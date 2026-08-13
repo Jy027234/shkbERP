@@ -16,6 +16,9 @@
 **/target/
 **/logs/
 **/upload/
+# Windows Git matches ignore patterns case-insensitively; keep this source component.
+!erp-frontend/src/components/Upload/
+!erp-frontend/src/components/Upload/**
 *.log
 erl_crash.dump
 hs_err_pid*.log
