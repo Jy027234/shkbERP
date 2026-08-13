@@ -39,7 +39,7 @@
     "test:e2e": "playwright test",
     "test:gzip": "npx http-server dist --cors --gzip -c-1",
     "test:watch": "vitest",
-    "type:check": "vue-tsc --noEmit --skipLibCheck"
+    "type:check": "cross-env NODE_OPTIONS=--max-old-space-size=4096 vue-tsc --noEmit --skipLibCheck"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

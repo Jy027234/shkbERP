@@ -7,6 +7,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,8 +20,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,8 +33,6 @@ import java.util.zip.GZIPOutputStream;
 public class MysqlBackupTask {
 
   private static final Logger log = LoggerFactory.getLogger(MysqlBackupTask.class);
-
-  private static final Pattern DB_NAME_PATTERN = Pattern.compile("jdbc:mysql://[^/]+/([^?]+)");
 
   @Autowired
   private Environment env;
@@ -58,11 +57,14 @@ public class MysqlBackupTask {
       log.error("datasource properties missing, skip");
       return;
     }
-    String host = extractHost(url);
-    String port = extractPort(url);
-    String dbName = extractDbName(url);
-    if (dbName == null) {
-      log.error("cannot parse db name from url: {}", url);
+    DatabaseTarget target = parseDatabaseTarget(url);
+    if (target == null) {
+      log.error("cannot parse MySQL datasource URL");
+      return;
+    }
+    String executable = properties.getExecutable();
+    if (executable == null || executable.trim().isEmpty()) {
+      log.error("backup executable is empty, skip");
       return;
     }
     Path backupDir = Paths.get(dir);
@@ -73,7 +75,7 @@ public class MysqlBackupTask {
       return;
     }
     String ts = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT).format(new Date());
-    File outFile = backupDir.resolve(dbName + "_" + ts + ".sql.gz").toFile();
+    File outFile = backupDir.resolve(target.database() + "_" + ts + ".sql.gz").toFile();
     ProcessBuilder pb = new ProcessBuilder();
     Path homeDefaults = Paths.get(System.getProperty("user.home"), ".my.cnf");
     Path tempDefaults = null;
@@ -83,7 +85,7 @@ public class MysqlBackupTask {
       // log.info("using credentials file: {}", homeDefaults.toAbsolutePath());
     } else {
       try {
-        tempDefaults = createDefaultsFile(host, port, username, password);
+        tempDefaults = createDefaultsFile(target.host(), target.port(), username, password);
         defaultsArg = "--defaults-extra-file=" + tempDefaults.toAbsolutePath();
         log.info("using temporary credentials file: {}", tempDefaults.toAbsolutePath());
       } catch (IOException e) {
@@ -92,17 +94,17 @@ public class MysqlBackupTask {
       }
     }
     pb.command(
-        "mysqldump",
+        executable,
         defaultsArg,
-        "--column-statistics=0",
         "--no-tablespaces",
-        dbName
+        "--single-transaction",
+        target.database()
     );
     long start = System.currentTimeMillis();
     try {
       // 打印当前执行日期时间 yyyyMMdd HH:mm:ss
       log.info("backup time {}", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-      log.info("backup start, db={}, file={}", dbName, outFile.getAbsolutePath());
+      log.info("backup start, db={}, file={}", target.database(), outFile.getAbsolutePath());
       Process p = pb.start();
       Thread errLogger = new Thread(() -> logErrorStream(p));
       errLogger.setDaemon(true);
@@ -168,7 +170,7 @@ public class MysqlBackupTask {
         "port=" + port + "\n" +
         "user=" + user + "\n" +
         "password=" + password + "\n";
-    Files.write(tmp, content.getBytes());
+    Files.writeString(tmp, content, StandardCharsets.UTF_8);
     try {
       Set<PosixFilePermission> perms = PosixFilePermissions.fromString("rw-------");
       Files.setPosixFilePermissions(tmp, perms);
@@ -184,8 +186,8 @@ public class MysqlBackupTask {
     }
     long now = System.currentTimeMillis();
     long keepMillis = TimeUnit.DAYS.toMillis(retainDays);
-    try {
-      Files.list(dir).filter(Files::isRegularFile).forEach(p -> {
+    try (Stream<Path> files = Files.list(dir)) {
+      files.filter(Files::isRegularFile).forEach(p -> {
         try {
           long lastModified = Files.getLastModifiedTime(p).toMillis();
           long age = now - lastModified;
@@ -206,41 +208,27 @@ public class MysqlBackupTask {
     return env.getProperty(key);
   }
 
-  private String extractDbName(String url) {
-    Matcher m = DB_NAME_PATTERN.matcher(url);
-    if (m.find()) {
-      return m.group(1);
+  static DatabaseTarget parseDatabaseTarget(String url) {
+    try {
+      if (url == null || !url.startsWith("jdbc:mysql://")) {
+        return null;
+      }
+      URI uri = URI.create(url.substring("jdbc:".length()));
+      String path = uri.getPath();
+      if (uri.getHost() == null || path == null || path.length() <= 1) {
+        return null;
+      }
+      String database = path.substring(1);
+      if (database.contains("/")) {
+        return null;
+      }
+      int port = uri.getPort() > 0 ? uri.getPort() : 3306;
+      return new DatabaseTarget(uri.getHost(), Integer.toString(port), database);
+    } catch (Exception e) {
+      return null;
     }
-    return null;
   }
 
-  private String extractHost(String url) {
-    try {
-      String s = url.substring("jdbc:mysql://".length());
-      int slash = s.indexOf('/') ;
-      String hostPort = slash >= 0 ? s.substring(0, slash) : s;
-      int idx = hostPort.indexOf(':');
-      if (idx > 0) {
-        return hostPort.substring(0, idx);
-      }
-      return hostPort;
-    } catch (Exception e) {
-      return "127.0.0.1";
-    }
-  }
-
-  private String extractPort(String url) {
-    try {
-      String s = url.substring("jdbc:mysql://".length());
-      int slash = s.indexOf('/') ;
-      String hostPort = slash >= 0 ? s.substring(0, slash) : s;
-      int idx = hostPort.indexOf(':');
-      if (idx > 0) {
-        return hostPort.substring(idx + 1);
-      }
-      return "3306";
-    } catch (Exception e) {
-      return "3306";
-    }
+  record DatabaseTarget(String host, String port, String database) {
   }
 }

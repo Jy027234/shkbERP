@@ -5,11 +5,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "backup.mysql")
 public class BackupProperties {
 
-  private boolean enabled = true;
+  private boolean enabled = false;
 
   private String dir;
 
   private int retainDays = 7;
+
+  private String executable = "mysqldump";
 
   public boolean isEnabled() {
     return enabled;
@@ -33,5 +35,13 @@ public class BackupProperties {
 
   public void setRetainDays(int retainDays) {
     this.retainDays = retainDays;
+  }
+
+  public String getExecutable() {
+    return executable;
+  }
+
+  public void setExecutable(String executable) {
+    this.executable = executable;
   }
 }

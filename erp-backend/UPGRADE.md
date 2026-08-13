@@ -34,6 +34,8 @@
 
 随后完成 V1.20 单租户认证与权限可靠性加固（本阶段没有新增 DDL）：按产品后续仅单租户的定位，不建设跨租户矩阵，也不移除 jugg 依赖的租户上下文。新增 `scripts/verify-auth-permission.ps1`，在本地隔离库临时创建仅有仓库查询权限的用户和角色，验证管理员访问、最小权限菜单与查询、用户管理 403、伪造及注销 Token 401、锁定/停用账号拒绝登录，并在 `finally` 中清理账号、角色、关系和操作日志。真实基线发现锁定账号被重复的 `isAccountNonLocked` 分支误报为“账户已过期”，现已修为“账户已锁定”，并在 `xingyun-sys` 新增 4 个登录资格 JUnit 用例。
 
+随后完成 V1.21 发布与恢复门禁：生产凭据全部改为环境变量，MySQL 定时备份改为默认关闭；运行镜像安装 MariaDB 10.11 客户端并验证提供兼容的 `mysqldump`。备份任务移除仅 MySQL 8 客户端支持的 `--column-statistics` 参数，增加单事务导出、可配置执行文件和 JDBC URL 单元测试。`scripts/verify-backup-restore.ps1` 只允许对本地 `xingyun-smoke-mysql` 执行，会生成 gzip 备份、恢复至随机临时库、比较两次逻辑导出的 SHA-256，并在 `finally` 中删除临时库和容器内文件。完成该演练并为 `/opt/data/backup/mysql` 配置容器外持久化之前，不得开启生产备份开关。
+
 ## 每次改动的固定流程
 
 1. 执行 `git status --short`，确认并保护现有改动。
