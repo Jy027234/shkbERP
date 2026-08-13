@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.sc.mappers.ProductStockSerialMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.sc.entity.ProductStockSerial">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="productId" column="product_id" jdbcType="VARCHAR"/>
+            <result property="serialNumber" column="serial_number" jdbcType="VARCHAR"/>
+            <result property="stockStatus" column="stock_status" jdbcType="TINYINT"/>
+            <result property="batchId" column="batch_id" jdbcType="VARCHAR"/>
+            <result property="productionDate" column="production_date" jdbcType="DATE"/>
+            <result property="expiryDate" column="expiry_date" jdbcType="DATE"/>
+            <result property="shelfLocation" column="shelf_location" jdbcType="VARCHAR"/>
+            <result property="supplierId" column="supplier_id" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+    
+    <resultMap id="QueryResultMap" type="com.lframework.xingyun.sc.bo.stock.serial.QueryProductStockSerialBo">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="productId" column="product_id" jdbcType="VARCHAR"/>
+            <result property="productCode" column="product_code" jdbcType="VARCHAR"/>
+            <result property="productName" column="product_name" jdbcType="VARCHAR"/>
+            <result property="serialNumber" column="serial_number" jdbcType="VARCHAR"/>
+            <result property="stockStatus" column="stock_status" jdbcType="TINYINT"/>
+            <result property="batchId" column="batch_id" jdbcType="VARCHAR"/>
+            <result property="batchNumber" column="batch_number" jdbcType="VARCHAR"/>
+            <result property="scId" column="sc_id" jdbcType="VARCHAR"/>
+            <result property="scCode" column="sc_code" jdbcType="VARCHAR"/>
+            <result property="scName" column="sc_name" jdbcType="VARCHAR"/>
+            <result property="categoryId" column="category_id" jdbcType="VARCHAR"/>
+            <result property="categoryName" column="category_name" jdbcType="VARCHAR"/>
+            <result property="brandId" column="brand_id" jdbcType="VARCHAR"/>
+            <result property="brandName" column="brand_name" jdbcType="VARCHAR"/>
+            <result property="shelfLocation" column="shelf_location" jdbcType="VARCHAR"/>
+            <result property="productionDate" column="production_date" jdbcType="DATE"/>
+            <result property="expiryDate" column="expiry_date" jdbcType="DATE"/>
+            <result property="supplierId" column="supplier_id" jdbcType="VARCHAR"/>
+            <result property="supplierName" column="supplier_name" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,product_id,serial_number,
+        stock_status,batch_id,production_date,
+        expiry_date,supplier_id,create_time
+    </sql>
+    
+    <!-- 查询序列号库存 -->
+    <select id="query" resultMap="QueryResultMap">
+        SELECT
+            pss.id,
+            pss.product_id,
+            p.code AS product_code,
+            p.name AS product_name,
+            pss.serial_number,
+            pss.stock_status,
+            pss.batch_id,
+            psb.batch_number,
+            psb.sc_id,
+            sc.code AS sc_code,
+            sc.name AS sc_name,
+            p.category_id,
+            c.name AS category_name,
+            p.brand_id,
+            b.name AS brand_name,
+            pss.shelf_location,
+            pss.production_date,
+            pss.expiry_date,
+            pss.supplier_id,
+            s.name AS supplier_name
+        FROM tbl_product_stock_serial pss
+        LEFT JOIN tbl_product_stock_batch psb ON psb.id = pss.batch_id
+        LEFT JOIN base_data_product p ON p.id = pss.product_id
+        LEFT JOIN base_data_product_category c ON c.id = p.category_id
+        LEFT JOIN base_data_product_brand b ON b.id = p.brand_id
+        LEFT JOIN base_data_store_center sc ON sc.id = psb.sc_id
+        LEFT JOIN base_data_supplier s ON s.id = pss.supplier_id
+        WHERE 1=1
+        <if test="scId != null and scId != ''">
+            AND psb.sc_id = #{scId}
+        </if>
+        <if test="productCode != null and productCode != ''">
+            AND p.code LIKE CONCAT('%', #{productCode}, '%')
+        </if>
+        <if test="productName != null and productName != ''">
+            AND p.name LIKE CONCAT('%', #{productName}, '%')
+        </if>
+        <if test="categoryId != null and categoryId != ''">
+            AND c.id = #{categoryId}
+        </if>
+        <if test="brandId != null and brandId != ''">
+            AND b.id = #{brandId}
+        </if>
+        <if test="serialNumber != null and serialNumber != ''">
+            AND pss.serial_number LIKE CONCAT('%', #{serialNumber}, '%')
+        </if>
+        ORDER BY pss.create_time DESC
+    </select>
+</mapper>

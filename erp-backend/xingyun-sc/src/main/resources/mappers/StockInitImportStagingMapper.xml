@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.sc.mappers.StockInitImportStagingMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.sc.entity.StockInitImportStaging">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="importBatchId" column="import_batch_id" jdbcType="VARCHAR"/>
+            <result property="importLineId" column="import_line_id" jdbcType="VARCHAR"/>
+            <result property="naturalKeyHash" column="natural_key_hash" jdbcType="VARCHAR"/>
+            <result property="productId" column="product_id" jdbcType="VARCHAR"/>
+            <result property="scId" column="sc_id" jdbcType="VARCHAR"/>
+            <result property="qty" column="qty" jdbcType="INTEGER"/>
+            <result property="taxPrice" column="tax_price" jdbcType="DECIMAL"/>
+            <result property="batchNumber" column="batch_number" jdbcType="VARCHAR"/>
+            <result property="productionDate" column="production_date" jdbcType="DATE"/>
+            <result property="expiryDate" column="expiry_date" jdbcType="DATE"/>
+            <result property="remark" column="remark" jdbcType="VARCHAR"/>
+            <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+            <result property="updatedAt" column="updated_at" jdbcType="TIMESTAMP"/>
+            <result property="shelfLocation" column="shelf_location" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,import_batch_id,import_line_id,
+        natural_key_hash,product_id,sc_id,
+        qty,tax_price,batch_number,
+        production_date,expiry_date,remark,
+        created_at,updated_at,shelf_location
+    </sql>
+</mapper>

@@ -1,0 +1,28 @@
+# Operating-system and editor state
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Local credentials and overrides
+**/.env
+**/.env.*
+!**/.env.example
+# Vite variables are compiled into browser assets and must never contain secrets.
+!erp-frontend/.env
+!erp-frontend/.env.*
+
+# Backend outputs
+**/target/
+**/logs/
+**/upload/
+*.log
+erl_crash.dump
+hs_err_pid*.log
+*.dump
+
+# Frontend outputs
+**/node_modules/
+**/dist/
+**/playwright-report/
+**/test-results/

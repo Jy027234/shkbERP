@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.ContractTaskMaterialApplyMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.ContractTaskMaterialApply">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="taskId" column="task_id" jdbcType="VARCHAR"/>
+            <result property="applyCode" column="apply_code" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="approvalStatus" column="approval_status" jdbcType="TINYINT"/>
+            <result property="remark" column="remark" jdbcType="VARCHAR"/>
+            <result property="approvalTime" column="approval_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <resultMap id="QueryBoResultMap" type="com.lframework.xingyun.shkb.bo.contract.task.QueryContractTaskMaterialApplyBo">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="taskId" column="taskId" jdbcType="VARCHAR"/>
+            <result property="applyCode" column="applyCode" jdbcType="VARCHAR"/>
+            <result property="createTime" column="createTime" jdbcType="TIMESTAMP"/>
+            <result property="approvalStatus" column="approvalStatus" jdbcType="TINYINT"/>
+            <result property="remark" column="remark" jdbcType="VARCHAR"/>
+            <result property="approvalTime" column="approvalTime" jdbcType="TIMESTAMP"/>
+            <result property="contractCode" column="contractCode" jdbcType="VARCHAR"/>
+            <result property="machineTypeName" column="machineTypeName" jdbcType="VARCHAR"/>
+            <result property="partNumberName" column="partNumberName" jdbcType="VARCHAR"/>
+            <result property="serialNumber" column="serialNumber" jdbcType="VARCHAR"/>
+            <result property="hasMaterialOrder" column="hasMaterialOrder" jdbcType="BOOLEAN"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,task_id,apply_code,
+        create_time,approval_status,remark,
+        approval_time
+    </sql>
+    
+    <!-- 查询领料申请列表 -->
+    <select id="query" resultMap="QueryBoResultMap">
+        SELECT
+            a.id,
+            a.task_id AS taskId,
+            a.apply_code AS applyCode,
+            a.create_time AS createTime,
+            a.approval_status AS approvalStatus,
+            a.remark,
+            a.approval_time AS approvalTime,
+            c.code AS contractCode,
+            mt.name AS machineTypeName,
+            pn.code AS partNumberName,
+            c.serial_number AS serialNumber,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM shkb_material_order mo
+                WHERE mo.material_apply_id = a.id
+            ) THEN 1 ELSE 0 END AS hasMaterialOrder
+        FROM shkb_contract_task_material_apply AS a
+        INNER JOIN shkb_contract_task AS t ON t.id = a.task_id
+        INNER JOIN shkb_contract AS c ON c.id = t.contract_id
+        INNER JOIN base_data_product AS pn ON c.part_number_id  = pn.id
+        INNER JOIN base_data_machine_type AS mt  ON pn.machine_type_id  = mt.id
+        <where>
+            <if test="vo.contractCode != null and vo.contractCode != ''">
+                AND c.code LIKE CONCAT('%', #{vo.contractCode}, '%')
+            </if>
+            <if test="vo.applyCode != null and vo.applyCode != ''">
+                AND a.apply_code LIKE CONCAT('%', #{vo.applyCode}, '%')
+            </if>
+            <if test="vo.createTimeStart != null and vo.createTimeStart != ''">
+                AND a.create_time &gt;= #{vo.createTimeStart}
+            </if>
+            <if test="vo.createTimeEnd != null and vo.createTimeEnd != ''">
+                AND a.create_time &lt;= #{vo.createTimeEnd}
+            </if>
+            <!-- hasMaterialOrder 为 true：筛选已有发料单；为 false：筛选尚未创建发料单；null：不过滤 -->
+            <if test="vo.hasMaterialOrder != null and vo.hasMaterialOrder == true">
+                AND EXISTS (
+                    SELECT 1 FROM shkb_material_order mo
+                    WHERE mo.material_apply_id = a.id
+                )
+            </if>
+            <if test="vo.hasMaterialOrder != null and vo.hasMaterialOrder == false">
+                AND NOT EXISTS (
+                    SELECT 1 FROM shkb_material_order mo
+                    WHERE mo.material_apply_id = a.id
+                )
+            </if>
+        </where>
+        ORDER BY a.create_time DESC
+    </select>
+    
+    <!-- 查询领料申请列表总数 -->
+    <select id="count" resultType="java.lang.Integer">
+        SELECT
+            COUNT(1)
+        FROM shkb_contract_task_material_apply AS a
+        INNER JOIN shkb_contract_task AS t ON t.id = a.task_id
+        INNER JOIN shkb_contract AS c ON c.id = t.contract_id
+        <where>
+            <if test="vo.contractCode != null and vo.contractCode != ''">
+                AND c.code LIKE CONCAT('%', #{vo.contractCode}, '%')
+            </if>
+            <if test="vo.applyCode != null and vo.applyCode != ''">
+                AND a.apply_code LIKE CONCAT('%', #{vo.applyCode}, '%')
+            </if>
+            <if test="vo.createTimeStart != null and vo.createTimeStart != ''">
+                AND a.create_time &gt;= #{vo.createTimeStart}
+            </if>
+            <if test="vo.createTimeEnd != null and vo.createTimeEnd != ''">
+                AND a.create_time &lt;= #{vo.createTimeEnd}
+            </if>
+        </where>
+    </select>
+</mapper>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.ShkbTrainingCourseMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.ShkbTrainingCourse">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="tenantId" column="tenant_id" jdbcType="VARCHAR"/>
+            <result property="courseName" column="course_name" jdbcType="VARCHAR"/>
+            <result property="courseType" column="course_type" jdbcType="VARCHAR"/>
+            <result property="trainingHours" column="training_hours" jdbcType="DECIMAL"/>
+            <result property="implementationInterval" column="implementation_interval" jdbcType="INTEGER"/>
+            <result property="intervalUnit" column="interval_unit" jdbcType="VARCHAR"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="status" column="status" jdbcType="TINYINT"/>
+            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateBy" column="update_by" jdbcType="VARCHAR"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+            <result property="deleted" column="deleted" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,tenant_id,course_name,
+        course_type,training_hours,implementation_interval,
+        interval_unit,description,status,
+        create_by,create_time,update_by,
+        update_time,deleted
+    </sql>
+</mapper>

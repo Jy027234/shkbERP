@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.WorkCardMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.WorkCard">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="code" column="code" jdbcType="VARCHAR"/>
+            <result property="name" column="name" jdbcType="VARCHAR"/>
+            <result property="available" column="available" jdbcType="TINYINT"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+            <result property="createById" column="create_by_id" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateBy" column="update_by" jdbcType="VARCHAR"/>
+            <result property="updateById" column="update_by_id" jdbcType="VARCHAR"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+            <result property="repairTypeId" column="repair_type_id" jdbcType="VARCHAR"/>
+            <result property="partNumberId" column="part_number_id" jdbcType="VARCHAR"/>
+            <result property="approvalDate" column="approval_date" jdbcType="TIMESTAMP"/>
+            <result property="version" column="version" jdbcType="VARCHAR"/>
+            <result property="customerId" column="customer_id" jdbcType="VARCHAR"/>
+    </resultMap>
+    
+    <resultMap id="QueryResultMap" type="com.lframework.xingyun.shkb.bo.workcard.QueryWorkCardBo">
+        <id property="id" column="id" jdbcType="VARCHAR"/>
+        <result property="code" column="code" jdbcType="VARCHAR"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="available" column="available" jdbcType="TINYINT"/>
+        <result property="description" column="description" jdbcType="VARCHAR"/>
+        <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+        <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+        <result property="machineTypeId" column="machine_type_id" jdbcType="VARCHAR"/>
+        <result property="machineTypeName" column="machine_type_name" jdbcType="VARCHAR"/>
+        <result property="partNumberId" column="part_number_id" jdbcType="VARCHAR"/>
+        <result property="partNumberName" column="part_number_name" jdbcType="VARCHAR"/>
+        <result property="partNumber" column="part_number_code" jdbcType="VARCHAR"/>
+        <result property="customerId" column="customer_id" jdbcType="VARCHAR"/>
+        <result property="customerName" column="customer_name" jdbcType="VARCHAR"/>
+        <result property="approvalDate" column="approval_date" jdbcType="TIMESTAMP"/>
+        <result property="version" column="version" jdbcType="VARCHAR"/>
+        <result property="repairTypeId" column="repair_type_id" jdbcType="VARCHAR"/>
+        <result property="repairTypeName" column="repair_type_name" jdbcType="VARCHAR"/>
+    </resultMap>
+    
+    <resultMap id="DetailResultMap" type="com.lframework.xingyun.shkb.bo.workcard.GetWorkCardBo">
+        <id property="id" column="id" jdbcType="VARCHAR"/>
+        <result property="code" column="code" jdbcType="VARCHAR"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="available" column="available" jdbcType="TINYINT"/>
+        <result property="description" column="description" jdbcType="VARCHAR"/>
+        <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+        <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+        <result property="updateBy" column="update_by" jdbcType="VARCHAR"/>
+        <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+        <result property="repairTypeId" column="repair_type_id" jdbcType="VARCHAR"/>
+        <result property="repairTypeName" column="repair_type_name" jdbcType="VARCHAR"/>
+        <result property="machineTypeId" column="machine_type_id" jdbcType="VARCHAR"/>
+        <result property="machineTypeName" column="machine_type_name" jdbcType="VARCHAR"/>
+        <result property="partNumberId" column="part_number_id" jdbcType="VARCHAR"/>
+        <result property="partNumberName" column="part_number_name" jdbcType="VARCHAR"/>
+        <result property="partNumber" column="part_number_code" jdbcType="VARCHAR"/>
+        <result property="customerId" column="customer_id" jdbcType="VARCHAR"/>
+        <result property="customerName" column="customer_name" jdbcType="VARCHAR"/>
+        <result property="approvalDate" column="approval_date" jdbcType="TIMESTAMP"/>
+        <result property="version" column="version" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,code,name,
+        available,description,create_by,
+        create_by_id,create_time,update_by,
+        update_by_id,update_time,repair_type_id,
+        part_number_id,approval_date,customer_id,
+        version
+    </sql>
+    
+    <!-- 查询工卡列表 -->
+    <select id="query" resultMap="QueryResultMap" parameterType="com.lframework.xingyun.shkb.vo.workcard.QueryWorkCardVo">
+        SELECT
+            wc.id,
+            wc.code,
+            wc.name,
+            wc.available,
+            wc.description,
+            wc.version,
+            wc.create_by,
+            wc.create_time,
+            pn.machine_type_id,
+            mt.name AS machine_type_name,
+            wc.part_number_id,
+            pn.name AS part_number_name,
+            pn.code AS part_number_code,
+            wc.customer_id,
+            cust.name AS customer_name,
+            wc.approval_date,
+            wc.repair_type_id,
+            rt.name AS repair_type_name
+        FROM
+            shkb_work_card wc
+        LEFT JOIN
+            base_data_product pn ON wc.part_number_id = pn.id
+        LEFT JOIN
+            base_data_machine_type mt ON pn.machine_type_id = mt.id
+        LEFT JOIN
+            base_data_customer cust ON wc.customer_id = cust.id
+        LEFT JOIN
+            base_data_repair_type rt ON wc.repair_type_id = rt.id
+        <where>
+            <if test="code != null and code != ''">
+                AND wc.code LIKE CONCAT('%', #{code}, '%')
+            </if>
+            <if test="name != null and name != ''">
+                AND wc.name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="machineTypeId != null and machineTypeId != ''">
+                AND pn.machine_type_id = #{machineTypeId}
+            </if>
+            <if test="partNumberCode != null and partNumberCode != ''">
+                AND pn.code LIKE CONCAT('%', #{partNumberCode}, '%')
+            </if>
+            <if test="repairTypeId != null and repairTypeId != ''">
+                AND wc.repair_type_id = #{repairTypeId}
+            </if>
+            <if test="customerId != null and customerId != ''">
+                AND wc.customer_id = #{customerId}
+            </if>
+            <if test="available != null">
+                AND wc.available = #{available}
+            </if>
+            <if test="createTimeStart != null">
+                AND wc.create_time >= #{createTimeStart}
+            </if>
+            <if test="createTimeEnd != null">
+                AND wc.create_time &lt;= #{createTimeEnd}
+            </if>
+        </where>
+        ORDER BY wc.create_time DESC
+    </select>
+    
+    <!-- 根据ID获取工卡详情 -->
+    <select id="getDetail" resultMap="DetailResultMap" parameterType="java.lang.String">
+        SELECT
+            wc.id,
+            wc.code,
+            wc.name,
+            wc.available,
+            wc.description,
+            wc.version,
+            wc.create_by,
+            wc.create_time,
+            wc.update_by,
+            wc.update_time,
+            wc.repair_type_id,
+            rt.name AS repair_type_name,
+            pn.machine_type_id,
+            mt.name AS machine_type_name,
+            wc.part_number_id,
+            pn.name AS part_number_name,
+            pn.code AS part_number_code,
+            wc.customer_id,
+            cust.name AS customer_name,
+            wc.approval_date
+        FROM
+            shkb_work_card wc
+        LEFT JOIN
+            base_data_product pn ON wc.part_number_id = pn.id
+        LEFT JOIN
+            base_data_machine_type mt ON pn.machine_type_id = mt.id
+        LEFT JOIN
+            base_data_customer cust ON wc.customer_id = cust.id
+        LEFT JOIN
+            base_data_repair_type rt ON wc.repair_type_id = rt.id
+        WHERE
+            wc.id = #{id}
+    </select>
+</mapper>

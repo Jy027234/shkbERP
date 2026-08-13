@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.MachineTaskTighteningMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.MachineTaskTightening">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="taskId" column="task_id" jdbcType="VARCHAR"/>
+            <result property="machineTaskStatus" column="machine_task_status" jdbcType="INTEGER"/>
+            <result property="taskType" column="task_type" jdbcType="INTEGER"/>
+            <result property="serialNo" column="serial_no" jdbcType="VARCHAR"/>
+            <result property="contractNo" column="contract_no" jdbcType="VARCHAR"/>
+            <result property="partNo" column="part_no" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="reportTime" column="report_time" jdbcType="TIMESTAMP"/>
+            <result property="reportData" column="report_data" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,task_id,machine_task_status,task_type,
+        contract_no,part_no,serial_no,create_time,
+        report_time,report_data
+    </sql>
+
+    <select id="query" parameterType="com.lframework.xingyun.shkb.vo.machinetask.QueryMachineTaskTighteningVo" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM shkb_machine_task_tightening
+        <where>
+            <if test="vo.createTimeStart != null">
+                AND create_time &gt;= #{vo.createTimeStart}
+            </if>
+            <if test="vo.createTimeEnd != null">
+                AND create_time &lt;= #{vo.createTimeEnd}
+            </if>
+            <if test="vo.contractNo != null and vo.contractNo != ''">
+                AND contract_no LIKE CONCAT('%', #{vo.contractNo}, '%')
+            </if>
+            <if test="vo.partNo != null and vo.partNo != ''">
+                AND part_no LIKE CONCAT('%', #{vo.partNo}, '%')
+            </if>
+            <if test="vo.machineTaskStatus != null">
+                AND machine_task_status = #{vo.machineTaskStatus}
+            </if>
+            <if test="vo.taskType != null">
+                AND task_type = #{vo.taskType}
+            </if>
+            <!-- 序列号筛选：暂使用 report_data 模糊匹配，如有独立字段/关联后再优化 -->
+            <if test="vo.serialNumber != null and vo.serialNumber != ''">
+                AND serial_no LIKE CONCAT('%', #{vo.serialNumber}, '%')
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="queryPending" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM shkb_machine_task_tightening
+        WHERE machine_task_status = 0
+        ORDER BY create_time ASC
+    </select>
+</mapper>

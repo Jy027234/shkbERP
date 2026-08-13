@@ -1,0 +1,91 @@
+package com.lframework.xingyun.basedata.vo.product.info;
+
+import com.lframework.starter.web.core.components.validation.IsEnum;
+import com.lframework.starter.web.core.vo.BaseVo;
+import com.lframework.starter.web.core.vo.SortPageVo;
+import com.lframework.xingyun.basedata.enums.ProductType;
+import io.swagger.annotations.ApiModelProperty;
+import java.io.Serializable;
+import java.time.LocalDateTime;
+import lombok.Data;
+
+@Data
+public class QueryProductVo extends SortPageVo implements BaseVo, Serializable {
+
+  private static final long serialVersionUID = 1L;
+
+  /**
+   * 编号
+   */
+  @ApiModelProperty("编号")
+  private String code;
+
+  /**
+   * 编号匹配方式：true 精确，false/空 模糊（默认）
+   */
+  @ApiModelProperty("编号匹配方式：true精确，false/空模糊（默认）")
+  private Boolean codeExact;
+
+  /**
+   * 名称
+   */
+  @ApiModelProperty("名称")
+  private String name;
+
+  /**
+   * SKU
+   */
+  @ApiModelProperty("SKU")
+  private String skuCode;
+
+  /**
+   * 简称
+   */
+  @ApiModelProperty("简称")
+  private String shortName;
+
+  /**
+   * 品牌ID
+   */
+  @ApiModelProperty("品牌ID")
+  private String brandId;
+
+  /**
+   * 分类ID
+   */
+  @ApiModelProperty("分类ID")
+  private String categoryId;
+
+  
+
+  /**
+   * 机型ID
+   */
+  @ApiModelProperty("机型ID")
+  private String machineTypeId;
+
+  /**
+   * 商品类型
+   */
+  @ApiModelProperty("商品类型")
+  @IsEnum(message = "商品类型格式错误！", enumClass = ProductType.class)
+  private Integer productType;
+
+  /**
+   * 创建起始时间
+   */
+  @ApiModelProperty("创建起始时间")
+  private LocalDateTime startTime;
+
+  /**
+   * 创建截止时间
+   */
+  @ApiModelProperty("创建截止时间")
+  private LocalDateTime endTime;
+
+  /**
+   * 状态
+   */
+  @ApiModelProperty("状态")
+  private Boolean available;
+}

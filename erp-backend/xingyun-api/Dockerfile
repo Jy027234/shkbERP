@@ -1,0 +1,16 @@
+FROM eclipse-temurin:25-jre-ubi10-minimal
+
+WORKDIR /opt
+
+ARG JAR_FILE=@build.finalName@.jar
+COPY ${JAR_FILE} /opt/app.jar
+
+EXPOSE 8080
+
+ENV JAVA_OPTS="-Dspring.profiles.active=prod"
+
+# 在默认情况下
+# /opt/data/tmp是tomcat临时文件目录
+# /opt/data/upload是上传文件的存储目录
+# /opt/logs是日志的存储目录
+CMD ["sh", "-c", "exec java -server -Dspring.servlet.multipart.location=/opt/data/tmp -Djugg.upload.location=/opt/data/upload $JAVA_OPTS -jar app.jar"]

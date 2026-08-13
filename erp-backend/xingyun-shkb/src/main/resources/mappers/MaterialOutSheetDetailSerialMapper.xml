@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.MaterialOutSheetDetailSerialMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.MaterialOutSheetDetailSerial">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="sheetId" column="sheet_id" jdbcType="VARCHAR"/>
+            <result property="productId" column="product_id" jdbcType="VARCHAR"/>
+            <result property="stockSerialId" column="stock_serial_id" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,sheet_id,product_id,
+        stock_serial_id
+    </sql>
+</mapper>

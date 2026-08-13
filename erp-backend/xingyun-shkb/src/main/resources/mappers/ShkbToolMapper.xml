@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.ShkbToolMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.ShkbTool">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="code" column="code" jdbcType="VARCHAR"/>
+            <result property="name" column="name" jdbcType="VARCHAR"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+            <result property="createById" column="create_by_id" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateBy" column="update_by" jdbcType="VARCHAR"/>
+            <result property="updateById" column="update_by_id" jdbcType="VARCHAR"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+            <result property="managementArea" column="management_area" jdbcType="VARCHAR"/>
+            <result property="available" column="available" jdbcType="TINYINT"/>
+            <result property="lastMaintenanceTime" column="last_maintenance_time" jdbcType="TIMESTAMP"/>
+            <result property="nextMaintenanceTime" column="next_maintenance_time" jdbcType="TIMESTAMP"/>
+            <result property="expirationTime" column="expiration_time" jdbcType="TIMESTAMP"/>
+            <result property="certificateNumber" column="certificate_number" jdbcType="VARCHAR"/>
+            <result property="model" column="model" jdbcType="VARCHAR"/>
+            <result property="specification" column="specification" jdbcType="VARCHAR"/>
+            <result property="standard" column="standard" jdbcType="VARCHAR"/>
+            <result property="precision" column="precision" jdbcType="VARCHAR"/>
+            <result property="storageLocation" column="storage_location" jdbcType="VARCHAR"/>
+            <result property="calibrationPeriod" column="calibration_period" jdbcType="INTEGER"/>
+            <result property="lastMaintenanceUnit" column="last_maintenance_unit" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,code,name,
+        description,create_by,create_by_id,
+        create_time,update_by,update_by_id,
+        update_time,management_area,available,
+        last_maintenance_time,next_maintenance_time,expiration_time,certificate_number,
+        model,specification,standard,`precision`,
+        storage_location,calibration_period,
+        last_maintenance_unit
+    </sql>
+    
+    <select id="query" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM shkb_tool
+        <where>
+            <if test="managementArea != null and managementArea != ''">
+                AND management_area LIKE CONCAT('%', #{managementArea}, '%')
+            </if>
+            <if test="code != null and code != ''">
+                AND code LIKE CONCAT('%', #{code}, '%')
+            </if>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="certificateNumber != null and certificateNumber != ''">
+                AND certificate_number LIKE CONCAT('%', #{certificateNumber}, '%')
+            </if>
+            <if test="model != null and model != ''">
+                AND model LIKE CONCAT('%', #{model}, '%')
+            </if>
+            <if test="specification != null and specification != ''">
+                AND specification LIKE CONCAT('%', #{specification}, '%')
+            </if>
+            <if test="standard != null and standard != ''">
+                AND standard LIKE CONCAT('%', #{standard}, '%')
+            </if>
+            <if test="precision != null and precision != ''">
+                AND `precision` LIKE CONCAT('%', #{precision}, '%')
+            </if>
+            <if test="storageLocation != null and storageLocation != ''">
+                AND storage_location LIKE CONCAT('%', #{storageLocation}, '%')
+            </if>
+            <if test="lastMaintenanceTimeStart != null and lastMaintenanceTimeStart != ''">
+                AND last_maintenance_time &gt;= #{lastMaintenanceTimeStart}
+            </if>
+            <if test="lastMaintenanceTimeEnd != null and lastMaintenanceTimeEnd != ''">
+                AND last_maintenance_time &lt;= #{lastMaintenanceTimeEnd}
+            </if>
+            <if test="nextMaintenanceTimeStart != null and nextMaintenanceTimeStart != ''">
+                AND next_maintenance_time &gt;= #{nextMaintenanceTimeStart}
+            </if>
+            <if test="nextMaintenanceTimeEnd != null and nextMaintenanceTimeEnd != ''">
+                AND next_maintenance_time &lt;= #{nextMaintenanceTimeEnd}
+            </if>
+            <if test="expirationTimeStart != null and expirationTimeStart != ''">
+                AND expiration_time &gt;= #{expirationTimeStart}
+            </if>
+            <if test="expirationTimeEnd != null and expirationTimeEnd != ''">
+                AND expiration_time &lt;= #{expirationTimeEnd}
+            </if>
+            <if test="calibrationPeriod != null and calibrationPeriod != ''">
+                AND calibration_period = #{calibrationPeriod}
+            </if>
+            <if test="available != null and available != ''">
+                AND available = #{available}
+            </if>
+            <if test="createTimeStart != null and createTimeStart != ''">
+                AND create_time &gt;= #{createTimeStart}
+            </if>
+            <if test="createTimeEnd != null and createTimeEnd != ''">
+                AND create_time &lt;= #{createTimeEnd}
+            </if>
+        </where>
+        ORDER BY
+        (expiration_time IS NULL) ASC,
+        <choose>
+            <when test="expirationTimeOrder != null and expirationTimeOrder != '' and (expirationTimeOrder == 'asc' or expirationTimeOrder == 'ASC')">
+                expiration_time ASC,
+            </when>
+            <when test="expirationTimeOrder != null and expirationTimeOrder != '' and (expirationTimeOrder == 'desc' or expirationTimeOrder == 'DESC')">
+                expiration_time DESC,
+            </when>
+            <otherwise>
+                expiration_time ASC,
+            </otherwise>
+        </choose>
+        <choose>
+            <when test="createTimeOrder != null and createTimeOrder != '' and (createTimeOrder == 'asc' or createTimeOrder == 'ASC')">
+                create_time ASC
+            </when>
+            <when test="createTimeOrder != null and createTimeOrder != '' and (createTimeOrder == 'desc' or createTimeOrder == 'DESC')">
+                create_time DESC
+            </when>
+            <otherwise>
+                create_time DESC
+            </otherwise>
+        </choose>
+    </select>
+</mapper>

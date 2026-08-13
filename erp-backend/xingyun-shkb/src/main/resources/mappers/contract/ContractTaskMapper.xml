@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.ContractTaskMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.ContractTask">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="contractId" column="contract_id" jdbcType="VARCHAR"/>
+            <result property="taskStatus" column="task_status" jdbcType="VARCHAR"/>
+            <result property="repairStatus" column="repair_status" jdbcType="VARCHAR"/>
+            <result property="materialStatus" column="material_status" jdbcType="VARCHAR"/>
+            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+            <result property="createById" column="create_by_id" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateBy" column="update_by" jdbcType="VARCHAR"/>
+            <result property="updateById" column="update_by_id" jdbcType="VARCHAR"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+            <result property="dispatch" column="dispatch" jdbcType="VARCHAR"/>
+            <result property="taskUserId" column="task_user_id" jdbcType="VARCHAR"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="repairDescription" column="repair_description" jdbcType="VARCHAR"/>
+            <result property="taskType" column="task_type" jdbcType="VARCHAR"/>
+            <result property="shContractId" column="sh_contract_id" jdbcType="VARCHAR"/>
+            <result property="approvalFileNumber" column="approval_file_number" jdbcType="VARCHAR"/>
+    </resultMap>
+    
+    <resultMap id="QueryResultMap" type="com.lframework.xingyun.shkb.bo.contract.task.QueryContractTaskBo">
+        <id property="id" column="id" jdbcType="VARCHAR"/>
+        <result property="contractId" column="contract_id" jdbcType="VARCHAR"/>
+        <result property="taskStatus" column="task_status" jdbcType="VARCHAR"/>
+        <result property="taskType" column="task_type" jdbcType="VARCHAR"/>
+        <result property="repairStatus" column="repair_status" jdbcType="VARCHAR"/>
+        <result property="materialStatus" column="material_status" jdbcType="VARCHAR"/>
+        <result property="dispatch" column="dispatch" jdbcType="VARCHAR"/>
+        <result property="description" column="description" jdbcType="VARCHAR"/>
+        <result property="otherRepairRequirements" column="other_repair_requirements" jdbcType="VARCHAR"/>
+        <result property="otherWorkCardNumber" column="other_work_card_number" jdbcType="VARCHAR"/>
+        <result property="taskUserName" column="task_user_name" jdbcType="VARCHAR"/>
+        <result property="contractCode" column="contract_code" jdbcType="VARCHAR"/>
+        <result property="contractName" column="contract_name" jdbcType="VARCHAR"/>
+        <result property="customerId" column="customer_id" jdbcType="VARCHAR"/>
+        <result property="mnemonicCode" column="mnemonic_code" jdbcType="VARCHAR"/>
+        <result property="customerName" column="customer_name" jdbcType="VARCHAR"/>
+        <result property="machineTypeCode" column="machine_type_code" jdbcType="VARCHAR"/>
+        <result property="machineTypeName" column="machine_type_name" jdbcType="VARCHAR"/>
+        <result property="partNumberCode" column="part_number_code" jdbcType="VARCHAR"/>
+        <result property="partNumberName" column="part_number_name" jdbcType="VARCHAR"/>
+        <result property="serialNumber" column="serial_number" jdbcType="VARCHAR"/>
+        <result property="storageTime" column="storage_time" jdbcType="TIMESTAMP"/>
+        <result property="plannedCompletionTime" column="planned_completion_time" jdbcType="TIMESTAMP"/>
+        <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+        <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+        <result property="returnRepairReason" column="return_repair_reason" jdbcType="VARCHAR"/>
+        <result property="approvalFileNumber" column="approval_file_number" jdbcType="VARCHAR"/>
+    </resultMap>
+    
+    <resultMap id="DetailResultMap" type="com.lframework.xingyun.shkb.bo.contract.task.GetContractTaskBo">
+        <id property="id" column="id" jdbcType="VARCHAR"/>
+        <result property="contractId" column="contract_id" jdbcType="VARCHAR"/>
+        <result property="taskStatus" column="task_status" jdbcType="VARCHAR"/>
+        <result property="repairStatus" column="repair_status" jdbcType="VARCHAR"/>
+        <result property="materialStatus" column="material_status" jdbcType="VARCHAR"/>
+        <result property="taskType" column="task_type" jdbcType="VARCHAR"/>
+        <result property="dispatch" column="dispatch" jdbcType="VARCHAR"/>
+        <result property="description" column="description" jdbcType="VARCHAR"/>
+        <result property="otherWorkCardNumber" column="other_work_card_number" jdbcType="VARCHAR"/>
+        <result property="taskUserId" column="task_user_id" jdbcType="VARCHAR"/>
+        <result property="taskUserName" column="task_user_name" jdbcType="VARCHAR"/>
+        <result property="contractCode" column="contract_code" jdbcType="VARCHAR"/>
+        <result property="contractName" column="contract_name" jdbcType="VARCHAR"/>
+        <result property="customerId" column="customer_id" jdbcType="VARCHAR"/>
+        <result property="mnemonicCode" column="mnemonic_code" jdbcType="VARCHAR"/>
+        <result property="customerName" column="customer_name" jdbcType="VARCHAR"/>
+        <result property="machineTypeCode" column="machine_type_code" jdbcType="VARCHAR"/>
+        <result property="machineTypeName" column="machine_type_name" jdbcType="VARCHAR"/>
+        <result property="machineTypeId" column="machine_type_id" jdbcType="VARCHAR"/>
+        <result property="partNumberCode" column="part_number_code" jdbcType="VARCHAR"/>
+        <result property="partNumberName" column="part_number_name" jdbcType="VARCHAR"/>
+        <result property="partNumberId" column="part_number_id" jdbcType="VARCHAR"/>
+        <result property="serialNumber" column="serial_number" jdbcType="VARCHAR"/>
+        <result property="storageTime" column="storage_time" jdbcType="TIMESTAMP"/>
+        <result property="plannedCompletionTime" column="planned_completion_time" jdbcType="TIMESTAMP"/>
+        <result property="otherRepairRequirements" column="other_repair_requirements" jdbcType="VARCHAR"/>
+        <result property="returnRepairReason" column="return_repair_reason" jdbcType="VARCHAR"/>
+        <result property="approvalFileNumber" column="approval_file_number" jdbcType="VARCHAR"/>
+        <!-- 维修类型列表 -->
+        <collection property="repairTypes" ofType="com.lframework.xingyun.shkb.bo.contract.task.GetContractTaskBo$RepairTypeBo">
+            <id property="id" column="repair_id" jdbcType="VARCHAR"/>
+            <result property="code" column="repair_code" jdbcType="VARCHAR"/>
+            <result property="name" column="repair_name" jdbcType="VARCHAR"/>
+        </collection>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,contract_id,task_status,repair_status,material_status,
+        create_by,create_by_id,create_time,
+        update_by,update_by_id,update_time,
+        dispatch,task_user_id,description,repair_description,
+        task_type,sh_contract_id,approval_file_number
+    </sql>
+    
+    <!-- 查询合同任务列表（去重主记录，子集合单独查询） -->
+    <select id="query" resultMap="QueryResultMap" parameterType="com.lframework.xingyun.shkb.vo.contract.task.QueryContractTaskVo">
+        SELECT DISTINCT
+            t.id,
+            t.contract_id,
+            t.task_status,
+            t.repair_status,
+            t.material_status,
+            t.create_time,
+            t.create_by,
+            t.task_type,
+            t.dispatch,
+            t.description,
+            t.other_work_card_number,
+            t.return_repair_reason,
+            t.approval_file_number,
+            c.other_repair_requirements,
+            su.name AS task_user_name,
+            c.code AS contract_code,
+            c.name AS contract_name,
+            c.customer_id,
+            cust.mnemonic_code,
+            cust.name AS customer_name,
+            c.serial_number,
+            c.storage_time,
+            c.planned_completion_time,
+            pn.code AS part_number_code,
+            pn.name AS part_number_name,
+            mt.code AS machine_type_code,
+            mt.name AS machine_type_name
+        FROM
+            shkb_contract_task t
+        LEFT JOIN
+            shkb_contract c ON t.contract_id = c.id
+        LEFT JOIN
+            base_data_customer cust ON c.customer_id = cust.id
+        LEFT JOIN
+            base_data_product pn ON c.part_number_id = pn.id
+        LEFT JOIN
+            base_data_machine_type mt ON pn.machine_type_id = mt.id
+        LEFT JOIN
+            sys_user su ON t.task_user_id = su.id
+        <where>
+            c.available = 1
+
+            <if test="taskType != null and taskType != ''">
+                AND t.task_type = #{taskType}
+            </if>
+            <if test="taskStatus != null and taskStatus != ''">
+                AND t.task_status = #{taskStatus}
+            </if>
+            <if test="repairStatus != null and repairStatus != ''">
+                AND t.repair_status = #{repairStatus}
+            </if>
+            <if test="contractCode != null and contractCode != ''">
+                AND c.code LIKE CONCAT('%', #{contractCode}, '%')
+            </if>
+            <if test="customerId != null and customerId != ''">
+                AND c.customer_id = #{customerId}
+            </if>
+            <if test="machineTypeId != null and machineTypeId != ''">
+                AND mt.id = #{machineTypeId}
+            </if>
+            <if test="partNumberCode != null and partNumberCode != ''">
+                AND pn.code = #{partNumberCode}
+            </if>
+            <if test="storageTimeStart != null">
+                AND c.storage_time &gt;= #{storageTimeStart}
+            </if>
+            <if test="storageTimeEnd != null">
+                AND c.storage_time &lt;= #{storageTimeEnd}
+            </if>
+            <if test="plannedCompletionTimeStart != null">
+                AND c.planned_completion_time &gt;= #{plannedCompletionTimeStart}
+            </if>
+            <if test="plannedCompletionTimeEnd != null">
+                AND c.planned_completion_time &lt;= #{plannedCompletionTimeEnd}
+            </if>
+            <if test="approvalFileNumber != null and approvalFileNumber != ''">
+                AND t.approval_file_number LIKE CONCAT('%', #{approvalFileNumber}, '%')
+            </if>
+        </where>
+        ORDER BY t.create_time DESC
+    </select>
+
+    <!-- 按合同查询维修类型列表 -->
+    <select id="selectRepairTypesByContractId" resultType="com.lframework.xingyun.shkb.bo.contract.task.QueryContractTaskBo$RepairTypeBo">
+        SELECT
+            cr.id AS id,
+            rt.code AS code,
+            rt.name AS name
+        FROM shkb_contract_repair cr
+        LEFT JOIN base_data_repair_type rt ON cr.repair_type_id = rt.id
+        WHERE cr.contract_id = #{contractId}
+    </select>
+
+    <!-- 按任务查询工卡列表 -->
+    <select id="selectWorkCardsByTaskId" resultType="com.lframework.xingyun.shkb.bo.contract.task.QueryContractTaskBo$WorkCardBo">
+        SELECT
+            wc.id AS id,
+            wc.code AS code,
+            wc.name AS name
+        FROM shkb_contract_task_work_card ctwc
+        LEFT JOIN shkb_work_card wc ON ctwc.work_card_id = wc.id
+        WHERE ctwc.task_id = #{taskId}
+    </select>
+    
+    <!-- 根据ID获取合同任务详情 -->
+    <select id="getDetail" resultMap="DetailResultMap" parameterType="java.lang.String">
+        SELECT
+            t.id,
+            t.contract_id,
+            t.task_status,
+            t.repair_status,
+            t.material_status,
+            t.dispatch,
+            t.task_user_id,
+            t.description,
+            t.repair_description,
+            t.other_work_card_number,
+            t.task_type,
+            t.return_repair_reason,
+            t.approval_file_number,
+            su.name AS task_user_name,
+            c.code AS contract_code,
+            c.name AS contract_name,
+            c.customer_id,
+            cust.name AS customer_name,
+            cust.mnemonic_code,
+            c.serial_number,
+            c.storage_time,
+            c.planned_completion_time,
+            c.other_repair_requirements,
+            pn.code AS part_number_code,
+            pn.name AS part_number_name,
+            pn.id AS part_number_id,
+            mt.code AS machine_type_code,
+            mt.name AS machine_type_name,
+            mt.id AS machine_type_id,
+            cr.id AS repair_id,
+            rt.code AS repair_code,
+            rt.name AS repair_name
+        FROM
+            shkb_contract_task t
+        LEFT JOIN
+            shkb_contract c ON t.contract_id = c.id
+        LEFT JOIN
+            base_data_customer cust ON c.customer_id = cust.id
+        LEFT JOIN
+            base_data_product pn ON c.part_number_id = pn.id
+        LEFT JOIN
+            base_data_machine_type mt ON pn.machine_type_id = mt.id
+        LEFT JOIN
+            shkb_contract_repair cr ON c.id = cr.contract_id
+        LEFT JOIN
+            base_data_repair_type rt ON cr.repair_type_id = rt.id
+        LEFT JOIN
+            sys_user su ON t.task_user_id = su.id
+        WHERE
+            t.id = #{id}
+    </select>
+    
+    <!-- 获取任务换件清单列表 -->
+    <resultMap id="TaskPartListResultMap" type="com.lframework.xingyun.shkb.bo.contract.task.TaskPartListBo">
+        <id property="id" column="id" jdbcType="VARCHAR"/>
+        <result property="productId" column="product_id" jdbcType="VARCHAR"/>
+        <result property="productCode" column="product_code" jdbcType="VARCHAR"/>
+        <result property="productName" column="product_name" jdbcType="VARCHAR"/>
+        <result property="productSpec" column="product_spec" jdbcType="VARCHAR"/>
+        <result property="productUnit" column="product_unit" jdbcType="VARCHAR"/>
+        <result property="partNumber" column="part_number" jdbcType="VARCHAR"/>
+        <result property="machineTypeCode" column="machine_type_code" jdbcType="VARCHAR"/>
+        <result property="machineTypeName" column="machine_type_name" jdbcType="VARCHAR"/>
+        <result property="quantity" column="quantity" jdbcType="INTEGER"/>
+        <result property="stockNum" column="stock_num" jdbcType="INTEGER"/>
+        <result property="isMandatory" column="is_mandatory" jdbcType="BOOLEAN"/>
+        <result property="reason" column="reason" jdbcType="VARCHAR"/>
+    </resultMap>
+    
+    <select id="getTaskPartList" resultMap="TaskPartListResultMap" parameterType="java.lang.String">
+        SELECT
+            temp.id,
+            temp.product_id,
+            p.code AS product_code,
+            p.name AS product_name,
+            p.spec AS product_spec,
+            p.unit AS product_unit,
+            COALESCE(pn.code, p.sku_code) AS part_number,
+            mt.code AS machine_type_code,
+            mt.name AS machine_type_name,
+            temp.quantity,
+            COALESCE(ps.stock_num, 0) AS stock_num,
+            temp.is_mandatory,
+            temp.reason
+        FROM (
+            <!-- 必换件 -->
+            SELECT
+                ctwp.id,
+                ctwp.product_id,
+                ctwp.quantity,
+                TRUE AS is_mandatory,
+                NULL AS reason
+            FROM
+                shkb_contract_task_work_card_product ctwp
+            WHERE
+                ctwp.task_id = #{taskId}
+            UNION ALL
+            <!-- 非必换件 -->
+            SELECT
+                ctnpp.id,
+                ctnpp.product_id,
+                ctnpp.quantity,
+                FALSE AS is_mandatory,
+                ctnpp.reason
+            FROM
+                shkb_contract_task_non_part_product ctnpp
+            WHERE
+                ctnpp.task_id = #{taskId}
+        ) temp
+        LEFT JOIN
+            base_data_product p ON temp.product_id = p.id
+        LEFT JOIN
+            base_data_part_number pn ON p.part_number_id = pn.id
+        LEFT JOIN
+            base_data_machine_type mt ON pn.machine_type_id = mt.id
+        LEFT JOIN
+            tbl_product_stock ps ON temp.product_id = ps.product_id AND ps.sc_id IS NULL
+    </select>
+    
+    <!-- 获取任务必换件清单列表 -->
+    <select id="getTaskMandatoryPartList" resultMap="TaskPartListResultMap">
+        SELECT
+            ctwp.id,
+            ctwp.product_id,
+            p.code AS product_code,
+            p.name AS product_name,
+            p.spec AS product_spec,
+            p.unit AS product_unit,
+            p.name AS part_number,
+            mt.code AS machine_type_code,
+            mt.name AS machine_type_name,
+            ctwp.quantity,
+            COALESCE(ps.stock_num, 0) AS stock_num,
+            TRUE AS is_mandatory,
+            NULL AS reason
+        FROM
+            shkb_contract_task_work_card_product ctwp
+        LEFT JOIN
+            base_data_product p ON ctwp.product_id = p.id
+        LEFT JOIN
+            base_data_machine_type mt ON p.machine_type_id = mt.id
+        LEFT JOIN
+            tbl_product_stock ps ON ctwp.product_id = ps.product_id AND ps.sc_id = #{scId}
+        WHERE
+            ctwp.task_id = #{taskId}
+    </select>
+    
+    <!-- 获取任务非必换件清单列表 -->
+    <select id="getTaskNonMandatoryPartList" resultMap="TaskPartListResultMap">
+        SELECT
+            ctnpp.id,
+            ctnpp.product_id,
+            p.code AS product_code,
+            p.name AS product_name,
+            p.spec AS product_spec,
+            p.unit AS product_unit,
+            p.name AS part_number,
+            mt.code AS machine_type_code,
+            mt.name AS machine_type_name,
+            ctnpp.quantity,
+            COALESCE(ps.stock_num, 0) AS stock_num,
+            FALSE AS is_mandatory,
+            ctnpp.reason
+        FROM
+            shkb_contract_task_non_part_product ctnpp
+        LEFT JOIN
+            base_data_product p ON ctnpp.product_id = p.id
+        LEFT JOIN
+            base_data_machine_type mt ON p.machine_type_id = mt.id
+        LEFT JOIN
+            tbl_product_stock ps ON ctnpp.product_id = ps.product_id AND ps.sc_id = #{scId}
+        WHERE
+            ctnpp.task_id = #{taskId}
+    </select>
+</mapper>

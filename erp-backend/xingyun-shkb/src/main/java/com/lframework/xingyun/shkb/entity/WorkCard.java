@@ -1,0 +1,109 @@
+package com.lframework.xingyun.shkb.entity;
+
+import com.baomidou.mybatisplus.annotation.*;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Date;
+
+import com.lframework.starter.web.core.dto.BaseDto;
+import com.lframework.starter.web.core.entity.BaseEntity;
+import lombok.Data;
+
+/**
+ * 工卡表
+ * @TableName shkb_work_card
+ */
+@TableName(value ="shkb_work_card")
+@Data
+public class WorkCard extends BaseEntity implements BaseDto {
+    /**
+     * ID
+     */
+    @TableId
+    private String id;
+
+    /**
+     * 工卡号
+     */
+    private String code;
+
+    /**
+     * 名称
+     */
+    private String name;
+
+    /**
+     * 状态
+     */
+    private Boolean available;
+
+    /**
+     * 备注
+     */
+    private String description;
+
+    /**
+     * 创建人
+     */
+    @TableField(fill = FieldFill.INSERT)
+    private String createBy;
+
+    /**
+     * 创建人ID
+     */
+    @TableField(fill = FieldFill.INSERT)
+    private String createById;
+
+    /**
+     * 创建时间
+     */
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
+
+    /**
+     * 修改人
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updateBy;
+
+    /**
+     * 修改人ID
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updateById;
+
+    /**
+     * 修改时间
+     */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
+
+    /**
+     * 维修类型id
+     */
+    private String repairTypeId;
+
+    /**
+     * 件号id
+     */
+    private String partNumberId;
+
+    /**
+     * 批准日期
+     */
+    private LocalDate approvalDate;
+
+    /**
+     * 客户ID
+     */
+    private String customerId;
+
+    /**
+     * 版本号
+     */
+    private String version;
+
+    @TableField(exist = false)
+    private static final long serialVersionUID = 1L;
+}

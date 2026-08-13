@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.ShkbDeviceMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.ShkbDevice">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="code" column="code" jdbcType="VARCHAR"/>
+            <result property="name" column="name" jdbcType="VARCHAR"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+            <result property="createById" column="create_by_id" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateBy" column="update_by" jdbcType="VARCHAR"/>
+            <result property="updateById" column="update_by_id" jdbcType="VARCHAR"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+            <result property="managementArea" column="management_area" jdbcType="VARCHAR"/>
+            <result property="available" column="available" jdbcType="TINYINT"/>
+            <result property="maintenanceProject" column="maintenance_project" jdbcType="VARCHAR"/>
+            <result property="maintenanceInterval" column="maintenance_Interval" jdbcType="INTEGER"/>
+            <result property="maintenanceCard" column="maintenance_card" jdbcType="VARCHAR"/>
+            <result property="lastMaintenanceTime" column="last_maintenance_time" jdbcType="TIMESTAMP"/>
+            <result property="nextMaintenanceTime" column="next_maintenance_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,code,name,
+        description,create_by,create_by_id,
+        create_time,update_by,update_by_id,
+        update_time,management_area,available,
+        maintenance_project,maintenance_Interval,maintenance_card,
+        last_maintenance_time,next_maintenance_time
+    </sql>
+    
+    <!-- 查询设备列表 -->
+    <select id="query" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List" />
+        FROM
+            shkb_device
+        WHERE 1=1
+        <if test="code != null and code != ''">
+            AND code LIKE CONCAT('%', #{code}, '%')
+        </if>
+        <if test="name != null and name != ''">
+            AND name LIKE CONCAT('%', #{name}, '%')
+        </if>
+        <if test="managementArea != null and managementArea != ''">
+            AND management_area LIKE CONCAT('%', #{managementArea}, '%')
+        </if>
+        <if test="maintenanceProject != null and maintenanceProject != ''">
+            AND maintenance_project LIKE CONCAT('%', #{maintenanceProject}, '%')
+        </if>
+        <if test="maintenanceInterval != null">
+            AND maintenance_Interval = #{maintenanceInterval}
+        </if>
+        <if test="maintenanceCard != null and maintenanceCard != ''">
+            AND maintenance_card LIKE CONCAT('%', #{maintenanceCard}, '%')
+        </if>
+        <if test="lastMaintenanceTimeStart != null">
+            AND last_maintenance_time >= #{lastMaintenanceTimeStart}
+        </if>
+        <if test="lastMaintenanceTimeEnd != null">
+            AND last_maintenance_time &lt;= #{lastMaintenanceTimeEnd}
+        </if>
+        <if test="nextMaintenanceTimeStart != null">
+            AND next_maintenance_time >= #{nextMaintenanceTimeStart}
+        </if>
+        <if test="nextMaintenanceTimeEnd != null">
+            AND next_maintenance_time &lt;= #{nextMaintenanceTimeEnd}
+        </if>
+        <if test="available != null">
+            AND available = #{available}
+        </if>
+        <if test="createTimeStart != null">
+            AND create_time >= #{createTimeStart}
+        </if>
+        <if test="createTimeEnd != null">
+            AND create_time &lt;= #{createTimeEnd}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+</mapper>

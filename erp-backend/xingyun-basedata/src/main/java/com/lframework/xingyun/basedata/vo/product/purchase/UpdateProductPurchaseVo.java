@@ -1,0 +1,33 @@
+package com.lframework.xingyun.basedata.vo.product.purchase;
+
+import com.lframework.starter.web.core.vo.BaseVo;
+import io.swagger.annotations.ApiModelProperty;
+import java.io.Serializable;
+import java.math.BigDecimal;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import lombok.Data;
+
+@Data
+public class UpdateProductPurchaseVo implements BaseVo, Serializable {
+
+  private static final long serialVersionUID = 1L;
+
+  /**
+   * 商品ID
+   */
+  @ApiModelProperty(value = "商品ID", required = true)
+  @NotBlank(message = "商品ID不能为空！")
+  private String id;
+
+  /**
+   * 采购价
+   */
+  @ApiModelProperty(value = "采购价", required = true)
+  @NotNull(message = "请输入采购价！")
+  @Positive(message = "采购价必须大于0！")
+  @Digits(integer = 20, fraction = 2, message = "采购价最多允许2位小数！")
+  private BigDecimal price;
+}

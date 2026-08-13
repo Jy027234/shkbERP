@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.ShkbEmployeeTrainingMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.ShkbEmployeeTraining">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="employeeId" column="employee_id" jdbcType="VARCHAR"/>
+            <result property="trainingName" column="training_name" jdbcType="VARCHAR"/>
+            <result property="trainingType" column="training_type" jdbcType="VARCHAR"/>
+            <result property="trainingOrg" column="training_org" jdbcType="VARCHAR"/>
+            <result property="trainingContent" column="training_content" jdbcType="VARCHAR"/>
+            <result property="startDate" column="start_date" jdbcType="DATE"/>
+            <result property="endDate" column="end_date" jdbcType="DATE"/>
+            <result property="trainingHours" column="training_hours" jdbcType="DECIMAL"/>
+            <result property="trainingResult" column="training_result" jdbcType="VARCHAR"/>
+            <result property="certificateNo" column="certificate_no" jdbcType="VARCHAR"/>
+            <result property="fileUrl" column="file_url" jdbcType="VARCHAR"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+            <result property="createById" column="create_by_id" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateBy" column="update_by" jdbcType="VARCHAR"/>
+            <result property="updateById" column="update_by_id" jdbcType="VARCHAR"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,employee_id,training_name,
+        training_type,training_org,training_content,
+        start_date,end_date,training_hours,
+        training_result,certificate_no,file_url,
+        description,create_by,create_by_id,
+        create_time,update_by,update_by_id,
+        update_time
+    </sql>
+</mapper>

@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.MaterialOrderMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.MaterialOrder">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="code" column="code" jdbcType="VARCHAR"/>
+            <result property="scId" column="sc_id" jdbcType="VARCHAR"/>
+            <result property="totalNum" column="total_num" jdbcType="INTEGER"/>
+            <result property="totalOutNum" column="total_out_num" jdbcType="INTEGER"/>
+            <result property="totalAmount" column="total_amount" jdbcType="DECIMAL"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+            <result property="createById" column="create_by_id" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="materialApplyId" column="material_apply_id" jdbcType="VARCHAR"/>
+            <result property="isOutFinish" column="is_out_finish" jdbcType="BOOLEAN"/>
+    </resultMap>
+
+    <resultMap id="MaterialOrderQueryResultMap" type="com.lframework.xingyun.shkb.bo.material.QueryMaterialOrderBo">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="code" column="code" jdbcType="VARCHAR"/>
+            <result property="scId" column="sc_id" jdbcType="VARCHAR"/>
+            <result property="totalNum" column="total_num" jdbcType="INTEGER"/>
+            <result property="totalOutNum" column="total_out_num" jdbcType="INTEGER"/>
+            <result property="totalAmount" column="total_amount" jdbcType="DECIMAL"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="materialApplyId" column="material_apply_id" jdbcType="VARCHAR"/>
+            <result property="isOutFinish" column="is_out_finish" jdbcType="BOOLEAN"/>
+            <!-- 关联信息 -->
+            <result property="scName" column="sc_name" jdbcType="VARCHAR"/>
+            <result property="materialApplyCode" column="material_apply_code" jdbcType="VARCHAR"/>
+            <result property="contractCode" column="contract_code" jdbcType="VARCHAR"/>
+            <result property="contractName" column="contract_name" jdbcType="VARCHAR"/>
+            <result property="customerCode" column="customer_code" jdbcType="VARCHAR"/>
+            <result property="customerName" column="customer_name" jdbcType="VARCHAR"/>
+            <result property="machineTypeCode" column="machine_type_code" jdbcType="VARCHAR"/>
+            <result property="machineTypeName" column="machine_type_name" jdbcType="VARCHAR"/>
+            <result property="partNumberCode" column="part_number_code" jdbcType="VARCHAR"/>
+            <result property="partNumberName" column="part_number_name" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <resultMap id="MaterialOrderFullResultMap" type="com.lframework.xingyun.shkb.dto.material.MaterialOrderFullDto">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="code" column="code" jdbcType="VARCHAR"/>
+            <result property="scId" column="sc_id" jdbcType="VARCHAR"/>
+            <result property="scName" column="sc_name" jdbcType="VARCHAR"/>
+            <result property="totalNum" column="total_num" jdbcType="INTEGER"/>
+            <result property="totalAmount" column="total_amount" jdbcType="DECIMAL"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+            <result property="createById" column="create_by_id" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="materialApplyId" column="material_apply_id" jdbcType="VARCHAR"/>
+            <result property="materialApplyCode" column="apply_code" jdbcType="VARCHAR"/>
+            <result property="isOutFinish" column="is_out_finish" jdbcType="BOOLEAN"/>
+            <collection property="details" ofType="com.lframework.xingyun.shkb.dto.material.MaterialOrderDetailDto">
+                <id property="id" column="detail_id" jdbcType="VARCHAR"/>
+                <result property="orderId" column="order_id" jdbcType="VARCHAR"/>
+                <result property="productId" column="product_id" jdbcType="VARCHAR"/>
+                <result property="productCode" column="product_code" jdbcType="VARCHAR"/>
+                <result property="productName" column="product_name" jdbcType="VARCHAR"/>
+                <result property="isBatch" column="is_batch" jdbcType="BOOLEAN"/>
+                <result property="isSerial" column="is_serial" jdbcType="BOOLEAN"/>
+                <result property="productName" column="product_name" jdbcType="VARCHAR"/>
+                <result property="machineTypeName" column="machine_type_name" jdbcType="VARCHAR"/>
+                <result property="categoryName" column="category_name" jdbcType="VARCHAR"/>
+                <result property="brandName" column="brand_name" jdbcType="VARCHAR"/>
+                <result property="skuCode" column="sku_code" jdbcType="VARCHAR"/>
+                <result property="externalCode" column="external_code" jdbcType="VARCHAR"/>
+                <result property="unit" column="unit" jdbcType="VARCHAR"/>
+                <result property="spec" column="spec" jdbcType="VARCHAR"/>
+                <result property="taxPrice" column="tax_price" jdbcType="DECIMAL"/>
+                <result property="taxAmount" column="tax_amount" jdbcType="DECIMAL"/>
+                <result property="description" column="detail_description" jdbcType="VARCHAR"/>
+                <result property="outNum" column="out_num" jdbcType="INTEGER"/>
+                <result property="orderNum" column="order_num" jdbcType="INTEGER"/>
+                <result property="stockNum" column="stock_num" jdbcType="INTEGER"/>
+                <result property="oriBundleDetailId" column="ori_bundle_detail_id" jdbcType="VARCHAR"/>
+            </collection>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,code,sc_id,total_num,
+        total_out_num,total_amount,description,
+        create_by,create_by_id,create_time,
+        material_apply_id,is_out_finish
+    </sql>
+
+    <select id="selectByIdForUpdate" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM shkb_material_order
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <!-- 分页查询发料单列表 -->
+    <select id="query" resultMap="MaterialOrderQueryResultMap">
+        SELECT 
+            mo.id,
+            mo.code,
+            mo.sc_id,
+            mo.total_num,
+            mo.total_out_num,
+            mo.total_amount,
+            mo.description,
+            mo.create_by,
+            mo.create_by_id,
+            mo.create_time,
+            mo.material_apply_id,
+            -- 仓库信息
+            sc.name as sc_name,
+            -- 发料申请单信息
+            cma.apply_code as material_apply_code,
+            -- 合同任务信息
+            sct.code as contract_code,
+            sct.name as contract_name,
+            dc.code  as customer_code,
+            dc.name  as customer_name,
+            mt.code as machine_type_code,
+            mt.name as machine_type_name,
+            pn.code as part_number_code,
+            pn.name as part_number_name,
+            mo.is_out_finish
+        FROM shkb_material_order mo
+        LEFT JOIN base_data_store_center sc ON mo.sc_id = sc.id
+        LEFT JOIN shkb_contract_task_material_apply cma ON mo.material_apply_id = cma.id
+        LEFT JOIN shkb_contract_task ct ON cma.task_id = ct.id
+        LEFT JOIN shkb_contract sct ON  ct.contract_id = sct.id
+        LEFT JOIN base_data_customer dc ON  sct.customer_id = dc.id
+        LEFT JOIN base_data_product pn ON  sct.part_number_id = pn.id
+        LEFT JOIN base_data_machine_type mt ON  pn.machine_type_id = mt.id
+        <where>
+            <if test="vo.code != null and vo.code != ''">
+                AND mo.code LIKE CONCAT('%', #{vo.code}, '%')
+            </if>
+            <if test="vo.scId != null and vo.scId != ''">
+                AND mo.sc_id = #{vo.scId}
+            </if>
+            <if test="vo.contractCode != null and vo.contractCode != ''">
+                AND sct.code LIKE CONCAT('%', #{vo.contractCode}, '%')
+            </if>
+            <if test="vo.materialApplyId != null and vo.materialApplyId != ''">
+                AND mo.material_apply_id = #{vo.materialApplyId}
+            </if>
+            <if test="vo.isOutFinish != null">
+                AND mo.is_out_finish = #{vo.isOutFinish}
+            </if>
+            <if test="vo.createBy != null and vo.createBy != ''">
+                AND mo.create_by LIKE CONCAT('%', #{vo.createBy}, '%')
+            </if>
+            <if test="vo.createTimeStart != null">
+                AND mo.create_time >= #{vo.createTimeStart}
+            </if>
+            <if test="vo.createTimeEnd != null">
+                AND mo.create_time &lt;= #{vo.createTimeEnd}
+            </if>
+        </where>
+        ORDER BY mo.create_time DESC
+    </select>
+
+    <!-- 根据ID查询详情 -->
+    <select id="getDetail" resultMap="MaterialOrderFullResultMap">
+        SELECT 
+            mo.id,
+            mo.code,
+            mo.sc_id,
+            sc.name as sc_name,
+            mo.total_num,
+            mo.total_amount,
+            mo.description,
+            mo.create_by,
+            mo.create_by_id,
+            mo.create_time,
+            mo.material_apply_id,
+            ma.apply_code,
+            -- 是否全部出库完毕
+            mo.is_out_finish,
+            smod.id as detail_id,
+            smod.order_id,
+            smod.product_id,
+            p.code as product_code,
+            p.name as product_name,
+            mt.name as machine_type_name,
+            pc.name as category_name,
+            pb.name as brand_name,
+            p.sku_code,
+            p.external_code,
+            p.unit,
+            p.spec,
+            p.is_batch,
+            p.is_serial,
+            smod.tax_price,
+            smod.tax_amount,
+            smod.description as detail_description,
+            smod.out_num,
+            smod.order_num,
+            smod.ori_bundle_detail_id,
+            -- 商品库存信息
+            ps.stock_num as stock_num
+        FROM shkb_material_order mo
+        LEFT JOIN base_data_store_center sc ON mo.sc_id = sc.id
+        LEFT JOIN shkb_contract_task_material_apply ma ON mo.material_apply_id = ma.id
+        LEFT JOIN shkb_material_order_detail smod ON mo.id = smod.order_id
+        LEFT JOIN base_data_product p ON smod.product_id = p.id
+        LEFT JOIN base_data_machine_type mt ON p.machine_type_id = mt.id
+        LEFT JOIN base_data_product_category pc ON p.category_id = pc.id
+        LEFT JOIN base_data_product_brand pb ON p.brand_id = pb.id
+        LEFT JOIN tbl_product_stock ps ON mo.sc_id = ps.sc_id AND smod.product_id = ps.product_id
+        WHERE mo.id = #{id}
+        ORDER BY smod.id
+    </select>
+</mapper>

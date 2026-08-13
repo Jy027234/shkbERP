@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.ShkbPersonAuthorizationMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.ShkbPersonAuthorization">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="tenantId" column="tenant_id" jdbcType="VARCHAR"/>
+            <result property="employeeId" column="employee_id" jdbcType="VARCHAR"/>
+            <result property="authorizationDate" column="authorization_date" jdbcType="DATE"/>
+            <result property="expiryDate" column="expiry_date" jdbcType="DATE"/>
+            <result property="status" column="status" jdbcType="TINYINT"/>
+            <result property="credentialFileUrl" column="credential_file_url" jdbcType="VARCHAR"/>
+            <result property="credentialFileName" column="credential_file_name" jdbcType="VARCHAR"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateBy" column="update_by" jdbcType="VARCHAR"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+            <result property="deleted" column="deleted" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,tenant_id,employee_id,
+        authorization_date,expiry_date,status,
+        credential_file_url,credential_file_name,description,
+        create_by,create_time,update_by,
+        update_time,deleted
+    </sql>
+</mapper>

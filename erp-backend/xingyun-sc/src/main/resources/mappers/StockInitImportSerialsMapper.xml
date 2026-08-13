@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.sc.mappers.StockInitImportSerialsMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.sc.entity.StockInitImportSerials">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="importBatchId" column="import_batch_id" jdbcType="VARCHAR"/>
+            <result property="importLineId" column="import_line_id" jdbcType="VARCHAR"/>
+            <result property="serialNumber" column="serial_number" jdbcType="VARCHAR"/>
+            <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+            <result property="shelfLocation" column="shelf_location" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,import_batch_id,import_line_id,
+        serial_number,created_at,shelf_location
+    </sql>
+</mapper>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.MaterialOutSheetDetailMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.MaterialOutSheetDetail">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="sheetId" column="sheet_id" jdbcType="VARCHAR"/>
+            <result property="productId" column="product_id" jdbcType="VARCHAR"/>
+            <result property="orderNum" column="order_num" jdbcType="INTEGER"/>
+            <result property="oriPrice" column="ori_price" jdbcType="DECIMAL"/>
+            <result property="taxPrice" column="tax_price" jdbcType="DECIMAL"/>
+            <result property="taxRate" column="tax_rate" jdbcType="DECIMAL"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="orderNo" column="order_no" jdbcType="INTEGER"/>
+            <result property="outNum" column="out_num" jdbcType="INTEGER"/>
+            <result property="stockBatchId" column="stock_batch_id" jdbcType="VARCHAR"/>
+            <result property="serialNumbers" column="serial_numbers" jdbcType="VARCHAR"/>
+            <result property="taxAmount" column="tax_amount" jdbcType="DECIMAL"/>
+            <result property="materialOrderDetailId" column="material_order_detail_id" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,sheet_id,product_id,
+        order_num,ori_price,tax_price,
+        tax_rate,description,order_no,
+        out_num,stock_batch_id,serial_numbers,
+        tax_amount,material_order_detail_id
+    </sql>
+</mapper>

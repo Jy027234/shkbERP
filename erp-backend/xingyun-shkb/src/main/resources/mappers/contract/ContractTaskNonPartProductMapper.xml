@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.ContractTaskNonPartProductMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.ContractTaskNonPartProduct">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="taskId" column="task_id" jdbcType="VARCHAR"/>
+            <result property="productId" column="product_id" jdbcType="VARCHAR"/>
+            <result property="quantity" column="quantity" jdbcType="INTEGER"/>
+            <result property="reason" column="reason" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <resultMap id="TaskNonPartProductBo" type="com.lframework.xingyun.shkb.bo.contract.task.ContractTaskNonPartProductBo">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="taskId" column="task_id" jdbcType="VARCHAR"/>
+            <result property="productId" column="product_id" jdbcType="VARCHAR"/>
+            <result property="productCode" column="product_code" jdbcType="VARCHAR"/>
+            <result property="productName" column="product_name" jdbcType="VARCHAR"/>
+            <result property="productSpec" column="product_spec" jdbcType="VARCHAR"/>
+            <result property="categoryName" column="category_name" jdbcType="VARCHAR"/>
+            <result property="brandName" column="brand_name" jdbcType="VARCHAR"/>
+            <result property="machineTypeName" column="machine_type_name" jdbcType="VARCHAR"/>
+            <result property="partNumber" column="part_number" jdbcType="VARCHAR"/>
+            <result property="quantity" column="quantity" jdbcType="INTEGER"/>
+            <result property="reason" column="reason" jdbcType="VARCHAR"/>
+            <collection property="files" ofType="com.lframework.xingyun.shkb.bo.contract.task.ContractTaskNonPartFileBo">
+                <id property="id" column="file_id" jdbcType="VARCHAR"/>
+                <result property="taskId" column="file_task_id" jdbcType="VARCHAR"/>
+                <result property="nonPartId" column="non_part_id" jdbcType="VARCHAR"/>
+                <result property="url" column="url" jdbcType="VARCHAR"/>
+                <result property="fileSuffix" column="file_suffix" jdbcType="VARCHAR"/>
+                <result property="fileSize" column="file_size" jdbcType="VARCHAR"/>
+                <result property="fileName" column="file_name" jdbcType="VARCHAR"/>
+                <result property="contentType" column="content_type" jdbcType="VARCHAR"/>
+            </collection>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,task_id,product_id,
+        quantity,reason
+    </sql>
+    
+    <!-- 获取任务非必换件记录列表 -->
+    <select id="getTaskNonPartProducts" resultMap="TaskNonPartProductBo">
+        SELECT
+            np.id,
+            np.task_id,
+            np.product_id,
+            np.quantity,
+            np.reason,
+            p.code AS product_code,
+            p.name AS product_name,
+            p.spec AS product_spec,
+            pc.name AS category_name,
+            pb.name AS brand_name,
+            mt.name AS machine_type_name,
+            p.name AS part_number,
+            f.id AS file_id,
+            f.task_id AS file_task_id,
+            f.non_part_id,
+            f.url,
+            f.file_suffix,
+            f.file_size,
+            f.file_name,
+            f.content_type
+        FROM
+            shkb_contract_task_non_part_product np
+        LEFT JOIN base_data_product p ON np.product_id = p.id
+        LEFT JOIN base_data_machine_type mt ON p.machine_type_id = mt.id
+        LEFT JOIN base_data_product_category pc ON p.category_id = pc.id
+        LEFT JOIN base_data_product_brand pb ON p.brand_id = pb.id
+        LEFT JOIN shkb_contract_task_non_part_file f ON np.id = f.non_part_id
+        WHERE
+            np.task_id = #{taskId}
+        ORDER BY
+            np.id
+    </select>
+    
+    <!-- 根据任务ID获取非必换件列表 -->
+    <select id="getByTaskId" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM
+            shkb_contract_task_non_part_product
+        WHERE
+            task_id = #{taskId}
+    </select>
+</mapper>

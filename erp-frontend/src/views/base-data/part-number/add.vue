@@ -1,0 +1,148 @@
+<template>
+  <a-modal
+    v-model:open="visible"
+    :mask-closable="false"
+    width="40%"
+    :style="{ top: '20px' }"
+    title="新增"
+    :footer="null"
+  >
+    <div v-if="visible" v-permission="['base-data:part-number:add']" v-loading="loading">
+      <a-form
+        ref="form"
+        :label-col="{ span: 4 }"
+        :wrapper-col="{ span: 16 }"
+        :model="formData"
+        :rules="rules"
+      >
+        <a-form-item label="件号" name="code">
+          <a-input v-model:value.trim="formData.code" allow-clear />
+        </a-form-item>
+        <a-form-item label="名称" name="name">
+          <a-input v-model:value.trim="formData.name" allow-clear />
+        </a-form-item>
+        <a-form-item label="适用机型" name="machineTypeId">
+          <a-select v-model:value="formData.machineTypeId" allow-clear>
+            <a-select-option
+              v-for="item in machineTypes"
+              :key="item.id"
+              :value="item.id"
+              >{{ item.name }}</a-select-option
+            >
+          </a-select>
+        </a-form-item>
+        <a-form-item label="状态" name="available">
+          <a-select v-model:value="formData.available" allow-clear>
+            <a-select-option
+              v-for="item in $enums.AVAILABLE.values()"
+              :key="item.code"
+              :value="item.code"
+              >{{ item.desc }}</a-select-option
+            >
+          </a-select>
+        </a-form-item>
+        <a-form-item label="备注" name="description">
+          <a-textarea v-model:value.trim="formData.description" />
+        </a-form-item>
+        <div class="form-modal-footer">
+          <a-space>
+            <a-button type="primary" :loading="loading" html-type="submit" @click="submit"
+              >保存</a-button
+            >
+            <a-button :loading="loading" @click="closeDialog">取消</a-button>
+          </a-space>
+        </div>
+      </a-form>
+    </div>
+  </a-modal>
+</template>
+<script>
+  import { defineComponent } from 'vue';
+  import { validCode } from '@/utils/validate';
+  import * as api from '@/api/base-data/part-number';
+  import * as machineTypeApi from '@/api/base-data/machine-type';
+
+  export default defineComponent({
+    components: {},
+    data() {
+      return {
+        // 是否可见
+        visible: false,
+        // 是否显示加载框
+        loading: false,
+        // 表单数据
+        formData: {},
+        // 机型列表
+        machineTypes: [],
+        // 表单校验规则
+        rules: {
+          code: [{ required: true, message: '请输入编号' }, { validator: validCode }],
+          name: [{ required: true, message: '请输入名称' }],
+          machineTypeId: [{ required: true, message: '请选择机型' }],
+          available: [{ required: true, message: '请选择状态' }],
+        },
+      };
+    },
+    computed: {},
+    created() {
+      // 初始化表单数据
+      this.initFormData();
+      // 加载机型列表
+      this.loadMachineTypes();
+    },
+    methods: {
+      // 加载机型列表
+      loadMachineTypes() {
+        machineTypeApi.selector({}).then(res => {
+          this.machineTypes = res.datas || [];
+        });
+      },
+      // 打开对话框 由父页面触发
+      openDialog() {
+        this.visible = true;
+
+        this.$nextTick(() => this.open());
+      },
+      // 关闭对话框
+      closeDialog() {
+        this.visible = false;
+        this.$emit('close');
+      },
+      // 初始化表单数据
+      initFormData() {
+        this.formData = {
+          code: '',
+          name: '',
+          machineTypeId: '',
+          available: this.$enums.AVAILABLE.ENABLE.code,
+          description: '',
+        };
+      },
+      // 提交表单事件
+      submit() {
+        this.$refs.form.validate().then((valid) => {
+          if (valid) {
+            this.loading = true;
+            api
+              .create(this.formData)
+              .then(() => {
+                this.$msg.createSuccess('新增成功！');
+                // 初始化表单数据
+                this.initFormData();
+                this.$emit('confirm');
+                this.visible = false;
+              })
+              .finally(() => {
+                this.loading = false;
+              });
+          }
+        });
+      },
+      // 页面显示时触发
+      open() {
+        // 初始化表单数据
+        this.initFormData();
+      },
+    },
+  });
+</script>

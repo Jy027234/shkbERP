@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.MaterialOutSheetMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.MaterialOutSheet">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="code" column="code" jdbcType="VARCHAR"/>
+            <result property="scId" column="sc_id" jdbcType="VARCHAR"/>
+            <result property="supplierId" column="supplier_id" jdbcType="VARCHAR"/>
+            <result property="materialUserId" column="material_user_id" jdbcType="VARCHAR"/>
+            <result property="materialDate" column="material_date" jdbcType="DATE"/>
+            <result property="materialOrderId" column="material_order_id" jdbcType="VARCHAR"/>
+            <result property="totalNum" column="total_num" jdbcType="INTEGER"/>
+            <result property="totalAmount" column="total_amount" jdbcType="DECIMAL"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+            <result property="createById" column="create_by_id" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateBy" column="update_by" jdbcType="VARCHAR"/>
+            <result property="updateById" column="update_by_id" jdbcType="VARCHAR"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+            <result property="approveBy" column="approve_by" jdbcType="VARCHAR"/>
+            <result property="approveTime" column="approve_time" jdbcType="TIMESTAMP"/>
+            <result property="status" column="status" jdbcType="TINYINT"/>
+            <result property="refuseReason" column="refuse_reason" jdbcType="VARCHAR"/>
+            <result property="txId" column="tx_id" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 详情DTO映射，包含批次与序列号子集合 -->
+    <resultMap id="MaterialOutSheetDetailDtoMap" type="com.lframework.xingyun.shkb.dto.material.out.MaterialOutSheetDetailDto">
+        <id property="id" column="id"/>
+        <result property="sheetId" column="sheetId"/>
+        <result property="productId" column="productId"/>
+        <result property="productCode" column="productCode"/>
+        <result property="productName" column="productName"/>
+        <result property="categoryName" column="categoryName"/>
+        <result property="brandName" column="brandName"/>
+        <result property="skuCode" column="skuCode"/>
+        <result property="externalCode" column="externalCode"/>
+        <result property="unit" column="unit"/>
+        <result property="spec" column="spec"/>
+        <result property="isBatch" column="isBatch" javaType="BOOLEAN"/>
+        <result property="isSerial" column="isSerial" javaType="BOOLEAN"/>
+        <result property="outNum" column="outNum"/>
+        <result property="orderNum" column="orderNum"/>
+        <result property="orderOutNum" column="orderOutNum"/>
+        <result property="taxPrice" column="taxPrice"/>
+        <result property="taxAmount" column="taxAmount"/>
+        <result property="description" column="description"/>
+        <result property="orderNo" column="orderNo"/>
+        <result property="stockNum" column="stockNum"/>
+        <result property="materialOrderDetailId" column="materialOrderDetailId"/>
+        <collection property="lots" ofType="com.lframework.xingyun.shkb.dto.material.out.MaterialOutSheetDetailLotDto" column="id" select="listLotsByDetailId"/>
+        <collection property="serials" ofType="com.lframework.xingyun.shkb.dto.material.out.MaterialOutSheetDetailSerialDto" column="id" select="listSerialsByDetailId" fetchType="eager"/>
+    </resultMap>
+
+    <!-- 头信息DTO映射，包含明细集合 -->
+    <resultMap id="MaterialOutSheetFullDtoMap" type="com.lframework.xingyun.shkb.dto.material.out.MaterialOutSheetFullDto">
+        <id property="id" column="id"/>
+        <result property="code" column="code"/>
+        <result property="scId" column="scId"/>
+        <result property="scName" column="scName"/>
+        <result property="supplierId" column="supplierId"/>
+        <result property="supplierName" column="supplierName"/>
+        <result property="materialUserId" column="materialUserId"/>
+        <result property="materialUserName" column="materialUserName"/>
+        <result property="materialDate" column="materialDate"/>
+        <result property="materialOrderId" column="materialOrderId"/>
+        <result property="materialOrderCode" column="materialOrderCode"/>
+        <result property="totalNum" column="totalNum"/>
+        <result property="totalAmount" column="totalAmount"/>
+        <result property="status" column="status"/>
+        <result property="description" column="description"/>
+        <result property="createBy" column="createBy"/>
+        <result property="createTime" column="createTime"/>
+        <result property="updateBy" column="updateBy"/>
+        <result property="updateTime" column="updateTime"/>
+        <result property="approveBy" column="approveBy"/>
+        <result property="approveTime" column="approveTime"/>
+        <result property="refuseReason" column="refuseReason"/>
+        <collection property="details" ofType="com.lframework.xingyun.shkb.dto.material.out.MaterialOutSheetDetailDto" column="id" select="listDetailsBySheetId"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,code,sc_id,
+        supplier_id,material_user_id,material_date,
+        material_order_id,total_num,total_amount,
+        description,create_by,create_by_id,
+        create_time,update_by,update_by_id,
+        update_time,approve_by,approve_time,
+        status,refuse_reason,tx_id
+    </sql>
+
+    <select id="selectByIdForUpdate" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM tbl_material_out_sheet
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <!-- 查询列表 -->
+    <select id="query" resultMap="BaseResultMap">
+        SELECT
+        mos.id,
+        mos.code,
+        mos.sc_id,
+        mos.supplier_id,
+        mos.material_user_id,
+        mos.material_date,
+        mos.material_order_id,
+        mos.total_num,
+        mos.total_amount,
+        mos.description,
+        mos.create_by,
+        mos.create_by_id,
+        mos.create_time,
+        mos.update_by,
+        mos.update_by_id,
+        mos.update_time,
+        mos.approve_by,
+        mos.approve_time,
+        mos.status,
+        mos.refuse_reason,
+        mos.tx_id
+        FROM tbl_material_out_sheet mos
+        LEFT JOIN shkb_material_order mo ON mos.material_order_id = mo.id
+        <where>
+            <if test="vo.code != null and vo.code != ''">
+                AND mos.code LIKE CONCAT('%', #{vo.code}, '%')
+            </if>
+            <if test="vo.scId != null and vo.scId != ''">
+                AND mos.sc_id = #{vo.scId}
+            </if>
+            <if test="vo.supplierId != null and vo.supplierId != ''">
+                AND mos.supplier_id = #{vo.supplierId}
+            </if>
+            <if test="vo.materialUserId != null and vo.materialUserId != ''">
+                AND mos.material_user_id = #{vo.materialUserId}
+            </if>
+            <if test="vo.materialOrderId != null and vo.materialOrderId != ''">
+                AND mos.material_order_id = #{vo.materialOrderId}
+            </if>
+            <if test="vo.status != null">
+                AND mos.status = #{vo.status}
+            </if>
+            <if test="vo.createTimeStart != null">
+                AND mos.create_time &gt;= #{vo.createTimeStart}
+            </if>
+            <if test="vo.createTimeEnd != null">
+                AND mos.create_time &lt;= #{vo.createTimeEnd}
+            </if>
+            <if test="vo.createBy != null and vo.createBy != ''">
+                AND mos.create_by = #{vo.createBy}
+            </if>
+            <if test="vo.approveBy != null and vo.approveBy != ''">
+                AND mos.approve_by = #{vo.approveBy}
+            </if>
+            <if test="vo.approveTimeStart != null">
+                AND mos.approve_time &gt;= #{vo.approveTimeStart}
+            </if>
+            <if test="vo.approveTimeEnd != null">
+                AND mos.approve_time &lt;= #{vo.approveTimeEnd}
+            </if>
+            <if test="vo.materialOrderCode != null and vo.materialOrderCode != ''">
+                AND mo.code LIKE CONCAT('%', #{vo.materialOrderCode}, '%')
+            </if>
+        </where>
+        ORDER BY mos.create_time DESC
+    </select>
+
+    <!-- 列表DTO查询（用于Controller列表展示，避免在实体上增加展示字段） -->
+    <select id="queryList" resultType="com.lframework.xingyun.shkb.bo.material.out.QueryMaterialOutSheetBo">
+        SELECT
+          mos.id AS id,
+          mos.code AS code,
+          mos.sc_id AS scId,
+          sc.name AS scName,
+          mos.supplier_id AS supplierId,
+          s.name AS supplierName,
+          mos.material_user_id AS materialUserId,
+          u.name AS materialUserName,
+          mos.material_order_id AS materialOrderId,
+          mo.code AS materialOrderCode,
+          mos.total_num AS totalNum,
+          mos.total_amount AS totalAmount,
+          mos.status AS status,
+          mos.description AS description,
+          mos.create_by AS createBy,
+          mos.create_time AS createTime,
+          au.name AS approveBy,
+          mos.approve_time AS approveTime
+        FROM tbl_material_out_sheet mos
+        LEFT JOIN base_data_store_center sc ON mos.sc_id = sc.id
+        LEFT JOIN base_data_supplier s ON mos.supplier_id = s.id
+        LEFT JOIN sys_user u ON mos.material_user_id = u.id
+        LEFT JOIN sys_user au ON mos.approve_by = au.id
+        LEFT JOIN shkb_material_order mo ON mos.material_order_id = mo.id
+        <where>
+            <if test="vo.code != null and vo.code != ''">
+                    AND mos.code LIKE CONCAT('%', #{vo.code}, '%')
+            </if>
+            <if test="vo.scId != null and vo.scId != ''">
+                AND mos.sc_id = #{vo.scId}
+            </if>
+            <if test="vo.supplierId != null and vo.supplierId != ''">
+                AND mos.supplier_id = #{vo.supplierId}
+            </if>
+            <if test="vo.materialUserId != null and vo.materialUserId != ''">
+                AND mos.material_user_id = #{vo.materialUserId}
+            </if>
+            <if test="vo.materialOrderId != null and vo.materialOrderId != ''">
+                AND mos.material_order_id = #{vo.materialOrderId}
+            </if>
+            <if test="vo.status != null">
+                AND mos.status = #{vo.status}
+            </if>
+            <if test="vo.createTimeStart != null">
+                AND mos.create_time &gt;= #{vo.createTimeStart}
+            </if>
+            <if test="vo.createTimeEnd != null">
+                AND mos.create_time &lt;= #{vo.createTimeEnd}
+            </if>
+            <if test="vo.createBy != null and vo.createBy != ''">
+                AND mos.create_by = #{vo.createBy}
+            </if>
+            <if test="vo.approveBy != null and vo.approveBy != ''">
+                AND mos.approve_by = #{vo.approveBy}
+            </if>
+            <if test="vo.approveTimeStart != null">
+                AND mos.approve_time &gt;= #{vo.approveTimeStart}
+            </if>
+            <if test="vo.approveTimeEnd != null">
+                AND mos.approve_time &lt;= #{vo.approveTimeEnd}
+            </if>
+            <if test="vo.materialOrderCode != null and vo.materialOrderCode != ''">
+                AND mo.code LIKE CONCAT('%', #{vo.materialOrderCode}, '%')
+            </if>
+        </where>
+        ORDER BY mos.create_time DESC
+    </select>
+
+    <!-- 根据ID查询详情（使用嵌套映射） -->
+  <select id="getDetail" resultMap="MaterialOutSheetFullDtoMap">
+        SELECT
+            mos.id,
+            mos.code,
+            mos.sc_id AS scId,
+            sc.name AS scName,
+            mos.supplier_id AS supplierId,
+            s.name AS supplierName,
+            mos.material_user_id AS materialUserId,
+            u.name AS materialUserName,
+            mos.material_date AS materialDate,
+            mos.material_order_id AS materialOrderId,
+            mo.code AS materialOrderCode,
+            mos.total_num AS totalNum,
+            mos.total_amount AS totalAmount,
+            mos.status,
+            mos.description,
+            mos.create_by AS createBy,
+            mos.create_time AS createTime,
+            mos.update_by AS updateBy,
+            mos.update_time AS updateTime,
+            mos.approve_by AS approveBy,
+            mos.approve_time AS approveTime,
+            mos.refuse_reason AS refuseReason
+        FROM tbl_material_out_sheet mos
+        LEFT JOIN base_data_store_center sc ON mos.sc_id = sc.id
+        LEFT JOIN base_data_supplier s ON mos.supplier_id = s.id
+        LEFT JOIN sys_user u ON mos.material_user_id = u.id
+        LEFT JOIN shkb_material_order mo ON mos.material_order_id = mo.id
+        WHERE mos.id = #{id}
+    </select>
+
+    <!-- 明细列表（带商品展示信息） -->
+    <select id="listDetailsBySheetId" resultMap="MaterialOutSheetDetailDtoMap">
+        SELECT
+            d.id AS id,
+            d.sheet_id AS sheetId,
+            d.product_id AS productId,
+            p.code AS productCode,
+            p.name AS productName,
+            pc.name AS categoryName,
+            pb.name AS brandName,
+            p.sku_code AS skuCode,
+            p.external_code AS externalCode,
+            p.unit AS unit,
+            p.spec AS spec,
+            p.is_batch AS isBatch,
+            p.is_serial AS isSerial,
+            d.out_num AS outNum,
+            d.order_num AS orderNum,
+            skmod.out_num AS orderOutNum,
+            d.tax_price AS taxPrice,
+            d.tax_amount AS taxAmount,
+            d.description AS description,
+            d.order_no AS orderNo,
+            d.material_order_detail_id AS materialOrderDetailId,
+            ps.stock_num AS stockNum
+        FROM tbl_material_out_sheet_detail d
+        LEFT JOIN tbl_material_out_sheet mos ON mos.id = d.sheet_id
+        LEFT JOIN base_data_product p ON p.id = d.product_id
+        LEFT JOIN base_data_product_category pc ON pc.id = p.category_id
+        LEFT JOIN base_data_product_brand pb ON pb.id = p.brand_id
+        LEFT JOIN tbl_product_stock ps ON mos.sc_id = ps.sc_id and d.product_id = ps.product_id
+        LEFT JOIN shkb_material_order_detail skmod ON  d.material_order_detail_id = skmod.id
+        WHERE d.sheet_id = #{id}
+        ORDER BY d.order_no ASC
+    </select>
+
+    <!-- 明细-批次列表（当前模型为单批次，返回一条记录） -->
+    <select id="listLotsByDetailId" resultType="com.lframework.xingyun.shkb.dto.material.out.MaterialOutSheetDetailLotDto">
+        SELECT
+            NULL AS id,
+            d.id AS detailId,
+            d.stock_batch_id AS lotId,
+            psb.batch_number AS lotCode,
+            d.out_num AS outNum,
+            1 AS orderNo
+        FROM tbl_material_out_sheet_detail d
+        LEFT JOIN tbl_product_stock_batch psb ON psb.id = d.stock_batch_id
+        WHERE d.id = #{id}
+    </select>
+
+    <!-- 明细-序列号列表（按出库单与商品维度） -->
+    <select id="listSerialsByDetailId" resultType="com.lframework.xingyun.shkb.dto.material.out.MaterialOutSheetDetailSerialDto">
+        SELECT
+            pss.id AS id,
+            d.id AS detailId,
+            pss.serial_number AS serialNumber,
+            0 AS orderNo
+        FROM tbl_material_out_sheet_detail d
+        INNER JOIN tbl_material_out_sheet_detail_serial s ON s.sheet_id = d.sheet_id AND s.product_id = d.product_id
+        LEFT JOIN tbl_product_stock_serial pss ON pss.id = s.stock_serial_id
+        WHERE d.id = #{id}
+        ORDER BY pss.create_time ASC
+    </select>
+
+  <!-- 查询批次库存（带商品、件号、机型、仓库信息） -->
+  <select id="queryBatchStock" resultType="com.lframework.xingyun.shkb.bo.material.out.BatchStockBo">
+    SELECT
+      psb.id AS id,
+      psb.sc_id AS scId,
+      sc.name AS scName,
+      psb.product_id AS productId,
+      p.name AS productName,
+      p.code AS partNumberCode,
+      mt.name AS machineType,
+      psb.batch_number AS batchNumber,
+      psb.quantity AS quantity,
+      psb.production_date AS productionDate,
+      psb.expiry_date AS expiryDate
+    FROM tbl_product_stock_batch psb
+    LEFT JOIN base_data_store_center sc ON sc.id = psb.sc_id
+    LEFT JOIN base_data_product p ON p.id = psb.product_id
+    LEFT JOIN base_data_machine_type mt ON  p.machine_type_id = mt.id
+    <where>
+      psb.sc_id = #{scId}
+      AND psb.product_id = #{productId}
+      AND psb.quantity &gt; 0
+    </where>
+    ORDER BY psb.create_time ASC
+  </select>
+
+  <!-- 查询序列号库存（带批次号、仓库、航材名称、件号、机型、在库状态） -->
+  <select id="querySerialStock" resultType="com.lframework.xingyun.shkb.bo.material.out.SerialStockBo">
+    SELECT
+      pss.id AS id,
+      pss.serial_number AS serialNumber,
+      psb.batch_number AS batchNumber,
+      psb.sc_id AS scId,
+      sc.name AS scName,
+      pss.product_id AS productId,
+      p.name AS productName,
+      p.code AS partNumberCode,
+      mt.name AS machineType,
+      pss.stock_status AS stockStatus,
+      pss.production_date AS productionDate,
+      pss.expiry_date AS expiryDate
+    FROM tbl_product_stock_serial pss
+    LEFT JOIN tbl_product_stock_batch psb ON psb.id = pss.batch_id
+    LEFT JOIN base_data_store_center sc ON sc.id = psb.sc_id
+    LEFT JOIN base_data_product p ON p.id = pss.product_id
+    LEFT JOIN base_data_machine_type mt ON p.machine_type_id = mt.id
+    <where>
+      psb.sc_id = #{scId}
+      AND pss.product_id = #{productId}
+      AND pss.stock_status = 1
+    </where>
+    ORDER BY pss.create_time ASC
+  </select>
+
+  <!-- 根据ID查询领料申请单 -->
+  <select id="getContractTaskMaterialApplyById" resultType="com.lframework.xingyun.shkb.entity.ContractTaskMaterialApply">
+    SELECT
+      id,
+      task_id AS taskId,
+      apply_code AS applyCode,
+      create_time AS createTime,
+      approval_status AS approvalStatus,
+      remark,
+      approval_time AS approvalTime
+    FROM shkb_contract_task_material_apply
+    WHERE id = #{id}
+  </select>
+
+  <!-- 根据ID查询合同任务 -->
+  <select id="getContractTaskById" resultType="com.lframework.xingyun.shkb.entity.ContractTask">
+    SELECT
+      id,
+      contract_id AS contractId,
+      task_status AS taskStatus,
+      repair_status AS repairStatus,
+      material_status AS materialStatus,
+      create_by AS createBy,
+      create_by_id AS createById,
+      create_time AS createTime,
+      update_by AS updateBy,
+      update_by_id AS updateById,
+      update_time AS updateTime,
+      dispatch,
+      task_user_id AS taskUserId,
+      description,
+      repair_description AS repairDescription,
+      task_type AS taskType,
+      sh_contract_id AS shContractId,
+      approval_file_number AS approvalFileNumber
+    FROM shkb_contract_task
+    WHERE id = #{id}
+  </select>
+
+  <!-- 更新合同任务航材状态 -->
+  <update id="updateContractTask">
+    UPDATE shkb_contract_task
+    SET material_status = #{materialStatus}
+    WHERE id = #{taskId}
+  </update>
+
+  <!-- 根据合同任务ID查询所有发料申请单 -->
+  <select id="getContractTaskMaterialAppliesByTaskId" resultType="com.lframework.xingyun.shkb.entity.ContractTaskMaterialApply">
+    SELECT
+      id,
+      task_id AS taskId,
+      apply_code AS applyCode,
+      create_time AS createTime,
+      approval_status AS approvalStatus,
+      remark,
+      approval_time AS approvalTime
+    FROM shkb_contract_task_material_apply
+    WHERE task_id = #{taskId}
+  </select>
+
+  <!-- 根据发料申请单ID查询对应的发料单 -->
+  <select id="getMaterialOrdersByMaterialApplyId" resultType="com.lframework.xingyun.shkb.entity.MaterialOrder">
+    SELECT
+      id,
+      material_apply_id AS materialApplyId,
+      code,
+      total_num AS totalNum,
+      total_out_num AS totalOutNum,
+      is_out_finish AS isOutFinish,
+      create_time AS createTime
+    FROM shkb_material_order
+    WHERE material_apply_id = #{materialApplyId}
+  </select>
+</mapper>

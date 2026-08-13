@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.ContractTaskWorkCardProductMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.ContractTaskWorkCardProduct">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="taskId" column="task_id" jdbcType="VARCHAR"/>
+            <result property="productId" column="product_id" jdbcType="VARCHAR"/>
+            <result property="quantity" column="quantity" jdbcType="INTEGER"/>
+            <result property="workCardId" column="work_card_id" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,task_id,product_id,
+        quantity,work_card_id
+    </sql>
+    
+    <!-- 根据任务ID获取任务自身记录的必换件列表 -->
+    <select id="getTaskSpecificReplacementParts" resultType="com.lframework.xingyun.shkb.dto.contract.task.ContractTaskProductDto">
+        SELECT
+            ctwcp.id,
+            ctwcp.work_card_id AS workCardId,
+            wc.code AS workCardCode,
+            wc.name AS workCardName,
+            wc.repair_type_id AS repairTypeId,
+            rt.name AS repairTypeName,
+            wc.part_number_id AS partNumberId,
+            pn.code AS partNumberCode,
+            pn.name AS partNumber,
+            ctwcp.product_id AS productId,
+            p.code AS productCode,
+            p.name AS productName,
+            p.spec AS productSpec,
+            p.unit AS productUnit,
+            ctwcp.quantity,
+            pmt.name AS machineTypeName,
+            rpmt.name AS productMachineTypeName
+        FROM shkb_contract_task_work_card_product AS ctwcp
+        LEFT JOIN shkb_work_card AS wc ON ctwcp.work_card_id = wc.id
+        LEFT JOIN base_data_repair_type AS rt ON wc.repair_type_id = rt.id
+        LEFT JOIN base_data_product AS p ON ctwcp.product_id = p.id
+        LEFT JOIN base_data_product AS pn ON wc.part_number_id = pn.id
+        LEFT JOIN base_data_machine_type AS pmt ON pn.machine_type_id = pmt.id
+        LEFT JOIN base_data_machine_type AS rpmt ON p.machine_type_id = rpmt.id
+        WHERE ctwcp.task_id = #{taskId}
+    </select>
+    
+    <!-- 根据任务ID获取必换件列表 -->
+    <select id="getByTaskId" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM
+            shkb_contract_task_work_card_product
+        WHERE
+            task_id = #{taskId}
+    </select>
+</mapper>

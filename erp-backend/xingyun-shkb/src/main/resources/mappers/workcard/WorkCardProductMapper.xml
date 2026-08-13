@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.WorkCardProductMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.WorkCardProduct">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="productId" column="product_id" jdbcType="VARCHAR"/>
+            <result property="workCardId" column="work_card_id" jdbcType="VARCHAR"/>
+            <result property="quantity" column="quantity" jdbcType="INTEGER"/>
+    </resultMap>
+    
+    <!-- 任务必换件列表结果映射 -->
+    <resultMap id="TaskProductResultMap" type="com.lframework.xingyun.shkb.dto.contract.task.ContractTaskProductDto">
+        <id property="id" column="id" jdbcType="VARCHAR"/>
+        <result property="workCardId" column="work_card_id" jdbcType="VARCHAR"/>
+        <result property="workCardCode" column="work_card_code" jdbcType="VARCHAR"/>
+        <result property="workCardName" column="work_card_name" jdbcType="VARCHAR"/>
+        <result property="repairTypeId" column="repair_type_id" jdbcType="VARCHAR"/>
+        <result property="repairTypeName" column="repair_type_name" jdbcType="VARCHAR"/>
+        <result property="partNumberId" column="part_number_id" jdbcType="VARCHAR"/>
+        <result property="partNumber" column="part_number" jdbcType="VARCHAR"/>
+        <result property="partNumberCode" column="part_number_code" jdbcType="VARCHAR"/>
+        <result property="machineTypeName" column="machine_type_name" jdbcType="VARCHAR"/>
+        <result property="productMachineTypeName" column="product_machine_type_name" jdbcType="VARCHAR"/>
+        <result property="productId" column="product_id" jdbcType="VARCHAR"/>
+        <result property="productCode" column="product_code" jdbcType="VARCHAR"/>
+        <result property="productName" column="product_name" jdbcType="VARCHAR"/>
+        <result property="productSpec" column="product_spec" jdbcType="VARCHAR"/>
+        <result property="productUnit" column="product_unit" jdbcType="VARCHAR"/>
+        <result property="quantity" column="quantity" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,product_id,work_card_id,quantity
+    </sql>
+    
+    <!-- 根据任务ID获取必换件列表 -->
+    <select id="getTaskReplacementParts" resultMap="TaskProductResultMap">
+        SELECT
+            wp.id,
+            wp.work_card_id,
+            wc.code AS work_card_code,
+            wc.name AS work_card_name,
+            wc.repair_type_id,
+            rt.name AS repair_type_name,
+            wc.part_number_id,
+            pn.name AS part_number,
+            pn.code AS part_number_code,
+            wp.product_id,
+            p.code AS product_code,
+            p.name AS product_name,
+            p.spec AS product_spec,
+            p.unit AS product_unit,
+            wp.quantity,
+            mt.name AS machine_type_name,
+            pmt.name AS product_machine_type_name
+        FROM
+            shkb_work_card_product wp
+        INNER JOIN
+            shkb_work_card wc ON wp.work_card_id = wc.id
+        INNER JOIN
+            shkb_contract_task_work_card ctwc ON wc.id = ctwc.work_card_id
+        LEFT JOIN
+            base_data_product p ON wp.product_id = p.id
+        LEFT JOIN
+            base_data_product pn ON wc.part_number_id = pn.id
+        LEFT JOIN
+            base_data_repair_type rt ON wc.repair_type_id = rt.id
+        LEFT JOIN
+            base_data_machine_type mt ON pn.machine_type_id = mt.id
+        LEFT JOIN
+            base_data_machine_type pmt ON p.machine_type_id = pmt.id
+        WHERE
+            ctwc.task_id = #{taskId}
+        ORDER BY
+            wc.code, p.code
+    </select>
+</mapper>

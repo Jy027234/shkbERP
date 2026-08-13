@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.ContractMapper">
+    <resultMap id="ContractMap" type="com.lframework.xingyun.shkb.entity.Contract">
+        <id property="id" column="id"/>
+        <result property="code" column="code"/>
+        <result property="name" column="name"/>
+        <result property="available" column="available"/>
+        <result property="description" column="description"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createById" column="create_by_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateById" column="update_by_id"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="contractType" column="contract_type"/>
+        <result property="partNumberId" column="part_number_id"/>
+        <result property="serialNumber" column="serial_number"/>
+        <result property="otherRepairRequirements" column="other_repair_requirements"/>
+        <result property="contractTime" column="contract_time"/>
+        <result property="storageTime" column="storage_time"/>
+        <result property="plannedCompletionTime" column="planned_completion_time"/>
+        <result property="deliveryTime" column="delivery_time"/>
+        <result property="contractPrice" column="contract_price"/>
+        <result property="replacementPartPrice" column="replacement_part_price"/>
+        <result property="actualCompletionTime" column="actual_completion_time"/>
+        <result property="contractStatus" column="contract_status"/>
+    </resultMap>
+    <sql id="ContractDto">
+        SELECT
+            c.id,
+            c.code,
+            c.name,
+            c.available,
+            c.description,
+            c.create_by,
+            c.create_by_id,
+            c.create_time,
+            c.update_by,
+            c.update_by_id,
+            c.update_time,
+            c.contract_type,
+            c.customer_id,
+            c.part_number_id,
+            c.serial_number,
+            c.other_repair_requirements,
+            c.contract_time,
+            c.storage_time,
+            c.planned_completion_time,
+            c.delivery_time,
+            c.contract_price,
+            c.replacement_part_price,
+            c.actual_completion_time,
+            c.contract_status
+        FROM shkb_contract AS c
+    </sql>
+    
+    <resultMap id="QueryContractBo" type="com.lframework.xingyun.shkb.bo.contract.QueryContractBo">
+        <id property="id" column="id"/>
+        <result property="code" column="code"/>
+        <result property="name" column="name"/>
+        <result property="available" column="available"/>
+        <result property="description" column="description"/>
+        <result property="contractType" column="contract_type"/>
+        <result property="contractTypeName" column="contract_type_name"/>
+        <result property="customerId" column="customer_id"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="mnemonicCode" column="mnemonic_code"/>
+        <result property="partNumberId" column="part_number_id"/>
+        <result property="partNumberCode" column="part_number_code"/>
+        <result property="partNumberName" column="part_number_name"/>
+        <result property="machineTypeId" column="machine_type_id"/>
+        <result property="machineTypeCode" column="machine_type_code"/>
+        <result property="machineTypeName" column="machine_type_name"/>
+        <result property="taskStatus" column="task_status"/>
+        <result property="repairStatus" column="repair_status"/>
+        <result property="repairStatusName" column="repair_status_name"/>
+        <result property="serialNumber" column="serial_number"/>
+        <result property="otherRepairRequirements" column="other_repair_requirements"/>
+        <result property="contractTime" column="contract_time"/>
+        <result property="storageTime" column="storage_time"/>
+        <result property="plannedCompletionTime" column="planned_completion_time"/>
+        <result property="deliveryTime" column="delivery_time"/>
+        <result property="actualCompletionTime" column="actual_completion_time"/>
+        <result property="contractPrice" column="contract_price"/>
+        <result property="replacementPartPrice" column="replacement_part_price"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="contractStatus" column="contract_status"/>
+        <result property="contractStatusName" column="contract_status_name"/>
+        <collection property="repairTypes" ofType="com.lframework.xingyun.shkb.bo.contract.QueryContractBo$RepairTypeVo">
+            <id property="id" column="repair_type_id"/>
+            <result property="code" column="repair_type_code"/>
+            <result property="name" column="repair_type_name"/>
+        </collection>
+    </resultMap>
+    
+    <sql id="QueryContractDto">
+        SELECT
+            c.id,
+            c.code,
+            c.name,
+            c.available,
+            c.description,
+            c.contract_type,
+            CASE
+                WHEN c.contract_type = 1 THEN '民航'
+                WHEN c.contract_type = 2 THEN '工厂WB'
+                WHEN c.contract_type = 3 THEN '工厂L'
+                ELSE '未知'
+            END AS contract_type_name,
+            c.customer_id,
+            bc.name AS customer_name,
+            bc.mnemonic_code,
+            c.part_number_id,
+            pn.code AS part_number_code,
+            pn.name AS part_number_name,
+            pn.machine_type_id AS machine_type_id,
+            mt.code AS machine_type_code,
+            mt.name AS machine_type_name,
+            t.task_status AS task_status,
+            t.repair_status AS repair_status,
+            CASE
+                WHEN t.repair_status = 'WAIT_CHECK' THEN '待检查'
+                WHEN t.repair_status = 'CHECKING' THEN '检查中'
+                WHEN t.repair_status = 'REPAIRING' THEN '维修中'
+                WHEN t.repair_status = 'WAITING_FOR_PARTS' THEN '等料暂停'
+                WHEN t.repair_status = 'PAUSED_OTHER' THEN '其他暂停'
+                WHEN t.repair_status = 'WAIT_ASSEMBLY' THEN '待装配'
+                WHEN t.repair_status = 'TESTING' THEN '测试中'
+                WHEN t.repair_status = 'COMPLETED' THEN '完工'
+                ELSE '未知'
+            END AS repair_status_name,
+            c.serial_number,
+            c.other_repair_requirements,
+            c.contract_time,
+            c.storage_time,
+            c.planned_completion_time,
+            c.delivery_time,
+            c.actual_completion_time,
+            c.contract_price,
+            c.replacement_part_price,
+            c.create_by,
+            c.create_time,
+            c.update_by,
+            c.update_time,
+            c.contract_status,
+            CASE
+                WHEN c.contract_status = 0 THEN '待生成合同任务'
+                WHEN c.contract_status = 1 THEN '任务执行中'
+                WHEN c.contract_status = 2 THEN '合同关闭'
+                WHEN c.contract_status = 3 THEN '任务退修'
+                WHEN c.contract_status = 4 THEN '任务关闭'
+                WHEN c.contract_status = 5 THEN '待交付'
+                ELSE '未知'
+            END AS contract_status_name,
+            rt.id AS repair_type_id,
+            rt.code AS repair_type_code,
+            rt.name AS repair_type_name
+        FROM shkb_contract AS c
+        LEFT JOIN base_data_product AS pn ON c.part_number_id = pn.id
+        LEFT JOIN base_data_customer AS bc ON c.customer_id = bc.id
+        LEFT JOIN base_data_machine_type AS mt ON pn.machine_type_id = mt.id
+        LEFT JOIN shkb_contract_repair AS cr ON c.id = cr.contract_id
+        LEFT JOIN base_data_repair_type AS rt ON cr.repair_type_id = rt.id
+        LEFT JOIN shkb_contract_task t ON t.contract_id = c.id
+    </sql>
+    
+    <select id="query" resultMap="QueryContractBo">
+        <include refid="QueryContractDto"/>
+        <where>
+            <if test="code != null and code != ''">
+                AND c.code LIKE CONCAT('%', #{code}, '%')
+            </if>
+            <if test="name != null and name != ''">
+                AND c.name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="available != null">
+                AND c.available = #{available}
+            </if>
+            <if test="contractType != null">
+                AND c.contract_type = #{contractType}
+            </if>
+            <if test="contractStatus != null">
+                AND c.contract_status = #{contractStatus}
+            </if>
+            <if test="taskStatus != null and taskStatus != ''">
+                AND t.task_status = #{taskStatus}
+            </if>
+            <if test="customerId != null and customerId != ''">
+                AND c.customer_id =  #{customerId}
+            </if>
+
+            <if test="partNumberCode != null and partNumberCode != ''">
+                AND pn.code = #{partNumberCode}
+            </if>
+            <if test="partNumberId != null and partNumberId != ''">
+                AND c.part_number_id = #{partNumberId}
+            </if>
+            <if test="machineTypeId != null and machineTypeId != ''">
+                AND mt.id = #{machineTypeId}
+            </if>
+            <if test="serialNumber != null and serialNumber != ''">
+                AND c.serial_number LIKE CONCAT('%', #{serialNumber}, '%')
+            </if>
+            <if test="repairTypeIds != null and repairTypeIds != ''">
+                AND EXISTS (
+                    SELECT 1 FROM shkb_contract_repair cr
+                    WHERE cr.contract_id = c.id
+                    AND cr.repair_type_id IN
+                    <foreach collection="repairTypeIds.split(',')" item="repairTypeId" open="(" close=")" separator=",">
+                        #{repairTypeId}
+                    </foreach>
+                )
+            </if>
+            <if test="startContractTime != null">
+                AND c.contract_time >= #{startContractTime}
+            </if>
+            <if test="endContractTime != null">
+                <![CDATA[
+                AND c.contract_time <= #{endContractTime}
+                ]]>
+            </if>
+            <if test="startStorageTime != null">
+                AND c.storage_time >= #{startStorageTime}
+            </if>
+            <if test="endStorageTime != null">
+                <![CDATA[
+                AND c.storage_time <= #{endStorageTime}
+                ]]>
+            </if>
+            <if test="startPlannedCompletionTime != null">
+                AND c.planned_completion_time >= #{startPlannedCompletionTime}
+            </if>
+            <if test="endPlannedCompletionTime != null">
+                <![CDATA[
+                AND c.planned_completion_time <= #{endPlannedCompletionTime}
+                ]]>
+            </if>
+            <if test="contractStatus != null">
+                AND c.contract_status = #{contractStatus}
+            </if>
+
+        </where>
+        ORDER BY c.create_time DESC
+    </select>
+
+    <resultMap id="GetContractBo" type="com.lframework.xingyun.shkb.bo.contract.GetContractBo">
+        <id property="id" column="id"/>
+        <result property="code" column="code"/>
+        <result property="name" column="name"/>
+        <result property="available" column="available"/>
+        <result property="description" column="description"/>
+        <result property="contractType" column="contract_type"/>
+        <result property="contractTypeName" column="contract_type_name"/>
+        <result property="customerId" column="customer_id"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="mnemonicCode" column="mnemonic_code"/>
+        <result property="partNumberId" column="part_number_id"/>
+        <result property="partNumberCode" column="part_number_code"/>
+        <result property="partNumberName" column="part_number_name"/>
+        <result property="machineTypeId" column="machine_type_id"/>
+        <result property="machineTypeCode" column="machine_type_code"/>
+        <result property="machineTypeName" column="machine_type_name"/>
+        <result property="repairStatus" column="repair_status"/>
+        <result property="repairStatusName" column="repair_status_name"/>
+        <result property="serialNumber" column="serial_number"/>
+        <result property="otherRepairRequirements" column="other_repair_requirements"/>
+        <result property="contractTime" column="contract_time"/>
+        <result property="storageTime" column="storage_time"/>
+        <result property="plannedCompletionTime" column="planned_completion_time"/>
+        <result property="deliveryTime" column="delivery_time"/>
+        <result property="actualCompletionTime" column="actual_completion_time"/>
+        <result property="contractPrice" column="contract_price"/>
+        <result property="replacementPartPrice" column="replacement_part_price"/>
+        <result property="contractStatus" column="contract_status"/>
+        <result property="contractStatusName" column="contract_status_name"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <collection property="repairTypes" ofType="com.lframework.xingyun.shkb.bo.contract.GetContractBo$RepairTypeVo">
+            <id property="id" column="repair_type_id"/>
+            <result property="code" column="repair_type_code"/>
+            <result property="name" column="repair_type_name"/>
+        </collection>
+    </resultMap>
+
+    <select id="getDetail" resultMap="GetContractBo">
+        <include refid="QueryContractDto"/>
+        WHERE c.id = #{id}
+    </select>
+</mapper>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lframework.xingyun.shkb.mappers.ShkbEmployeeMapper">
+
+    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.ShkbEmployee">
+            <id property="id" column="id" jdbcType="VARCHAR"/>
+            <result property="code" column="code" jdbcType="VARCHAR"/>
+            <result property="name" column="name" jdbcType="VARCHAR"/>
+            <result property="gender" column="gender" jdbcType="TINYINT"/>
+            <result property="idCard" column="id_card" jdbcType="VARCHAR"/>
+            <result property="birthday" column="birthday" jdbcType="DATE"/>
+            <result property="nation" column="nation" jdbcType="VARCHAR"/>
+            <result property="nativePlace" column="native_place" jdbcType="VARCHAR"/>
+            <result property="politicalStatus" column="political_status" jdbcType="VARCHAR"/>
+            <result property="education" column="education" jdbcType="VARCHAR"/>
+            <result property="major" column="major" jdbcType="VARCHAR"/>
+            <result property="graduateSchool" column="graduate_school" jdbcType="VARCHAR"/>
+            <result property="graduateDate" column="graduate_date" jdbcType="DATE"/>
+            <result property="phone" column="phone" jdbcType="VARCHAR"/>
+            <result property="email" column="email" jdbcType="VARCHAR"/>
+            <result property="address" column="address" jdbcType="VARCHAR"/>
+            <result property="emergencyContact" column="emergency_contact" jdbcType="VARCHAR"/>
+            <result property="emergencyPhone" column="emergency_phone" jdbcType="VARCHAR"/>
+            <result property="deptId" column="dept_id" jdbcType="VARCHAR"/>
+            <result property="position" column="position" jdbcType="VARCHAR"/>
+            <result property="entryDate" column="entry_date" jdbcType="DATE"/>
+            <result property="regularDate" column="regular_date" jdbcType="DATE"/>
+            <result property="leaveDate" column="leave_date" jdbcType="DATE"/>
+            <result property="leaveReason" column="leave_reason" jdbcType="VARCHAR"/>
+            <result property="status" column="status" jdbcType="TINYINT"/>
+            <result property="photoUrl" column="photo_url" jdbcType="VARCHAR"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+            <result property="createById" column="create_by_id" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateBy" column="update_by" jdbcType="VARCHAR"/>
+            <result property="updateById" column="update_by_id" jdbcType="VARCHAR"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,code,name,
+        gender,id_card,birthday,
+        nation,native_place,political_status,
+        education,major,graduate_school,
+        graduate_date,phone,email,
+        address,emergency_contact,emergency_phone,
+        dept_id,position,entry_date,
+        regular_date,leave_date,leave_reason,
+        status,photo_url,description,
+        create_by,create_by_id,create_time,
+        update_by,update_by_id,update_time
+    </sql>
+</mapper>
