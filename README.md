@@ -31,7 +31,15 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Full
 
 MySQL 定时备份默认关闭。只有在运行镜像具备备份工具、备份产物可外部持久化且完成恢复演练后，才设置 `MYSQL_BACKUP_ENABLED=true`。
 
+本地冒烟库恢复演练：
+
+```powershell
+cd erp-backend
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-backup-restore.ps1
+```
+
+该脚本只接受 `xingyun-smoke-mysql` 容器，创建带随机后缀的临时数据库，完成压缩备份、恢复和内容哈希比对后自动删除临时库。
+
 ## 数据库警告
 
 `erp-backend/xingyun-api/src/main/resources/db/migration/tenant/V1.0__init.sql` 是全量初始化脚本，会 DROP/CREATE 表。它只允许用于新建空库，禁止对已有业务数据的数据库执行。
-
