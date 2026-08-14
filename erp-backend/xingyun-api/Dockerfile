@@ -8,9 +8,12 @@ WORKDIR /opt
 ARG JAR_FILE=@build.finalName@.jar
 COPY ${JAR_FILE} /opt/app.jar
 
-EXPOSE 8080
+EXPOSE 8088
 
 ENV JAVA_OPTS="-Dspring.profiles.active=prod"
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+    CMD curl --fail --silent --show-error http://127.0.0.1:8088/livez || exit 1
 
 # 在默认情况下
 # /opt/data/tmp是tomcat临时文件目录

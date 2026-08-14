@@ -35,6 +35,14 @@ jobs:
       - name: Verify Maven reactor
         run: mvn --batch-mode --no-transfer-progress verify
 
+      - name: Build runtime image
+        run: docker build --tag shkb-erp-api:ci xingyun-api/target
+
+      - name: Verify runtime image contract
+        run: |
+          docker run --rm --entrypoint sh shkb-erp-api:ci -c "java -version && mysqldump --version && command -v curl"
+          docker image inspect shkb-erp-api:ci --format '{{json .Config.ExposedPorts}} {{json .Config.Healthcheck}}' | grep -q '8088/tcp.*livez'
+
   frontend:
     name: Frontend / Node 24
     runs-on: ubuntu-latest
