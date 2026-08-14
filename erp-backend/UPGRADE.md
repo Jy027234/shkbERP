@@ -40,6 +40,8 @@
 
 随后完成 V1.23 核心物料写操作回归基线（本阶段没有新增 DDL）：将发料出库单的修改、审批、可领料和删除状态守卫，以及发料明细归属、同明细多行数量汇总、剩余数量和主单累计进度规则集中到无数据库依赖的规则类。`xingyun-shkb` 新增首批 10 个 JUnit 用例，覆盖合法状态、重复审批提示、未知状态、跨发料单或跨商品明细、零数量、同明细合计超发、部分出库、完成出库和累计超发；这些测试会随 Maven `verify` 在 CI 中执行。真实事务、库存扣减、回滚和并发仍由本地隔离库的 `verify-material-flow-write.ps1` 与 `verify-material-concurrency.ps1` 覆盖，二者职责互补。
 
+随后完成 V1.24 RabbitMQ 消费失败恢复基线（本阶段没有新增 DDL）：Direct Listener 从异常后默认无限重入队改为进程内最多 3 次、1 秒起始且 2 倍退避的有限重试；耗尽后使用发布确认把原消息、原交换机/路由及异常诊断转存至持久化 `shkb.failed` 队列。RabbitTemplate 同时启用不可路由返回和连接瞬时故障有限重试，RabbitMQ 纳入 readiness，连接不可用时实例停止接收新流量。`xingyun-api` 新增 3 个配置/拓扑 JUnit 用例；`scripts/verify-rabbitmq-recovery.ps1` 仅允许本机隔离环境，会向独立图表队列注入因空金额必然回滚的订单事件并验证退避、失败转存和诊断头后清理消息。失败队列只允许在根因修复且确认幂等后人工重放。该门禁解决毒消息循环与静默丢弃风险，但数据库事务提交后到消息发布之间的极小丢失窗口仍需后续 Outbox 专题处理。
+
 ## 每次改动的固定流程
 
 1. 执行 `git status --short`，确认并保护现有改动。
@@ -60,7 +62,7 @@
 
 1. 在现有 Spring Boot 3.5 分支内做补丁升级，并回归登录、租户、打印、导出和数据库迁移。
 2. 为核心业务补最小自动化测试，优先覆盖金额/库存、单租户权限、Token 生命周期和迁移脚本。
-3. 分专题移除 Swagger 2 注解兼容层、验证 jugg inner 双栈、补 RabbitMQ/定时任务/WebSocket 测试。
+3. 分专题移除 Swagger 2 注解兼容层、验证 jugg inner 双栈，并继续补 RabbitMQ Outbox、定时任务与 WebSocket 测试。
 4. 将两个 cloud 模块单独编译和运行验证后，才决定是否纳入主 reactor。
 5. 只有在上述门禁稳定后，另开任务评估 Spring Boot 下一大版本。
 
@@ -69,7 +71,7 @@
 - 导出兼容层默认上限为 10000。
 - Swagger 2 注解仍由 `swagger-annotations 1.6.14` 提供编译兼容。
 - jugg 独有 inner Bean 与项目实现双栈共存，深度一致性尚未验证。
-- RabbitMQ、定时任务、WebSocket 和 cloud 模块尚无完整端到端覆盖。
+- RabbitMQ 已覆盖消费失败重试与失败队列；事务提交到消息发布之间尚无 Outbox，定时任务、WebSocket 和 cloud 模块尚无完整端到端覆盖。
 - Lombok 在 Java 25 下仍可能输出 `sun.misc.Unsafe` 警告。
 - 原项目未版本化完整 SHKB 业务 schema；目前 `V1.13` 覆盖看板核心、`V1.14` 覆盖合同核心、`V1.15` 覆盖工具/设备从属记录、`V1.16` 覆盖维修工卡及任务关联核心、`V1.17` 覆盖领料申请后的发料与出库库存闭环。其余 SHKB 功能仍需按接口逐步补录增量迁移与回归样例。
 

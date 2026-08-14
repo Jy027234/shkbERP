@@ -45,7 +45,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-backup-restore.ps1
 后端只公开不含组件详情的健康端点：
 
 - `/livez`：仅表示应用自身是否需要重启，不依赖外部服务。
-- `/readyz`：确认应用已可接收流量，并检查数据库与 Redis。
+- `/readyz`：确认应用已可接收流量，并检查数据库、Redis 与 RabbitMQ。
 - `/actuator/health`：综合健康状态，响应只包含 `status` 与非敏感的探针组名称。
 
 本地运行时验证：
@@ -68,6 +68,21 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-material-concurrency.p
 ```
 
 这两个脚本会直接造数，只允许连接本机隔离环境，并在结束时精确清理测试数据。
+
+## RabbitMQ 失败恢复
+
+消费者异常会按 1 秒、2 秒退避最多尝试 3 次；仍然失败的原始消息和异常诊断会经发布确认写入持久化 `shkb.failed` 队列，避免无限重新入队。生产者连接瞬时异常同样执行有限重试，不可路由消息必须返回生产端。
+
+`shkb.failed` 出现消息时应触发运维告警；必须先修复根因并确认目标操作具备幂等性，再人工重放，禁止自动循环回灌。RabbitMQ 同时纳入 `/readyz`，连接不可用时实例停止接收新流量。
+
+本地 RabbitMQ 与隔离库运行时，可验证真实失败恢复链路：
+
+```powershell
+cd erp-backend
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-rabbitmq-recovery.ps1
+```
+
+脚本会向独立的图表消费队列注入一条因空金额必然回滚的订单事件，确认重试退避、失败队列、原交换机和异常诊断字段后自动清理测试消息，不写入业务数据。
 
 ## 数据库警告
 
