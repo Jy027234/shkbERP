@@ -11,6 +11,27 @@ spring:
     allow-circular-references: true
   lifecycle:
     timeout-per-shutdown-phase: 30s
+  rabbitmq:
+    # 消费失败先在进程内有限重试；耗尽后由 MessageRecoverer 转存 shkb.failed，禁止无限重入队。
+    listener:
+      direct:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          initial-interval: 1s
+          multiplier: 2
+          max-interval: 5s
+          max-attempts: 3
+          stateless: true
+    # 发布端连接瞬时失败时有限重试；mandatory 使不可路由消息返回生产端。
+    template:
+      mandatory: true
+      retry:
+        enabled: true
+        initial-interval: 1s
+        multiplier: 2
+        max-interval: 5s
+        max-attempts: 3
   profiles:
     active: @profiles-active@
   servlet:
@@ -239,4 +260,4 @@ management:
         add-additional-paths: true
       group:
         readiness:
-          include: readinessState,db,redis
+          include: readinessState,db,redis,rabbit
