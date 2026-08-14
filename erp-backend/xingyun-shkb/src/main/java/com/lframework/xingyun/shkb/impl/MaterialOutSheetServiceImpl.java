@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.github.pagehelper.PageInfo;
 import com.lframework.starter.common.constants.StringPool;
-import com.lframework.starter.common.exceptions.impl.DefaultClientException;
 import com.lframework.starter.common.exceptions.impl.InputErrorException;
 import com.lframework.starter.common.utils.Assert;
 import com.lframework.starter.common.utils.CollectionUtil;
@@ -234,10 +233,7 @@ public class MaterialOutSheetServiceImpl extends BaseMpServiceImpl<MaterialOutSh
         }
 
         // 允许“备料中”和“可领料”状态进行修改，其他状态不允许
-        if (sheet.getStatus() != MaterialOutSheetStatus.PREPARING.getCode()
-                && sheet.getStatus() != MaterialOutSheetStatus.PICKABLE.getCode()) {
-            throw new DefaultClientException("发料出库单当前状态不允许修改！");
-        }
+        MaterialOutSheetRules.requireUpdatable(sheet.getStatus());
 
         // 删除明细
         Wrapper<MaterialOutSheetDetail> deleteDetailWrapper = Wrappers.<MaterialOutSheetDetail>lambdaQuery()
@@ -275,14 +271,7 @@ public class MaterialOutSheetServiceImpl extends BaseMpServiceImpl<MaterialOutSh
         }
 
         // 仅允许“备料中”和“可领料”两种状态执行发料
-        if (sheet.getStatus() != MaterialOutSheetStatus.PREPARING.getCode()
-                && sheet.getStatus() != MaterialOutSheetStatus.PICKABLE.getCode()) {
-            if (sheet.getStatus() == MaterialOutSheetStatus.ISSUED.getCode()) {
-                throw new DefaultClientException("发料出库单已发料！");
-            }
-
-            throw new DefaultClientException("发料出库单无法发料！");
-        }
+        MaterialOutSheetRules.requireApprovable(sheet.getStatus());
 
         // 同一发料单下的多张出库单必须串行更新明细及主表汇总，避免 totalOutNum 丢更新。
         MaterialOrder lockedMaterialOrder = null;
@@ -338,9 +327,7 @@ public class MaterialOutSheetServiceImpl extends BaseMpServiceImpl<MaterialOutSh
             throw new InputErrorException("发料出库单不存在！");
         }
 
-        if (sheet.getStatus() != MaterialOutSheetStatus.PREPARING.getCode()) {
-            throw new DefaultClientException("发料出库单无法标记为可领料！");
-        }
+        MaterialOutSheetRules.requirePickable(sheet.getStatus());
 
         // 标记后状态为“可领料”
         sheet.setStatus(MaterialOutSheetStatus.PICKABLE.getCode());
@@ -365,10 +352,7 @@ public class MaterialOutSheetServiceImpl extends BaseMpServiceImpl<MaterialOutSh
             throw new InputErrorException("发料出库单不存在！");
         }
 
-        if (sheet.getStatus() != MaterialOutSheetStatus.PREPARING.getCode()
-                && sheet.getStatus() != MaterialOutSheetStatus.PICKABLE.getCode()) {
-            throw new DefaultClientException("发料出库单无法删除！");
-        }
+        MaterialOutSheetRules.requireDeletable(sheet.getStatus());
 
         // 删除明细
         Wrapper<MaterialOutSheetDetail> deleteDetailWrapper = Wrappers.<MaterialOutSheetDetail>lambdaQuery()
@@ -814,15 +798,8 @@ public class MaterialOutSheetServiceImpl extends BaseMpServiceImpl<MaterialOutSh
         // 同步更新发料单主表：主表已先通过 FOR UPDATE 串行化，直接在最新累计值上增加本单数量，
         // 避免 RR 隔离级别下重新汇总全部明细时读到旧快照并覆盖并发结果。
         if (materialOrder != null) {
-            int approvedOutNum = detailOutMap.values().stream().mapToInt(Integer::intValue).sum();
-            int totalOutNum = (materialOrder.getTotalOutNum() == null ? 0 : materialOrder.getTotalOutNum())
-                    + approvedOutNum;
-            if (materialOrder.getTotalNum() == null || materialOrder.getTotalNum() <= 0) {
-                throw new InputErrorException("发料单应发数量异常，无法更新出库进度！");
-            }
-            if (totalOutNum > materialOrder.getTotalNum()) {
-                throw new InputErrorException("发料单累计出库数量超出应发数量，请刷新后重试！");
-            }
+            int totalOutNum = MaterialOutSheetRules.calculateTotalOutNum(materialOrder.getTotalOutNum(),
+                    materialOrder.getTotalNum(), detailOutMap.values());
 
             materialOrder.setTotalOutNum(totalOutNum);
             materialOrder.setIsOutFinish(totalOutNum >= materialOrder.getTotalNum());
@@ -890,32 +867,8 @@ public class MaterialOutSheetServiceImpl extends BaseMpServiceImpl<MaterialOutSh
 
         // 1）校验发料单剩余数量
         if (!StringUtil.isBlank(sheet.getMaterialOrderId())) {
-            Map<String, Integer> orderDetailSum = new HashMap<>();
-            Map<String, MaterialOrderDetail> lockedDetailMap = new HashMap<>();
-            for (MaterialOrderDetail orderDetail : lockedOrderDetails) {
-                lockedDetailMap.put(orderDetail.getId(), orderDetail);
-            }
-            for (MaterialOutSheetDetail d : details) {
-                if (StringUtil.isBlank(d.getMaterialOrderDetailId())) {
-                    throw new InputErrorException("关联发料单的出库明细必须指定发料单明细！");
-                }
-                MaterialOrderDetail orderDetail = lockedDetailMap.get(d.getMaterialOrderDetailId());
-                if (orderDetail == null
-                        || !sheet.getMaterialOrderId().equals(orderDetail.getOrderId())
-                        || !d.getProductId().equals(orderDetail.getProductId())) {
-                    throw new InputErrorException("出库明细与发料单明细不匹配！");
-                }
-                orderDetailSum.merge(d.getMaterialOrderDetailId(), d.getOutNum(), Integer::sum);
-            }
-
-            for (Map.Entry<String, Integer> e : orderDetailSum.entrySet()) {
-                MaterialOrderDetail od = lockedDetailMap.get(e.getKey());
-                int remaining = od.getOrderNum() - (od.getOutNum() == null ? 0 : od.getOutNum());
-                if (e.getValue() > remaining) {
-                    throw new InputErrorException("发料单明细超出可出库数量！需要出库：" + od.getOrderNum() +
-                            "，已出库：" + od.getOutNum() + "，剩余：" + remaining + "，本次申请：" + e.getValue());
-                }
-            }
+            MaterialOutSheetRules.validateAndSumOrderDetails(sheet.getMaterialOrderId(), details,
+                    lockedOrderDetails);
         }
 
         // 2）批次库存校验（并校验批次管理商品必须选择批次）

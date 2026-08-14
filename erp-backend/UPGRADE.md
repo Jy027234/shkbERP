@@ -38,6 +38,8 @@
 
 随后完成 V1.22 运行健康门禁：引入 Spring Boot Actuator，但只通过 HTTP 暴露无详情的 `health` 端点；启用 `/actuator/health/liveness`、`/actuator/health/readiness` 以及主端口上的 `/livez`、`/readyz`。Liveness 不依赖外部系统，避免共享基础设施故障引发重启风暴；Readiness 纳入数据库与 Redis，核心依赖不可用时停止接收流量。应用启用 30 秒优雅停机，运行镜像修正为暴露真实的 8088 端口，并使用 `/livez` 作为 Docker `HEALTHCHECK`。`scripts/verify-health.ps1` 会无认证验证五个端点均为 UP，且响应不泄露组件和环境细节。
 
+随后完成 V1.23 核心物料写操作回归基线（本阶段没有新增 DDL）：将发料出库单的修改、审批、可领料和删除状态守卫，以及发料明细归属、同明细多行数量汇总、剩余数量和主单累计进度规则集中到无数据库依赖的规则类。`xingyun-shkb` 新增首批 10 个 JUnit 用例，覆盖合法状态、重复审批提示、未知状态、跨发料单或跨商品明细、零数量、同明细合计超发、部分出库、完成出库和累计超发；这些测试会随 Maven `verify` 在 CI 中执行。真实事务、库存扣减、回滚和并发仍由本地隔离库的 `verify-material-flow-write.ps1` 与 `verify-material-concurrency.ps1` 覆盖，二者职责互补。
+
 ## 每次改动的固定流程
 
 1. 执行 `git status --short`，确认并保护现有改动。

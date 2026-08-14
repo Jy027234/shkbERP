@@ -57,6 +57,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-health.ps1
 
 除 `health` 外的 Actuator 端点不对外暴露。运行镜像使用 `/livez` 作为 Docker `HEALTHCHECK`，并为约一分钟的应用启动过程预留 90 秒启动窗口。
 
+## 核心业务回归
+
+后端完整门禁会运行物料出库状态、发料明细归属、累计数量和超发守卫等 JUnit 测试。涉及真实事务、库存扣减、批次或序列号并发时，还必须在本地隔离冒烟库运行：
+
+```powershell
+cd erp-backend
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-material-flow-write.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-material-concurrency.ps1 -Iterations 5
+```
+
+这两个脚本会直接造数，只允许连接本机隔离环境，并在结束时精确清理测试数据。
+
 ## 数据库警告
 
 `erp-backend/xingyun-api/src/main/resources/db/migration/tenant/V1.0__init.sql` 是全量初始化脚本，会 DROP/CREATE 表。它只允许用于新建空库，禁止对已有业务数据的数据库执行。
