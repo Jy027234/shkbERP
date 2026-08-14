@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "product": "SHKB ERP",
+  "observedAt": "2026-08-14",
+  "canonical": {
+    "repository": "git@github.com:Jy027234/shkbERP.git",
+    "branch": "main",
+    "observedCommit": "ee2af4ddff85c4d8b686f1f88394270f38ec8d3e",
+    "contains": [
+      "erp-backend",
+      "erp-frontend"
+    ]
+  },
+  "legacyInputs": [
+    {
+      "name": "legacy-split-backend",
+      "workspacePath": "../erp-backend",
+      "branch": "appmod/java-upgrade-20260812043920",
+      "observedCommit": "9539e95",
+      "dirtyAtObservation": true,
+      "role": "reconciliation-input-only"
+    },
+    {
+      "name": "legacy-split-frontend",
+      "workspacePath": "../erp-frontend",
+      "branch": "master",
+      "observedCommit": "b4c0097",
+      "dirtyAtObservation": true,
+      "role": "reconciliation-input-only"
+    }
+  ],
+  "reconciliation": {
+    "status": "candidate-required",
+    "backend": {
+      "sameFiles": 2319,
+      "differentFiles": 33,
+      "onlyLegacySplitFiles": 5,
+      "onlyCanonicalFiles": 28
+    },
+    "frontend": {
+      "sameFiles": 2122,
+      "differentFiles": 1,
+      "onlyLegacySplitFiles": 0,
+      "onlyCanonicalFiles": 0
+    },
+    "completedItems": [
+      "merge-shkb-menu-permission-baseline",
+      "review-and-classify-33-divergent-backend-files",
+      "retain-canonical-frontend-package-workspace-semantics",
+      "run-combined-static-and-runtime-gates",
+      "create-clean-governance-commit"
+    ],
+    "blockingItems": [
+      "create-tagged-release-candidate"
+    ]
+  },
+  "cloudReference": {
+    "policy": "frozen-read-only-until-explicit-release-approval",
+    "backendRuntime": "Java 8 / Spring Boot 2.2.2",
+    "backendArtifactObservedDate": "2026-07-18",
+    "frontendArtifactObservedDate": "2026-07-23",
+    "embeddedGitCommit": null
+  },
+  "release": {
+    "deploymentAllowed": false,
+    "requiresCleanWorktree": true,
+    "requiresVersionTag": true,
+    "requiresSingleCommitForFrontendBackendAndMigrations": true
+  }
+}

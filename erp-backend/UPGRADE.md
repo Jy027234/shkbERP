@@ -48,6 +48,8 @@
 
 部署顺序必须是：先备份并对业务库应用 `V1.18__mq_outbox.sql`，确认两张表存在，再发布新 jar；反向发布会使核心库存/审批事务因缺表回滚。`scripts/verify-outbox.ps1` 只允许本地隔离环境，已验证首次确认投递、强制重复中继、Inbox 只保留 1 条且图表业务记录只产生 1 条。Outbox 状态为 `0=待发送、1=发送中、2=已确认、3=永久失败`；状态 3 必须先修复根因并核对消费者幂等，才可人工重置为待发送。已确认记录默认保留 7 天，可通过 `app.rabbitmq.outbox.*` 调整批量、租约、重试、确认超时和保留期。
 
+随后完成治理里程碑 V1.27（里程碑编号，不是数据库迁移号）：将 2026-08-14 对云端生产配置的只读核对结果合入唯一单体仓库，新增数据库迁移 `tenant/V1.21__shkb_menu_permission_baseline.sql`。该迁移补齐 67 条上海凯奔业务菜单、覆盖 21 条通用菜单的航材化配置，保留 10 个业务角色及 592 条有效角色—菜单关系，并将单租户名称固定为“上海凯奔航空技术有限公司”；不包含用户、用户角色、凭据或业务数据。`scripts/verify-menu-baseline.ps1` 验证登录后 14 个可见业务根菜单，并排除零售、开发、物流三个非产品模块。合入后已在随机临时克隆库连续两次执行 `V1.18__mq_outbox.sql` 与 `V1.21__shkb_menu_permission_baseline.sql`，两次均稳定得到 350 个菜单、11 个角色、592 条有效角色菜单关系、12 个租户模块和 2 张 Outbox/Inbox 表；临时库已删除。菜单探针已通过 8088 直连和单体前端 5174 `/api` 代理，Java 25 十模块编译、前端 6 个测试文件/27 个用例、类型检查和 9117 模块生产构建均通过。该证据仍不等于生产恢复副本验收，不能据此解除生产部署锁。
+
 ## 每次改动的固定流程
 
 1. 执行 `git status --short`，确认并保护现有改动。
@@ -61,6 +63,7 @@
    物料相关改动同时运行 `scripts/verify-material-flow.ps1`；本地隔离库增加 `scripts/verify-material-flow-write.ps1`。涉及审批、库存、批次、序列号或状态流转时，再运行 `scripts/verify-material-concurrency.ps1 -Iterations 5`。
    修改全局异常、认证、权限或响应包装时，同时对 8088 直连和 5173 `/api` 代理运行 `scripts/verify-error-contract.ps1`。
    修改登录、角色、菜单权限、Token 或账号状态时，在本地隔离库同时对 8088 和 5173 `/api` 运行 `scripts/verify-auth-permission.ps1`。
+   修改菜单、租户模块或业务角色基线时，同时对 8088 和 5173 `/api` 运行 `scripts/verify-menu-baseline.ps1`。
 5. 发布候选版本先停止运行中的 JVM，再用 `scripts/verify.ps1 -Full` 执行测试与打包。
 6. 记录旧版本、新版本、失败现象、修复方式、验证结果和可回滚提交。
 
