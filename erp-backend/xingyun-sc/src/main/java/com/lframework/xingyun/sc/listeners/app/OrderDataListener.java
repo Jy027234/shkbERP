@@ -1,20 +1,23 @@
 package com.lframework.xingyun.sc.listeners.app;
 
-import com.lframework.starter.mq.core.producer.MqProducer;
+import com.lframework.xingyun.core.queue.outbox.MqOutboxEventType;
+import com.lframework.xingyun.core.queue.outbox.MqOutboxWriter;
 import com.lframework.xingyun.sc.events.order.ApprovePassOrderEvent;
-import com.lframework.xingyun.core.queue.MqConstants;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 public class OrderDataListener {
 
-  @Autowired
-  private MqProducer mqProducer;
+  private final MqOutboxWriter outboxWriter;
 
-  @TransactionalEventListener
+  public OrderDataListener(MqOutboxWriter outboxWriter) {
+    this.outboxWriter = outboxWriter;
+  }
+
+  @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
   public void execute(ApprovePassOrderEvent event) {
-    mqProducer.sendMessage(MqConstants.APPROVE_PASS_ORDER, event.getOrder());
+    outboxWriter.append(MqOutboxEventType.APPROVE_PASS_ORDER, event.getOrder());
   }
 }

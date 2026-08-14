@@ -55,6 +55,20 @@ class RabbitMqReliabilityConfigurationTest {
         assertEquals("3", properties.getProperty("spring.rabbitmq.template.retry.max-attempts"));
         assertEquals("readinessState,db,redis,rabbit",
                 properties.getProperty("management.endpoint.health.group.readiness.include"));
+        assertEquals("true", properties.getProperty("app.rabbitmq.outbox.enabled"));
+        assertEquals("10", properties.getProperty("app.rabbitmq.outbox.max-attempts"));
+        assertEquals("5000", properties.getProperty("app.rabbitmq.outbox.confirm-timeout-millis"));
+    }
+
+    @Test
+    void everyRuntimeProfileUsesCorrelatedPublisherConfirms() {
+        for (String profile : new String[] {"dev", "test", "prod"}) {
+            YamlPropertiesFactoryBean yaml = new YamlPropertiesFactoryBean();
+            yaml.setResources(new ClassPathResource("application-" + profile + ".yml"));
+            Properties properties = yaml.getObject();
+            assertEquals("CORRELATED",
+                    properties.getProperty("spring.rabbitmq.publisher-confirm-type"), profile);
+        }
     }
 
     @Test
@@ -67,6 +81,10 @@ class RabbitMqReliabilityConfigurationTest {
                 () -> configuration.rabbitMessageRecoverer(rabbitTemplate, properties));
 
         properties.setPublisherConfirmType(ConfirmType.SIMPLE);
+        assertThrows(IllegalStateException.class,
+                () -> configuration.rabbitMessageRecoverer(rabbitTemplate, properties));
+
+        properties.setPublisherConfirmType(ConfirmType.CORRELATED);
         assertInstanceOf(RepublishMessageRecovererWithConfirms.class,
                 configuration.rabbitMessageRecoverer(rabbitTemplate, properties));
     }

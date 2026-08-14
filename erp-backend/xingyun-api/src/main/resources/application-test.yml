@@ -71,7 +71,7 @@ spring:
     ssl:
       enabled: false       # 是否启用SSL，默认为false
       algorithm: TLSv1.2   # SSL算法，默认为TLSv1.2
-    publisher-confirm-type: SIMPLE # 发布确认机制
+    publisher-confirm-type: CORRELATED # Outbox 逐条关联发布确认
     publisher-returns: true  # 是否开启发布返回机制，默认为false
     listener:
       type: direct

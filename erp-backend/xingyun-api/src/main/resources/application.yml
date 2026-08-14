@@ -62,6 +62,20 @@ spring:
     lettuce:
       reader-idle-time-seconds: 30
 
+app:
+  rabbitmq:
+    outbox:
+      enabled: true
+      fixed-delay: 1000
+      batch-size: 20
+      lease-seconds: 60
+      max-attempts: 10
+      initial-retry-seconds: 5
+      max-retry-seconds: 300
+      confirm-timeout-millis: 5000
+      retention-days: 7
+      cleanup-cron: "0 30 3 * * ?"
+
 knife4j:
   enable: true
   setting:

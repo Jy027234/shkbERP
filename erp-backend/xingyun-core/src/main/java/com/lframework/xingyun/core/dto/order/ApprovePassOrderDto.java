@@ -12,6 +12,11 @@ public class ApprovePassOrderDto implements BaseDto, Serializable {
   private static final long serialVersionUID = 1L;
 
   /**
+   * Outbox 事件ID，用于消费者幂等去重。
+   */
+  private String eventId;
+
+  /**
    * 业务单据ID
    */
   private String id;
