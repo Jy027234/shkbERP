@@ -5,6 +5,7 @@ import com.lframework.xingyun.chart.service.OrderChartService;
 import com.lframework.xingyun.chart.vo.CreateOrderChartVo;
 import com.lframework.xingyun.core.dto.order.ApprovePassOrderDto;
 import com.lframework.xingyun.core.queue.MqStringPool;
+import com.lframework.xingyun.core.queue.outbox.MqInboxDeduplicator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.ExchangeTypes;
 import org.springframework.amqp.rabbit.annotation.Exchange;
@@ -23,13 +24,20 @@ public class OrderDataToChartListener {
   @Autowired
   private OrderChartService orderChartService;
 
+  @Autowired
+  private MqInboxDeduplicator inboxDeduplicator;
+
   @Transactional(rollbackFor = Exception.class)
   @RabbitListener(bindings = {
       @QueueBinding(value = @Queue(value = "chart.approve_pass_order"), exchange = @Exchange(value = MqStringPool.APPROVE_PASS_ORDER_EXCHANGE, type = ExchangeTypes.FANOUT))})
   public void execute(Message<ApprovePassOrderDto> message) {
     ApprovePassOrderDto event = message.getPayload();
+    if (!inboxDeduplicator.accept(event.getEventId(), "chart.approve_pass_order")) {
+      log.info("忽略重复订单审批事件 eventId={}", event.getEventId());
+      return;
+    }
     OrderChartBizType bizType = this.convertBizType(event.getOrderType());
-    if (event.getOrderType() == null) {
+    if (bizType == null) {
       log.error("orderType={}，无法匹配业务类型", event.getOrderType());
       return;
     }

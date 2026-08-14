@@ -44,6 +44,10 @@
 
 随后完成 V1.25 jugg RabbitMQ Listener 去重（本阶段没有新增 DDL）：确认 `rabbitmq-starter 5.0.1` 自动配置直接导入的系统通知、邮件、站内信 Listener 与项目实现使用相同队列但不同 DTO/服务类型，启动后会形成竞争消费者。扩展既有 `JuggInnerBeanConflictResolver`，仅在项目侧存在同名替代 Bean 时移除 jugg 的重复 Listener；jugg 独有的导出任务 Listener 与既有 inner 服务依赖闭包继续保留。`xingyun-api` 新增 3 个注册表单元测试，覆盖三个项目替代 Listener、jugg 独有 Listener 和必须保留的 inner 服务。此项消除了三个消息队列的双栈竞争，但 jugg 其余 inner 控制器/服务的深度一致性仍需按专题验证。
 
+随后完成 V1.26 核心事务消息 Outbox：新增部署迁移 `tenant/V1.18__mq_outbox.sql`，为单租户业务库建立 `sys_mq_outbox` 与 `sys_mq_inbox`。入库、出库和订单审批事件改为业务事务提交前写 Outbox；后台中继按租约领取，等待 RabbitMQ `CORRELATED` publisher confirm 与不可路由返回后才标记成功，失败按 5 秒起始的指数退避最多尝试 10 次。盘点统计和订单图表消费者在同一业务事务内写 Inbox 去重，因此即使发生“Broker 已确认、SENT 尚未落库”宕机窗口，重复投递也不会重复累计。产品仍按单租户部署；中继枚举现有可用租户仅用于兼容动态数据源，不扩展跨租户能力或测试矩阵。
+
+部署顺序必须是：先备份并对业务库应用 `V1.18__mq_outbox.sql`，确认两张表存在，再发布新 jar；反向发布会使核心库存/审批事务因缺表回滚。`scripts/verify-outbox.ps1` 只允许本地隔离环境，已验证首次确认投递、强制重复中继、Inbox 只保留 1 条且图表业务记录只产生 1 条。Outbox 状态为 `0=待发送、1=发送中、2=已确认、3=永久失败`；状态 3 必须先修复根因并核对消费者幂等，才可人工重置为待发送。已确认记录默认保留 7 天，可通过 `app.rabbitmq.outbox.*` 调整批量、租约、重试、确认超时和保留期。
+
 ## 每次改动的固定流程
 
 1. 执行 `git status --short`，确认并保护现有改动。
@@ -73,7 +77,7 @@
 - 导出兼容层默认上限为 10000。
 - Swagger 2 注解仍由 `swagger-annotations 1.6.14` 提供编译兼容。
 - jugg RabbitMQ 三个重复 Listener 已移除；其余独有 inner Bean 与项目实现仍双栈共存，深度一致性尚未验证。
-- RabbitMQ 已覆盖消费失败重试与失败队列；事务提交到消息发布之间尚无 Outbox，定时任务、WebSocket 和 cloud 模块尚无完整端到端覆盖。
+- RabbitMQ 核心库存/审批事件已覆盖事务 Outbox、发布确认、消费失败重试、失败队列及非幂等消费者去重；其他直接消息生产点、定时任务、WebSocket 和 cloud 模块尚无完整端到端覆盖。
 - Lombok 在 Java 25 下仍可能输出 `sun.misc.Unsafe` 警告。
 - 原项目未版本化完整 SHKB 业务 schema；目前 `V1.13` 覆盖看板核心、`V1.14` 覆盖合同核心、`V1.15` 覆盖工具/设备从属记录、`V1.16` 覆盖维修工卡及任务关联核心、`V1.17` 覆盖领料申请后的发料与出库库存闭环。其余 SHKB 功能仍需按接口逐步补录增量迁移与回归样例。
 

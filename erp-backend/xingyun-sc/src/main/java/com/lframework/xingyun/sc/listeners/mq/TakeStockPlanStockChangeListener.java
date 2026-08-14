@@ -2,6 +2,7 @@ package com.lframework.xingyun.sc.listeners.mq;
 
 import com.lframework.xingyun.core.dto.stock.ProductStockChangeDto;
 import com.lframework.xingyun.core.queue.MqStringPool;
+import com.lframework.xingyun.core.queue.outbox.MqInboxDeduplicator;
 import com.lframework.xingyun.sc.mappers.TakeStockPlanDetailMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.ExchangeTypes;
@@ -21,12 +22,19 @@ public class TakeStockPlanStockChangeListener {
   @Autowired
   private TakeStockPlanDetailMapper takeStockPlanDetailMapper;
 
+  @Autowired
+  private MqInboxDeduplicator inboxDeduplicator;
+
   @Transactional(rollbackFor = Exception.class)
   @RabbitListener(bindings = {
       @QueueBinding(value = @Queue(value = "take_stock_plan.add_stock"), exchange = @Exchange(value = MqStringPool.ADD_STOCK_EXCHANGE, type = ExchangeTypes.FANOUT))
   })
   public void addStock(Message<ProductStockChangeDto> message) {
     ProductStockChangeDto change = message.getPayload();
+    if (!inboxDeduplicator.accept(change.getEventId(), "take_stock_plan.add_stock")) {
+      log.info("忽略重复入库事件 eventId={}", change.getEventId());
+      return;
+    }
     log.info("增加库存，统计进项数量 scId = {}, productId = {}, num = {}", change.getScId(),
         change.getProductId(), change.getNum());
     takeStockPlanDetailMapper.addTotalInNum(change.getScId(), change.getProductId(),
@@ -39,6 +47,10 @@ public class TakeStockPlanStockChangeListener {
   })
   public void subStock(Message<ProductStockChangeDto> message) {
     ProductStockChangeDto change = message.getPayload();
+    if (!inboxDeduplicator.accept(change.getEventId(), "take_stock_plan.sub_stock")) {
+      log.info("忽略重复出库事件 eventId={}", change.getEventId());
+      return;
+    }
     log.info("扣减库存，统计出项数量 scId = {}, productId = {}, num = {}", change.getScId(),
         change.getProductId(), change.getNum());
     takeStockPlanDetailMapper.addTotalOutNum(change.getScId(), change.getProductId(),

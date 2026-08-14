@@ -41,9 +41,9 @@ public class RabbitMqReliabilityConfiguration {
     public MessageRecoverer rabbitMessageRecoverer(RabbitTemplate rabbitTemplate,
             RabbitProperties rabbitProperties) {
         ConfirmType confirmType = rabbitProperties.getPublisherConfirmType();
-        if (confirmType == null || ConfirmType.NONE == confirmType) {
+        if (ConfirmType.CORRELATED != confirmType) {
             throw new IllegalStateException(
-                    "RabbitMQ failure recovery requires publisher-confirm-type SIMPLE or CORRELATED");
+                    "RabbitMQ outbox requires publisher-confirm-type CORRELATED");
         }
         RepublishMessageRecovererWithConfirms recoverer = new RepublishMessageRecovererWithConfirms(
                 rabbitTemplate, FAILED_EXCHANGE, FAILED_ROUTING_KEY, confirmType);
