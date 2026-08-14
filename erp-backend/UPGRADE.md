@@ -42,6 +42,8 @@
 
 随后完成 V1.24 RabbitMQ 消费失败恢复基线（本阶段没有新增 DDL）：Direct Listener 从异常后默认无限重入队改为进程内最多 3 次、1 秒起始且 2 倍退避的有限重试；耗尽后使用发布确认把原消息、原交换机/路由及异常诊断转存至持久化 `shkb.failed` 队列。RabbitTemplate 同时启用不可路由返回和连接瞬时故障有限重试，RabbitMQ 纳入 readiness，连接不可用时实例停止接收新流量。`xingyun-api` 新增 3 个配置/拓扑 JUnit 用例；`scripts/verify-rabbitmq-recovery.ps1` 仅允许本机隔离环境，会向独立图表队列注入因空金额必然回滚的订单事件并验证退避、失败转存和诊断头后清理消息。失败队列只允许在根因修复且确认幂等后人工重放。该门禁解决毒消息循环与静默丢弃风险，但数据库事务提交后到消息发布之间的极小丢失窗口仍需后续 Outbox 专题处理。
 
+随后完成 V1.25 jugg RabbitMQ Listener 去重（本阶段没有新增 DDL）：确认 `rabbitmq-starter 5.0.1` 自动配置直接导入的系统通知、邮件、站内信 Listener 与项目实现使用相同队列但不同 DTO/服务类型，启动后会形成竞争消费者。扩展既有 `JuggInnerBeanConflictResolver`，仅在项目侧存在同名替代 Bean 时移除 jugg 的重复 Listener；jugg 独有的导出任务 Listener 与既有 inner 服务依赖闭包继续保留。`xingyun-api` 新增 3 个注册表单元测试，覆盖三个项目替代 Listener、jugg 独有 Listener 和必须保留的 inner 服务。此项消除了三个消息队列的双栈竞争，但 jugg 其余 inner 控制器/服务的深度一致性仍需按专题验证。
+
 ## 每次改动的固定流程
 
 1. 执行 `git status --short`，确认并保护现有改动。
@@ -70,7 +72,7 @@
 
 - 导出兼容层默认上限为 10000。
 - Swagger 2 注解仍由 `swagger-annotations 1.6.14` 提供编译兼容。
-- jugg 独有 inner Bean 与项目实现双栈共存，深度一致性尚未验证。
+- jugg RabbitMQ 三个重复 Listener 已移除；其余独有 inner Bean 与项目实现仍双栈共存，深度一致性尚未验证。
 - RabbitMQ 已覆盖消费失败重试与失败队列；事务提交到消息发布之间尚无 Outbox，定时任务、WebSocket 和 cloud 模块尚无完整端到端覆盖。
 - Lombok 在 Java 25 下仍可能输出 `sun.misc.Unsafe` 警告。
 - 原项目未版本化完整 SHKB 业务 schema；目前 `V1.13` 覆盖看板核心、`V1.14` 覆盖合同核心、`V1.15` 覆盖工具/设备从属记录、`V1.16` 覆盖维修工卡及任务关联核心、`V1.17` 覆盖领料申请后的发料与出库库存闭环。其余 SHKB 功能仍需按接口逐步补录增量迁移与回归样例。

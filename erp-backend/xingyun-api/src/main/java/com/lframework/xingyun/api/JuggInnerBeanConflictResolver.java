@@ -19,7 +19,8 @@ import org.springframework.stereotype.Component;
  * 与项目 {@code com.lframework.xingyun.} 下的同名实现重复，
  * 导致接口注入歧义与 URL 映射冲突。
  * <p>
- * 处理规则：jugg inner Bean 若存在同名（简单类名）的项目 Bean，则移除 jugg 的；
+ * 处理规则：jugg inner Bean 或 RabbitMQ Listener 若存在同名（简单类名）的项目 Bean，
+ * 则移除 jugg 的；
  * 项目没有对应实现的（如 SecurityUploadRecordServiceImpl、SysUserGroupServiceImpl
  * 等 12 个）保留，保证 jugg 独有功能可用。
  */
@@ -28,6 +29,9 @@ import org.springframework.stereotype.Component;
 public class JuggInnerBeanConflictResolver implements BeanDefinitionRegistryPostProcessor {
 
   private static final String JUGG_INNER_PREFIX = "com.lframework.starter.web.inner.";
+
+  private static final String JUGG_RABBIT_LISTENER_PREFIX =
+      "com.lframework.starter.mq.rabbitmq.listeners.";
 
   private static final String PROJECT_PREFIX = "com.lframework.xingyun.";
 
@@ -62,12 +66,13 @@ public class JuggInnerBeanConflictResolver implements BeanDefinitionRegistryPost
       }
     }
 
-    // 移除与项目同名的 jugg inner Bean
+    // 移除与项目同名的 jugg inner Bean 和 RabbitMQ Listener。jugg 独有的导出 Listener
+    // 没有项目侧同名实现，因此会继续保留。
     int removed = 0;
     for (String name : registry.getBeanDefinitionNames()) {
       BeanDefinition bd = registry.getBeanDefinition(name);
       String className = bd.getBeanClassName();
-      if (className != null && className.startsWith(JUGG_INNER_PREFIX)
+      if (className != null && isReplaceableJuggBean(className)
           && projectSimpleNames.contains(simpleName(className))
           && !KEEP_SIMPLE_NAMES.contains(simpleName(className))) {
         registry.removeBeanDefinition(name);
@@ -76,7 +81,7 @@ public class JuggInnerBeanConflictResolver implements BeanDefinitionRegistryPost
     }
     if (removed > 0) {
       System.out.println("[JuggInnerBeanConflictResolver] removed " + removed
-          + " conflicting jugg inner bean definitions");
+          + " conflicting jugg bean definitions");
     }
   }
 
@@ -90,5 +95,11 @@ public class JuggInnerBeanConflictResolver implements BeanDefinitionRegistryPost
 
     int idx = className.lastIndexOf('.');
     return idx < 0 ? className : className.substring(idx + 1);
+  }
+
+  private static boolean isReplaceableJuggBean(String className) {
+
+    return className.startsWith(JUGG_INNER_PREFIX)
+        || className.startsWith(JUGG_RABBIT_LISTENER_PREFIX);
   }
 }
