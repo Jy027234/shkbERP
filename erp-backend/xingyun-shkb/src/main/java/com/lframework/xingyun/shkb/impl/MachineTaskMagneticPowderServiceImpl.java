@@ -30,6 +30,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
@@ -79,17 +80,17 @@ public class MachineTaskMagneticPowderServiceImpl extends BaseMpServiceImpl<Mach
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void send(String taskId) {
         if (StringUtil.isBlank(taskId)) {
             throw new DefaultClientException("任务ID不能为空！");
         }
-        MachineTaskMagneticPowder task = this.getBaseMapper().selectOne(
-                com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery(MachineTaskMagneticPowder.class)
-                        .eq(MachineTaskMagneticPowder::getTaskId, taskId)
-        );
+        // 锁住任务行，避免同一任务被浏览器重复点击或多个实例并发下发。
+        MachineTaskMagneticPowder task = this.getBaseMapper().selectByTaskIdForUpdate(taskId);
         if (task == null) {
             throw new DefaultClientException("未找到磁粉机任务！");
         }
+        MachineTaskRules.requireMagneticSendable(task.getMachineTaskStatus());
 
         // 获取磁粉机设备IP（machineType=2）
         MachineInfo machine = machineInfoService.lambdaQuery()
@@ -159,6 +160,8 @@ public class MachineTaskMagneticPowderServiceImpl extends BaseMpServiceImpl<Mach
             if (status != 200) {
                 throw new DefaultClientException("下发失败：" + (StringUtil.isNotBlank(msg) ? msg : ("status=" + status)));
             }
+        } catch (DefaultClientException e) {
+            throw e;
         } catch (Exception e) {
             throw new DefaultClientException("下发响应解析失败");
         }
@@ -250,7 +253,12 @@ public class MachineTaskMagneticPowderServiceImpl extends BaseMpServiceImpl<Mach
         requestFactory.setConnectTimeout(5000);
         requestFactory.setReadTimeout(5000);
         RestTemplate restTemplate = new RestTemplate(requestFactory);
-        String url = "http://" + machine.getIpAddress() + "/api/files?folder=" + folder;
+        String url = UriComponentsBuilder
+                .fromHttpUrl("http://" + machine.getIpAddress() + "/api/files")
+                .queryParam("folder", folder)
+                .build()
+                .encode()
+                .toUriString();
         log.info("获取远程磁粉机文件列表，请求url={}", url);
         ResponseEntity<String> response;
         try {
@@ -369,7 +377,6 @@ public class MachineTaskMagneticPowderServiceImpl extends BaseMpServiceImpl<Mach
         return new ResponseEntity<>(resp.getBody(), outHeaders, resp.getStatusCode());
     }
 }
-
 
 
 

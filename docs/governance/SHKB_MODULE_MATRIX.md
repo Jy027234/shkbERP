@@ -24,7 +24,7 @@ L5 才表示具备生产替换证据。当前没有任何升级模块达到 L5�
 | 维修工卡 | `views/work-card` | `WorkCardController` | `V1.16__shkb_work_card_core.sql` | 工卡只读与隔离写流程脚本 | L4 | 补浏览器端完整业务流和生产恢复副本验收 |
 | 发料、出库与库存 | `views/material` | Material Order/Out Controller 与事务服务 | `V1.17__shkb_material_flow.sql`；Outbox `V1.18__mq_outbox.sql` | 写流程、并发、物料规则、Outbox 验证 | L4 | 对账菜单迁移后执行整套组合回归 |
 | 采购、销售、通用库存 | `views/sc` | `xingyun-sc` | 原通用迁移；部分航材字段迁移 | 打印、导出及部分 API 曾冒烟 | L2-L3 | 建立凯奔实际采购/收货/退货/盘点验收用例 |
-| 拧紧机、磁粉机任务 | `views/machine-task` | MachineTask 与 MachineInfo Controller/Service | 未发现专门增量迁移 | 无专门业务验证脚本 | L2 | 补表结构、设备回报、重复上报和异常恢复验证 |
+| 拧紧机、磁粉机任务 | `views/machine-task` | MachineTask 与 MachineInfo Controller/Service | `V1.22__shkb_machine_task_core.sql` | 管理端只读探针；状态规则单测；隔离写流程覆盖相同上报重试、冲突上报和重复下发 | L3 | 补真实设备协议联调、下发成功后的断电窗口与生产恢复副本验收 |
 | 成品出入库 | `views/product-storage` | `ProductStorageController` 及附件服务 | 未发现专门增量迁移 | 无专门验证脚本 | L2 | 补 schema、增删改查、附件和权限验证 |
 | 人事、培训、证书、人员授权 | `views/hr`、`api/hr` | 已发现部分实体/Service/Mapper，未发现完整 HR Controller | 未发现专门增量迁移 | 仅部分前端 API 单测 | L1 | 先确认云端真实接口和表，再补后端入口、schema 与 E2E |
 | 航材基础信息 | 基础资料和航材页面 | `xingyun-basedata` 及 SHKB 扩展 | 部分字段迁移 | 主要依赖编译和通用冒烟 | L2 | 建立机型、件号、批次、序列号的业务验收集 |

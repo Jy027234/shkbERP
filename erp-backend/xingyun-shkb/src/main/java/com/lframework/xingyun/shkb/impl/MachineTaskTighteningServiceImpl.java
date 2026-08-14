@@ -18,6 +18,7 @@ import com.lframework.starter.web.core.utils.JsonUtil;
 import com.lframework.starter.common.utils.StringUtil;
 import com.lframework.starter.web.core.utils.IdUtil;
 import com.lframework.xingyun.shkb.bo.machinetask.GetMachineTaskTighteningBo;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
 * @author kison
@@ -75,11 +76,21 @@ public class MachineTaskTighteningServiceImpl extends BaseMpServiceImpl<MachineT
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void report(ReportMachineTaskTighteningVo vo) {
         String json = JsonUtil.toJsonString(vo.getReportData());
 
         // 1) 有 taskId：按 taskId 更新（平台任务 taskType=0）
         if (StringUtil.isNotBlank(vo.getTaskId())) {
+            MachineTaskTightening current = getByTaskId(vo.getTaskId());
+            if (current == null) {
+                throw new DefaultClientException("任务不存在，无法上报！");
+            }
+            if (MachineTaskRules.isIdempotentReport(
+                    current.getMachineTaskStatus(), current.getReportData(), json)) {
+                return;
+            }
+
             boolean updated = this.lambdaUpdate()
                     .set(MachineTaskTightening::getMachineTaskStatus, 1)
                     .set(MachineTaskTightening::getReportData, json)
@@ -90,10 +101,16 @@ public class MachineTaskTighteningServiceImpl extends BaseMpServiceImpl<MachineT
                     .set(StringUtil.isNotBlank(vo.getSerialNo()), MachineTaskTightening::getSerialNo, vo.getSerialNo())
                     .set(StringUtil.isNotBlank(vo.getPartNo()), MachineTaskTightening::getPartNo, vo.getPartNo())
                     .eq(MachineTaskTightening::getTaskId, vo.getTaskId())
+                    .eq(MachineTaskTightening::getMachineTaskStatus, 0)
                     .update();
 
             if (!updated) {
-                throw new DefaultClientException("任务不存在或已被处理，无法上报！");
+                MachineTaskTightening latest = getByTaskId(vo.getTaskId());
+                if (latest != null && MachineTaskRules.isIdempotentReport(
+                        latest.getMachineTaskStatus(), latest.getReportData(), json)) {
+                    return;
+                }
+                throw new DefaultClientException("任务已被处理，无法上报！");
             }
             return;
         }
@@ -112,13 +129,26 @@ public class MachineTaskTighteningServiceImpl extends BaseMpServiceImpl<MachineT
                 .one();
 
         if (exist != null) {
-            this.lambdaUpdate()
+            if (MachineTaskRules.isIdempotentReport(
+                    exist.getMachineTaskStatus(), exist.getReportData(), json)) {
+                return;
+            }
+            boolean updated = this.lambdaUpdate()
                     .set(MachineTaskTightening::getMachineTaskStatus, 1)
                     .set(MachineTaskTightening::getReportData, json)
                     .set(MachineTaskTightening::getReportTime, LocalDateTime.now())
                     .set(MachineTaskTightening::getTaskType, 1)
                     .eq(MachineTaskTightening::getId, exist.getId())
+                    .eq(MachineTaskTightening::getMachineTaskStatus, 0)
                     .update();
+            if (!updated) {
+                MachineTaskTightening latest = this.getById(exist.getId());
+                if (latest != null && MachineTaskRules.isIdempotentReport(
+                        latest.getMachineTaskStatus(), latest.getReportData(), json)) {
+                    return;
+                }
+                throw new DefaultClientException("任务已被处理，无法上报！");
+            }
             return;
         }
 
@@ -137,7 +167,6 @@ public class MachineTaskTighteningServiceImpl extends BaseMpServiceImpl<MachineT
         this.save(data);
     }
 }
-
 
 
 
