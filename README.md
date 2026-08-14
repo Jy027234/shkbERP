@@ -7,6 +7,7 @@
 - `erp-backend/`：Maven 多模块后端，详细升级与验证说明见 `erp-backend/UPGRADE.md`。
 - `erp-frontend/`：Vue 3 前端，详细升级与验证说明见 `erp-frontend/UPGRADE.md`。
 - `scripts/verify-all.ps1`：依次执行前后端标准门禁。
+- `docs/governance/`：唯一源码、部署基线、业务模块覆盖和发布治理记录。
 
 ## 本地工具链
 
@@ -19,11 +20,21 @@
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1
 ```
 
+该命令首先校验当前目录确实是 GitHub 单体仓库，防止从旧独立仓库或混合工作区构建。治理与对账状态见 [源码治理说明](docs/governance/SOURCE_OF_TRUTH.md)。
+
 发布前运行完整后端测试和打包：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Full
 ```
+
+正式发布还必须显式增加 `-Release`。该模式要求工作树干净、HEAD 有版本标签，并且治理基线已经解除部署锁：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Full -Release
+```
+
+当前处于旧仓库双向差异对账阶段，生产部署锁保持关闭。云端现网只作为冻结参照，治理脚本不会连接或修改云服务器。
 
 ## 配置安全
 

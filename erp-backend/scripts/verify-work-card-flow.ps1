@@ -18,7 +18,7 @@ if ($parsedBaseUri.Host -notin @('127.0.0.1', 'localhost')) {
 }
 if (-not $TenantName) {
     # Keep the source ASCII-only for Windows PowerShell 5 UTF-8 compatibility.
-    $TenantName = -join [char[]](0x6D4B, 0x8BD5, 0x79DF, 0x6237)
+    $TenantName = -join [char[]](0x4E0A, 0x6D77, 0x51EF, 0x5954, 0x822A, 0x7A7A, 0x6280, 0x672F, 0x6709, 0x9650, 0x516C, 0x53F8)
 }
 
 function Invoke-SmokeSql {
