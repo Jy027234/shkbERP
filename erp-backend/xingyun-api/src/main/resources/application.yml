@@ -1,6 +1,7 @@
 server:
   #端口
   port: 8088
+  shutdown: graceful
 spring:
   application:
     name: @project.artifactId@
@@ -8,6 +9,8 @@ spring:
     # 项目历史代码存在服务间循环依赖（如 productPropertyServiceImpl ↔ productPropertyRelationServiceImpl），
     # Boot 2.6+ 默认禁止循环引用，恢复 Boot 2.2 时代的允许行为；后续可逐步用 @Lazy 重构
     allow-circular-references: true
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   profiles:
     active: @profiles-active@
   servlet:
@@ -89,7 +92,7 @@ jugg:
     default-user-name: 系统管理员
   web:
     #不需要认证的Url
-    filter-url: ${magic-api.push_path}
+    filter-url: ${magic-api.push_path},/actuator/health,/actuator/health/**,/livez,/readyz
     #终端ID
     worker-id: 1
     #数据中心ID
@@ -219,3 +222,21 @@ simple-open-api:
   header-name: X-Simple-Auth
   tenant-header-name: X-Tenant-Id
   default-tenant-id: 1000   # 默认租户ID，未传 X-Tenant-Id 时使用（可按需修改）
+
+management:
+  endpoints:
+    access:
+      max-permitted: read-only
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+      probes:
+        enabled: true
+        add-additional-paths: true
+      group:
+        readiness:
+          include: readinessState,db,redis

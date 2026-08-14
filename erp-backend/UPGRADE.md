@@ -36,6 +36,8 @@
 
 随后完成 V1.21 发布与恢复门禁：生产凭据全部改为环境变量，MySQL 定时备份改为默认关闭；运行镜像安装 MariaDB 10.11 客户端并验证提供兼容的 `mysqldump`。备份任务移除仅 MySQL 8 客户端支持的 `--column-statistics` 参数，增加单事务导出、可配置执行文件和 JDBC URL 单元测试。`scripts/verify-backup-restore.ps1` 只允许对本地 `xingyun-smoke-mysql` 执行，会生成 gzip 备份、恢复至随机临时库、比较两次逻辑导出的 SHA-256，并在 `finally` 中删除临时库和容器内文件。完成该演练并为 `/opt/data/backup/mysql` 配置容器外持久化之前，不得开启生产备份开关。
 
+随后完成 V1.22 运行健康门禁：引入 Spring Boot Actuator，但只通过 HTTP 暴露无详情的 `health` 端点；启用 `/actuator/health/liveness`、`/actuator/health/readiness` 以及主端口上的 `/livez`、`/readyz`。Liveness 不依赖外部系统，避免共享基础设施故障引发重启风暴；Readiness 纳入数据库与 Redis，核心依赖不可用时停止接收流量。应用启用 30 秒优雅停机，运行镜像修正为暴露真实的 8088 端口，并使用 `/livez` 作为 Docker `HEALTHCHECK`。`scripts/verify-health.ps1` 会无认证验证五个端点均为 UP，且响应不泄露组件和环境细节。
+
 ## 每次改动的固定流程
 
 1. 执行 `git status --short`，确认并保护现有改动。
