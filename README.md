@@ -73,6 +73,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-material-concurrency.p
 
 消费者异常会按 1 秒、2 秒退避最多尝试 3 次；仍然失败的原始消息和异常诊断会经发布确认写入持久化 `shkb.failed` 队列，避免无限重新入队。生产者连接瞬时异常同样执行有限重试，不可路由消息必须返回生产端。
 
+系统通知、邮件和站内信三个队列只由项目侧 Listener 消费；兼容处理器会移除 jugg 5 自动配置导入的同队列重复 Listener，同时保留 jugg 独有的导出任务 Listener，防止不同 DTO/服务栈竞争同一条消息。
+
 `shkb.failed` 出现消息时应触发运维告警；必须先修复根因并确认目标操作具备幂等性，再人工重放，禁止自动循环回灌。RabbitMQ 同时纳入 `/readyz`，连接不可用时实例停止接收新流量。
 
 本地 RabbitMQ 与隔离库运行时，可验证真实失败恢复链路：
