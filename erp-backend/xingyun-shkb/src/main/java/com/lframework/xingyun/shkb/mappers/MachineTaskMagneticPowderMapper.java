@@ -3,6 +3,7 @@ package com.lframework.xingyun.shkb.mappers;
 import com.lframework.starter.web.core.mapper.BaseMapper;
 import com.lframework.xingyun.shkb.entity.MachineTaskMagneticPowder;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 /**
 * @author kison
@@ -13,8 +14,8 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface MachineTaskMagneticPowderMapper extends BaseMapper<MachineTaskMagneticPowder> {
 
+    MachineTaskMagneticPowder selectByTaskIdForUpdate(@Param("taskId") String taskId);
 }
-
 
 
 

@@ -20,4 +20,12 @@
         part_no,create_time,serial_no,
         machine_task_status,send_time
     </sql>
+
+    <select id="selectByTaskIdForUpdate" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM shkb_machine_task_magnetic_powder
+        WHERE task_id = #{taskId}
+        FOR UPDATE
+    </select>
 </mapper>
