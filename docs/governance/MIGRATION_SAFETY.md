@@ -70,12 +70,30 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-release-restore.ps1
 
 这个脚本不会连接、上传、重启或修改云服务器；它也不会对 shkb_platform 执行迁移。它的通过结果只能证明本地隔离环境和候选 SQL 的可重复性。
 
+## 授权生产备份副本的本地验收
+
+当授权人员已通过受控渠道把生产逻辑备份复制到本机后，使用下列脚本把该文件导入**本地** `xingyun-smoke-mysql` 的随机受限库，再执行预检和两轮恢复演练：
+
+~~~
+cd erp-backend
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-production-backup-copy.ps1 `
+  -BackupPath C:\safe-staging\shkb_platform.sql.gz `
+  -ExpectedSha256 <由备份源独立记录的64位SHA-256> `
+  -BackupLabel production-backup
+~~~
+
+脚本只接受 `.sql.gz` 文件并再次校验 SHA-256；它不包含 SSH、云端地址或生产凭据，也不会连接云端。导入和验证只会使用名称固定、标签受检的本地 Docker MySQL 容器，生成的 `shkb_production_copy_*` 源库、二次恢复克隆库和容器临时文件都会被精确删除。原始备份文件由操作者按数据保留规则保管或安全删除，不会被脚本提交到仓库。
+
+生成的 JSON 证据只包含文件名、大小、哈希、预检结果、迁移结果和清理状态，不包含数据库行、凭据或云端地址。即使技术验证通过，`productionDeploymentAllowed` 仍固定为 `false`；V1.21 业务影响确认、核心业务验收、回退方案和明确变更窗口批准仍是单独条件。
+
+2026-08-16 已对经授权的 `shkb_platform` 逻辑备份副本完成本地技术验收：15 项预检全部通过，11 个候选迁移连续两轮执行成功，7 项迁移后检查通过，逻辑恢复前后 SHA-256 一致，生成的本地源库和克隆库均已删除。该副本中 V1.21 会更新租户名称，待删除的三个租户模块关系为 0；菜单/角色语义仍须由业务负责人确认。
+
 ## 生产恢复副本的外部前置条件
 
 解除生产发布锁之前，仍必须由授权人员提供生产逻辑备份或数据库快照，并在与云端隔离的本地/专用恢复环境完成：
 
 1. 校验备份来源、时间、大小和 SHA-256，并恢复到隔离库；
-2. 以该恢复库作为本地预检与恢复演练的 -SourceDatabase；
+2. 以该恢复库作为本地预检与恢复演练的 -SourceDatabase；可用 `verify-production-backup-copy.ps1` 自动完成本地导入、预检和二次恢复演练；
 3. 处理全部重复键和 schema 差异，不得在生产库猜测修复；
 4. 由业务负责人确认 V1.21 的菜单/模块影响；
 5. 在恢复副本上执行认证、菜单、合同、采购、库存等对应冒烟，并准备数据库回退备份；

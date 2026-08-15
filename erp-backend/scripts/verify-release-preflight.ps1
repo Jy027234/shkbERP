@@ -14,6 +14,8 @@ $repoRoot = (Resolve-Path -LiteralPath (Join-Path $backendRoot '..')).Path
 $checks = [System.Collections.Generic.List[object]]::new()
 $failures = [System.Collections.Generic.List[string]]::new()
 $manualConfirmations = [System.Collections.Generic.List[string]]::new()
+$v121TargetTenantNameHex = 'E4B88AE6B5B7E587AFE5A594E888AAE7A9BAE68A80E69CAFE69C89E99990E585ACE58FB8'
+$tenantNameMatches = $false
 
 if ($DbContainer -ne 'xingyun-smoke-mysql') {
     throw 'Release preflight is restricted to the local xingyun-smoke-mysql container.'
@@ -67,6 +69,7 @@ function Invoke-MySqlRows {
     return @(
         $rows |
             ForEach-Object { ([string]$_).Trim() } |
+            Where-Object { $_ -notmatch '^mysql:\s+\[Warning\]\s+Using a password on the command line interface can be insecure\.$' } |
             Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
     )
 }
@@ -228,14 +231,27 @@ if ($databaseExists) {
         $tenantCount = [int](Invoke-MySqlScalar -Sql "SELECT COUNT(*) FROM tenant WHERE id = '1000';" -UseDatabase)
         $tenantDetail = if ($tenantCount -eq 1) { 'V1.21 target tenant is present.' } else { 'V1.21 requires exactly one tenant with id 1000.' }
         Add-Check -Name 'tenant:1000' -Passed ($tenantCount -eq 1) -Detail $tenantDetail
+
+        if ($tenantCount -eq 1) {
+            $tenantNameHex = Invoke-MySqlScalar -Sql "SELECT UPPER(HEX(name)) FROM tenant WHERE id = '1000';" -UseDatabase
+            $tenantNameMatches = ($tenantNameHex -eq $v121TargetTenantNameHex)
+            $nameDetail = if ($tenantNameMatches) {
+                'V1.21 target tenant name already matches; the tenant-name update is a no-op on this copy.'
+            }
+            else {
+                'V1.21 will change the target tenant name on this copy; business confirmation is required.'
+            }
+            Add-Check -Name 'tenant-name:1000' -Passed $true -Detail $nameDetail
+        }
     }
 
     if (Test-Table -Table 'sys_module_tenant') {
         $removedModuleRelations = [int](Invoke-MySqlScalar -Sql (
             "SELECT COUNT(*) FROM sys_module_tenant WHERE tenant_id = 1000 AND module_id IN (7, 12, 15);"
         ) -UseDatabase)
+        $nameImpact = if ($tenantNameMatches) { 'already matches the target' } else { 'will be updated' }
         $manualConfirmations.Add(
-            "V1.21 will remove $removedModuleRelations tenant-module relation(s) for tenant 1000 and modules 7, 12, 15; business owner confirmation is required."
+            "V1.21 tenant-name state $nameImpact and will remove $removedModuleRelations tenant-module relation(s) for tenant 1000 and modules 7, 12, 15; business owner confirmation is required."
         )
     }
 

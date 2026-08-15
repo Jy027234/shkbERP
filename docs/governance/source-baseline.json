@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "product": "SHKB ERP",
-  "observedAt": "2026-08-15",
+  "observedAt": "2026-08-16",
   "canonical": {
     "repository": "git@github.com:Jy027234/shkbERP.git",
     "branch": "main",
@@ -30,7 +30,7 @@
     }
   ],
   "reconciliation": {
-    "status": "production-copy-required",
+    "status": "business-acceptance-required",
     "backend": {
       "sameFiles": 2319,
       "differentFiles": 33,
@@ -51,10 +51,11 @@
       "create-clean-governance-commit",
       "catalog-all-versioned-migrations-with-checksums-and-safety-classification",
       "verify-local-isolated-backup-restore-and-approved-delta-idempotency",
-      "create-tagged-release-candidate-v2026.08.15-rc.1"
+      "create-tagged-release-candidate-v2026.08.15-rc.1",
+      "verify-authorized-production-backup-copy-20260815-technical-gates"
     ],
     "blockingItems": [
-      "restore-and-accept-a-production-data-copy",
+      "obtain-v121-business-confirmation-and-core-business-acceptance",
       "obtain-explicit-production-deployment-approval"
     ]
   },
@@ -63,7 +64,14 @@
     "backendRuntime": "Java 8 / Spring Boot 2.2.2",
     "backendArtifactObservedDate": "2026-07-18",
     "frontendArtifactObservedDate": "2026-07-23",
-    "embeddedGitCommit": null
+    "embeddedGitCommit": null,
+    "lastReadOnlyInspection": {
+      "observedAt": "2026-08-16",
+      "runtimeJarSha256": "e86099f02b26c5297af095f0a8b46223121ae9dbf523691d76dbd90920d1528b",
+      "databaseEngine": "MySQL 8.0.46",
+      "latestLogicalBackupAt": "2026-08-15T02:00:01+08:00",
+      "latestLogicalBackupSha256": "ff3b467e1de0bd3aef42233653b2cd26a2dad4a66205dd4b1c83f3428e000a2d"
+    }
   },
   "release": {
     "deploymentAllowed": false,
@@ -71,11 +79,26 @@
     "requiresVersionTag": true,
     "requiresSingleCommitForFrontendBackendAndMigrations": true,
     "candidateEvidence": {
-      "tag": "v2026.08.15-rc.1",
-      "tagObject": "a0b6d42816106ad62fa39ee53850cbf223c13b82",
-      "sourceCommit": "edfd802562689a5b9521d53fd9533d370feeb6d0",
-      "manifestSha256": "bd72c45c861d3dfc6aa3c0be9f14113cf513a3c7ca771ca147bc6e849de11e0a",
+      "tag": "v2026.08.15-rc.2",
+      "tagObject": "072defae0cfa46c6f8843e9aef59c60d82c3bc99",
+      "sourceCommit": "d4cd9c95741532f01ace947d8e1de1103c28c3a2",
+      "manifestSha256": "550763ccbb141717e8e9ed669c86614af9b1f56d60b0f78e9a402b71409cd249",
       "scope": "local-isolated-only",
+      "productionAllowed": false
+    },
+    "productionBackupCopyEvidence": {
+      "checkedAt": "2026-08-16",
+      "scope": "authorized-production-backup-copy-restored-locally-only",
+      "backupCompressedSha256": "ff3b467e1de0bd3aef42233653b2cd26a2dad4a66205dd4b1c83f3428e000a2d",
+      "evidenceSha256": "f6d6ebfdccf2383a634112aea9d5ace707515c0c15ebae770910cc165b27c41e",
+      "migrationCatalogSha256": "aea66a5419eb8795bbd276d03555eb85f4346ed550896353bfb2369a389100fb",
+      "technicalPreflightChecks": 15,
+      "migrationRuns": 22,
+      "postMigrationChecks": 7,
+      "v121TenantNameUpdateIsNoOp": false,
+      "v121ModuleRelationsToRemove": 0,
+      "generatedLocalCopiesRemoved": true,
+      "manualBusinessConfirmationRequired": true,
       "productionAllowed": false
     }
   }

@@ -65,6 +65,7 @@ function Invoke-MySqlScalar {
     $arguments += @('-e', $Sql)
     $rows = Invoke-DockerCommand -Arguments $arguments -ReturnOutput |
         ForEach-Object { ([string]$_).Trim() } |
+        Where-Object { $_ -notmatch '^mysql:\s+\[Warning\]\s+Using a password on the command line interface can be insecure\.$' } |
         Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
     if (@($rows).Count -eq 0) {
         return ''
