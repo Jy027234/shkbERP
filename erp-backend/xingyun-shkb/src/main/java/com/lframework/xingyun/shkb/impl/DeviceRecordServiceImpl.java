@@ -13,6 +13,7 @@ import com.lframework.starter.web.core.utils.PageResultUtil;
 import com.lframework.starter.web.core.utils.IdUtil;
 import com.lframework.xingyun.shkb.entity.DeviceRecord;
 import com.lframework.xingyun.shkb.mappers.DeviceRecordMapper;
+import com.lframework.xingyun.shkb.mappers.ShkbDeviceMapper;
 import com.lframework.xingyun.shkb.service.DeviceRecordService;
 import com.lframework.xingyun.shkb.vo.device.CreateDeviceRecordVo;
 import com.lframework.xingyun.shkb.vo.device.QueryDeviceRecordVo;
@@ -20,6 +21,7 @@ import com.lframework.xingyun.shkb.vo.device.UpdateDeviceRecordVo;
 import com.github.pagehelper.PageInfo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,6 +34,9 @@ import java.util.List;
 @Service
 public class DeviceRecordServiceImpl extends BaseMpServiceImpl<DeviceRecordMapper, DeviceRecord>
     implements DeviceRecordService {
+
+    @Autowired
+    private ShkbDeviceMapper deviceMapper;
 
     @Override
     public PageResult<DeviceRecord> query(Integer pageIndex, Integer pageSize, QueryDeviceRecordVo vo) {
@@ -86,6 +91,10 @@ public class DeviceRecordServiceImpl extends BaseMpServiceImpl<DeviceRecordMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String create(CreateDeviceRecordVo vo) {
+        if (deviceMapper.selectById(vo.getDeviceId()) == null) {
+            throw new DefaultClientException("设备不存在");
+        }
+
         DeviceRecord record = new DeviceRecord();
         record.setId(IdUtil.getId());
         record.setDeviceId(vo.getDeviceId());
@@ -104,6 +113,12 @@ public class DeviceRecordServiceImpl extends BaseMpServiceImpl<DeviceRecordMappe
         DeviceRecord record = getBaseMapper().selectById(vo.getId());
         if (record == null) {
             throw new DefaultClientException("设备维修记录不存在");
+        }
+        if (!record.getDeviceId().equals(vo.getDeviceId())) {
+            throw new DefaultClientException("设备维修记录不允许变更所属设备");
+        }
+        if (deviceMapper.selectById(vo.getDeviceId()) == null) {
+            throw new DefaultClientException("设备不存在");
         }
         
         record.setDeviceId(vo.getDeviceId());

@@ -3,14 +3,17 @@ package com.lframework.xingyun.shkb.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 
+import com.lframework.starter.common.exceptions.impl.DefaultClientException;
 import com.lframework.starter.common.utils.CollectionUtil;
 import com.lframework.starter.common.utils.FileUtil;
 import com.lframework.starter.web.core.impl.BaseMpServiceImpl;
 import com.lframework.starter.web.core.utils.IdUtil;
 import com.lframework.starter.web.core.utils.UploadUtil;
 import com.lframework.xingyun.shkb.entity.ToolRecordFile;
+import com.lframework.xingyun.shkb.mappers.ShkbToolRecordMapper;
 import com.lframework.xingyun.shkb.service.ToolRecordFileService;
 import com.lframework.xingyun.shkb.mappers.ToolRecordFileMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,6 +32,9 @@ import java.util.stream.Collectors;
 public class ToolRecordFileServiceImpl extends BaseMpServiceImpl<ToolRecordFileMapper, ToolRecordFile>
     implements ToolRecordFileService {
 
+    @Autowired
+    private ShkbToolRecordMapper toolRecordMapper;
+
     /**
      * 上传工具计量记录附件
      *
@@ -40,6 +46,10 @@ public class ToolRecordFileServiceImpl extends BaseMpServiceImpl<ToolRecordFileM
     @Transactional(rollbackFor = Exception.class)
     public List<String> uploadToolRecordFiles(String recordId, List<MultipartFile> files) {
         List<String> fileIds = new ArrayList<>();
+
+        if (toolRecordMapper.selectById(recordId) == null) {
+            throw new DefaultClientException("工具计量记录不存在");
+        }
         
         if (CollectionUtil.isEmpty(files)) {
             return fileIds;

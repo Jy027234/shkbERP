@@ -86,6 +86,11 @@ public class ShkbToolRecordServiceImpl extends BaseMpServiceImpl<ShkbToolRecordM
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String create(CreateToolRecordVo vo) {
+        ShkbTool tool = toolMapper.selectById(vo.getToolId());
+        if (tool == null) {
+            throw new DefaultClientException("计量工具不存在");
+        }
+
         ShkbToolRecord record = new ShkbToolRecord();
         record.setId(IdUtil.getId());
         record.setToolId(vo.getToolId());
@@ -97,10 +102,6 @@ public class ShkbToolRecordServiceImpl extends BaseMpServiceImpl<ShkbToolRecordM
         getBaseMapper().insert(record);
         
         // 计量记录落表后，更新计量工具：上次计量时间与有效期
-        ShkbTool tool = toolMapper.selectById(vo.getToolId());
-        if (tool == null) {
-            throw new DefaultClientException("计量工具不存在");
-        }
         // 更新上次计量时间
         tool.setLastMaintenanceTime(vo.getMaintenanceTime());
         
@@ -124,6 +125,12 @@ public class ShkbToolRecordServiceImpl extends BaseMpServiceImpl<ShkbToolRecordM
         ShkbToolRecord record = getBaseMapper().selectById(vo.getId());
         if (record == null) {
             throw new DefaultClientException("工具计量记录不存在");
+        }
+        if (!record.getToolId().equals(vo.getToolId())) {
+            throw new DefaultClientException("工具计量记录不允许变更所属工具");
+        }
+        if (toolMapper.selectById(vo.getToolId()) == null) {
+            throw new DefaultClientException("计量工具不存在");
         }
         
         record.setToolId(vo.getToolId());

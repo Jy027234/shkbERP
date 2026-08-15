@@ -24,7 +24,7 @@ L5 才表示具备生产替换证据。当前没有任何升级模块达到 L5�
 | 登录、单租户、菜单、权限 | 登录/动态菜单/权限路由 | 认证、用户、角色、菜单 | 认证加固与菜单 `V1.21` 已进入唯一仓库 | 组合迁移两次幂等；直连/单体 Vite 菜单探针通过 | L3 | 补带标签候选和生产恢复副本验收 |
 | 维修数据看板 | `views/dashboard/maintenance-board` | `DashboardController` | `V1.13__shkb_dashboard_core.sql` | `verify-dashboard.ps1` | L3 | 补真实数据口径验收和前端交互 E2E |
 | 合同管理 | `views/contract` | `ContractController`、`ContractTaskController` | `V1.14__shkb_contract_core.sql`、`V1.23__shkb_contract_task_flow.sql` | 只读探针；隔离写流程覆盖新增、修改、附件归属、任务初始状态和重复生成拒绝 | L4 | 明确合同恢复业务规则；补附件物理存储生命周期和生产恢复副本验收 |
-| 工具与设备 | `views/equipment` | 工具、设备及记录 Controller | `V1.15__shkb_equipment_records.sql` | `verify-equipment.ps1` | L3 | 补附件上传、计量和维保写流程 |
+| 工具与设备 | `views/equipment` | 工具、设备及记录 Controller | `V1.15__shkb_equipment_records.sql` | 只读探针；隔离写流程覆盖父记录守卫、计量/维保记录、日期/证书同步和附件上传删除 | L4 | 补附件物理存储生命周期、浏览器人工验收和生产恢复副本验收 |
 | 维修工卡 | `views/work-card` | `WorkCardController` | `V1.16__shkb_work_card_core.sql` | 工卡只读与隔离写流程脚本 | L4 | 补浏览器端完整业务流和生产恢复副本验收 |
 | 发料、出库与库存 | `views/material` | Material Order/Out Controller 与事务服务 | `V1.17__shkb_material_flow.sql`；Outbox `V1.18__mq_outbox.sql` | 写流程、并发、物料规则、Outbox 验证 | L4 | 对账菜单迁移后执行整套组合回归 |
 | 采购、销售、通用库存 | `views/sc` | `xingyun-sc` | 原通用迁移；部分航材字段迁移 | 打印、导出及部分 API 曾冒烟 | L2-L3 | 建立凯奔实际采购/收货/退货/盘点验收用例 |

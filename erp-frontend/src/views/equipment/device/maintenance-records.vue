@@ -17,7 +17,7 @@
               <a-descriptions-item label="设备名称">{{ deviceInfo.name || '-' }}</a-descriptions-item>
               <a-descriptions-item label="管理区域">{{ deviceInfo.managementArea || '-' }}</a-descriptions-item>
               <a-descriptions-item label="维保项目">{{ deviceInfo.maintenanceProject || '-' }}</a-descriptions-item>
-              <a-descriptions-item label="维保间隔">{{ deviceInfo.maintenanceInterval ? `${deviceInfo.maintenanceInterval}月` : '-' }}</a-descriptions-item>
+              <a-descriptions-item label="维保间隔">{{ deviceInfo.maintenanceInterval ? `${deviceInfo.maintenanceInterval}天` : '-' }}</a-descriptions-item>
               <a-descriptions-item label="维保工卡">{{ deviceInfo.maintenanceCard || '-' }}</a-descriptions-item>
             </template>
             <template v-else>

@@ -2,6 +2,7 @@ package com.lframework.xingyun.shkb.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.lframework.starter.common.exceptions.impl.DefaultClientException;
 import com.lframework.starter.common.utils.CollectionUtil;
 import com.lframework.starter.common.utils.FileUtil;
 import com.lframework.starter.web.core.impl.BaseMpServiceImpl;
@@ -9,7 +10,9 @@ import com.lframework.starter.web.core.utils.IdUtil;
 import com.lframework.starter.web.core.utils.UploadUtil;
 import com.lframework.xingyun.shkb.entity.ShkbDeviceFile;
 import com.lframework.xingyun.shkb.mappers.ShkbDeviceFileMapper;
+import com.lframework.xingyun.shkb.mappers.ShkbDeviceMapper;
 import com.lframework.xingyun.shkb.service.ShkbDeviceFileService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +30,9 @@ import java.util.List;
 public class ShkbDeviceFileServiceImpl extends BaseMpServiceImpl<ShkbDeviceFileMapper, ShkbDeviceFile>
     implements ShkbDeviceFileService{
 
+    @Autowired
+    private ShkbDeviceMapper deviceMapper;
+
     /**
      * 上传设备附件
      *
@@ -38,6 +44,10 @@ public class ShkbDeviceFileServiceImpl extends BaseMpServiceImpl<ShkbDeviceFileM
     @Transactional(rollbackFor = Exception.class)
     public List<String> uploadDeviceFiles(String deviceId, List<MultipartFile> files) {
         List<String> fileIds = new ArrayList<>();
+
+        if (deviceMapper.selectById(deviceId) == null) {
+            throw new DefaultClientException("设备不存在");
+        }
 
         if (CollectionUtil.isEmpty(files)) {
             return fileIds;
@@ -131,4 +141,3 @@ public class ShkbDeviceFileServiceImpl extends BaseMpServiceImpl<ShkbDeviceFileM
         return count;
     }
 }
-

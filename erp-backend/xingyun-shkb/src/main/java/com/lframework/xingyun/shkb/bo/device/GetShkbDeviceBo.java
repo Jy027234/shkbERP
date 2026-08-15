@@ -46,9 +46,9 @@ public class GetShkbDeviceBo extends BaseBo<ShkbDevice> {
     private String maintenanceProject;
 
     /**
-     * 维保间隔（月）
+     * 维保间隔（天）
      */
-    @ApiModelProperty("维保间隔（月）")
+    @ApiModelProperty("维保间隔（天）")
     private Integer maintenanceInterval;
 
     /**

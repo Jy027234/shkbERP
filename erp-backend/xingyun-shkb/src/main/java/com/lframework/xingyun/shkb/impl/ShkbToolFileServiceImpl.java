@@ -9,8 +9,10 @@ import com.lframework.starter.web.core.impl.BaseMpServiceImpl;
 import com.lframework.starter.web.core.utils.IdUtil;
 import com.lframework.starter.web.core.utils.UploadUtil;
 import com.lframework.xingyun.shkb.entity.ShkbToolFile;
+import com.lframework.xingyun.shkb.mappers.ShkbToolMapper;
 import com.lframework.xingyun.shkb.service.ShkbToolFileService;
 import com.lframework.xingyun.shkb.mappers.ShkbToolFileMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,6 +30,9 @@ import java.util.List;
 public class ShkbToolFileServiceImpl extends BaseMpServiceImpl<ShkbToolFileMapper, ShkbToolFile>
     implements ShkbToolFileService {
 
+    @Autowired
+    private ShkbToolMapper toolMapper;
+
     /**
      * 上传工具附件
      *
@@ -39,6 +44,10 @@ public class ShkbToolFileServiceImpl extends BaseMpServiceImpl<ShkbToolFileMappe
     @Transactional(rollbackFor = Exception.class)
     public List<String> uploadToolFiles(String toolId, List<MultipartFile> files) {
         List<String> fileIds = new ArrayList<>();
+
+        if (toolMapper.selectById(toolId) == null) {
+            throw new DefaultClientException("工具不存在");
+        }
         
         if (CollectionUtil.isEmpty(files)) {
             return fileIds;
