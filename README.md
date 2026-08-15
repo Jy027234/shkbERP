@@ -76,9 +76,11 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-health.ps1
 cd erp-backend
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-material-flow-write.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-material-concurrency.ps1 -Iterations 5
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-purchase-flow.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-purchase-flow.ps1 -BaseUrl http://127.0.0.1:5173/api
 ```
 
-这两个脚本会直接造数，只允许连接本机隔离环境，并在结束时精确清理测试数据。
+这些脚本会直接造数，只允许连接本机隔离环境，并在结束时精确清理测试数据。采购流程脚本同时验证批次扣减、序列号部分退货和并发状态变化时的事务回滚。
 
 ## RabbitMQ 失败恢复
 

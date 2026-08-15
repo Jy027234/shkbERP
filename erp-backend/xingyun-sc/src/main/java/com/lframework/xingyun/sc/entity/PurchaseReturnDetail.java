@@ -70,5 +70,10 @@ public class PurchaseReturnDetail extends BaseEntity implements BaseDto {
    */
   private String receiveSheetDetailId;
 
+  /**
+   * 本次退货序列号，多个序列号用逗号分隔
+   */
+  private String serialNumberList;
+
 
 }

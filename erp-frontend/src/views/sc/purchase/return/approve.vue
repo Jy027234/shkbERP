@@ -227,6 +227,7 @@
             },
           },
           { field: 'returnNum', title: '退货数量', align: 'right', width: 100 },
+          { field: 'serialNumberList', title: '退货序列号', width: 220 },
           {
             field: 'taxAmount',
             title: '含税金额',

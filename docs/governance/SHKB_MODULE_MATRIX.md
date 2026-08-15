@@ -27,7 +27,7 @@ L5 才表示具备生产替换证据。当前没有任何升级模块达到 L5�
 | 工具与设备 | `views/equipment` | 工具、设备及记录 Controller | `V1.15__shkb_equipment_records.sql` | 只读探针；隔离写流程覆盖父记录守卫、计量/维保记录、日期/证书同步和附件上传删除 | L4 | 补附件物理存储生命周期、浏览器人工验收和生产恢复副本验收 |
 | 维修工卡 | `views/work-card` | `WorkCardController` | `V1.16__shkb_work_card_core.sql` | 工卡只读与隔离写流程脚本 | L4 | 补浏览器端完整业务流和生产恢复副本验收 |
 | 发料、出库与库存 | `views/material` | Material Order/Out Controller 与事务服务 | `V1.17__shkb_material_flow.sql`；Outbox `V1.18__mq_outbox.sql` | 写流程、并发、物料规则、Outbox 验证 | L4 | 对账菜单迁移后执行整套组合回归 |
-| 采购、收货、退货与通用库存 | `views/sc/purchase` | 采购订单、收货单、采购退货与库存事务服务 | 原通用迁移；`V1.24__purchase_receive_traceability.sql` 补齐收货追溯列 | `verify-purchase-flow.ps1` 在直连与 Vite 代理覆盖主单/商品归属、超量守卫、追溯字段和库存 `0→6→4` | L4 | 补批次商品专项与序列号退货选择；销售、盘点仍需独立验收；补生产恢复副本验收 |
+| 采购、收货、退货与通用库存 | `views/sc/purchase` | 采购订单、收货单、采购退货与库存事务服务 | `V1.24__purchase_receive_traceability.sql` 补收货追溯列；`V1.25__purchase_return_serial_traceability.sql` 补退货序列号快照 | `verify-purchase-flow.ps1` 在直连与 Vite 代理覆盖主单/商品归属、超量守卫、批次扣减、序列号部分退货与并发回滚 | L4 | 销售、盘点仍需独立验收；补浏览器业务验收和生产恢复副本验收 |
 | 拧紧机、磁粉机任务 | `views/machine-task` | MachineTask 与 MachineInfo Controller/Service | `V1.22__shkb_machine_task_core.sql` | 管理端只读探针；状态规则单测；隔离写流程覆盖相同上报重试、冲突上报和重复下发 | L3 | 补真实设备协议联调、下发成功后的断电窗口与生产恢复副本验收 |
 | 成品出入库（冻结） | `views/product-storage` | `ProductStorageController` 及附件服务 | 不补迁移 | 不纳入核心回归 | 非发布范围 | 半成品且未纳入上海凯奔实际流程；除非用户明确启用并重新验收，否则不投入、不发布 |
 | 人事、培训、证书、人员授权 | `views/hr`、`api/hr` | 已发现部分实体/Service/Mapper，未发现完整 HR Controller | 未发现专门增量迁移 | 仅部分前端 API 单测 | L1 | 先确认云端真实接口和表，再补后端入口、schema 与 E2E |

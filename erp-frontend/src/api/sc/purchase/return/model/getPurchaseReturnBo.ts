@@ -223,6 +223,15 @@ export interface ReturnDetailBo {
    */
   receiveSheetDetailId: string;
 
+  /** 是否批次管理 */
+  isBatch: boolean;
+
+  /** 是否序列号管理 */
+  isSerial: boolean;
+
+  /** 本次退货序列号 */
+  serialNumberList: string;
+
   /**
    * 仓库ID
    */

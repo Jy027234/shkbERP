@@ -13,8 +13,10 @@ import com.lframework.xingyun.core.bo.print.A4ExcelPortraitPrintBo;
 import com.lframework.xingyun.sc.bo.purchase.returned.GetPurchaseReturnBo;
 import com.lframework.xingyun.sc.bo.purchase.returned.PrintPurchaseReturnBo;
 import com.lframework.xingyun.sc.bo.purchase.returned.QueryPurchaseReturnBo;
+import com.lframework.xingyun.sc.bo.purchase.returned.PurchaseReturnSerialBo;
 import com.lframework.xingyun.sc.dto.purchase.returned.PurchaseReturnFullDto;
 import com.lframework.xingyun.sc.entity.PurchaseReturn;
+import com.lframework.xingyun.sc.entity.ProductStockSerial;
 import com.lframework.xingyun.sc.excel.purchase.returned.PurchaseReturnExportModel;
 import com.lframework.xingyun.sc.service.purchase.PurchaseReturnService;
 import com.lframework.xingyun.sc.vo.purchase.returned.ApprovePassPurchaseReturnVo;
@@ -38,6 +40,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -140,6 +143,23 @@ public class PurchaseReturnController extends DefaultBaseController {
     GetPurchaseReturnBo result = new GetPurchaseReturnBo(data);
 
     return InvokeResultBuilder.success(result);
+  }
+
+  /**
+   * 查询采购收货明细当前可退货的序列号
+   */
+  @ApiOperation("查询采购收货明细可退货序列号")
+  @HasPermission({"purchase:return:add", "purchase:return:modify"})
+  @GetMapping("/available-serials")
+  public InvokeResult<List<PurchaseReturnSerialBo>> getAvailableSerials(
+      @NotBlank(message = "采购收货单明细ID不能为空！") @RequestParam String receiveSheetDetailId) {
+
+    List<ProductStockSerial> serials = purchaseReturnService.getAvailableSerials(
+        receiveSheetDetailId);
+    List<PurchaseReturnSerialBo> results = serials.stream().map(PurchaseReturnSerialBo::new)
+        .collect(Collectors.toList());
+
+    return InvokeResultBuilder.success(results);
   }
 
   /**

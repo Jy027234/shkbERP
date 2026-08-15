@@ -159,6 +159,22 @@
         <template #description_default="{ row }">
           <a-input v-model:value="row.description" />
         </template>
+
+        <!-- 序列号 列自定义内容 -->
+        <template #serialNumberList_default="{ row }">
+          <a-select
+            v-if="row.isSerial"
+            v-model:value="row.selectedSerialNumbers"
+            mode="multiple"
+            style="width: 100%"
+            placeholder="选择本次退货序列号"
+            :options="row.serialOptions"
+            :loading="row.serialLoading"
+            :max-tag-count="1"
+            @dropdown-visible-change="(visible) => visible && loadAvailableSerials(row)"
+          />
+          <span v-else>-</span>
+        </template>
       </vxe-grid>
 
       <order-time-line :id="id" />
@@ -325,6 +341,12 @@
             width: 200,
             slots: { default: 'description_default' },
           },
+          {
+            field: 'serialNumberList',
+            title: '序列号',
+            width: 240,
+            slots: { default: 'serialNumberList_default' },
+          },
         ],
         tableData: [],
       };
@@ -410,6 +432,9 @@
             const tableData = res.details || [];
             tableData.forEach((item) => {
               item.isFixed = !this.$utils.isEmpty(item.receiveSheetDetailId);
+              item.selectedSerialNumbers = item.serialNumberList
+                ? item.serialNumberList.split(',').filter((value) => value)
+                : [];
 
               if (item.isFixed) {
                 // 接口返回的剩余退货数量是最新的数据，应加上当前退货数量
@@ -452,6 +477,12 @@
           description: '',
           isFixed: false,
           products: [],
+          isBatch: false,
+          isSerial: false,
+          serialNumberList: '',
+          selectedSerialNumbers: [],
+          serialOptions: [],
+          serialLoading: false,
         };
       },
       // 新增航材
@@ -617,6 +648,7 @@
           return false;
         }
 
+        const selectedSerialNumbers = new Set();
         for (let i = 0; i < this.tableData.length; i++) {
           const product = this.tableData[i];
 
@@ -686,6 +718,23 @@
                 return false;
               }
             }
+
+            if (product.isSerial) {
+              const rowSerialNumbers = product.selectedSerialNumbers || [];
+              if (rowSerialNumbers.length !== Number(product.returnNum)) {
+                this.$msg.createError(
+                  '第' + (i + 1) + '行序列号数量必须与退货数量一致！',
+                );
+                return false;
+              }
+              for (const serialNumber of rowSerialNumbers) {
+                if (selectedSerialNumbers.has(serialNumber)) {
+                  this.$msg.createError('序列号[' + serialNumber + ']被重复选择！');
+                  return false;
+                }
+                selectedSerialNumbers.add(serialNumber);
+              }
+            }
           } else {
             if (!product.isFixed) {
               this.$msg.createError('第' + (i + 1) + '行航材退货数量不允许为空！');
@@ -702,6 +751,24 @@
         }
 
         return true;
+      },
+      // 加载当前采购收货明细仍在库、可退货的序列号
+      loadAvailableSerials(row) {
+        if (!row.receiveSheetDetailId || row.serialLoading) {
+          return;
+        }
+        row.serialLoading = true;
+        api
+          .getAvailableSerials(row.receiveSheetDetailId)
+          .then((serials) => {
+            row.serialOptions = (serials || []).map((serial) => ({
+              label: serial.serialNumber,
+              value: serial.serialNumber,
+            }));
+          })
+          .finally(() => {
+            row.serialLoading = false;
+          });
       },
       // 修改订单
       updateOrder() {
@@ -724,6 +791,7 @@
                 productId: t.productId,
                 returnNum: t.returnNum,
                 description: t.description,
+                serialNumberList: (t.selectedSerialNumbers || []).join(','),
               };
 
               if (t.isFixed) {

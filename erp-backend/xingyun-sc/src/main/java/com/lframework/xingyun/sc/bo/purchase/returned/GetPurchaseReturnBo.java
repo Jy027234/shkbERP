@@ -358,6 +358,24 @@ public class GetPurchaseReturnBo extends BaseBo<PurchaseReturnFullDto> {
     private String receiveSheetDetailId;
 
     /**
+     * 是否批次管理
+     */
+    @ApiModelProperty("是否批次管理")
+    private Boolean isBatch;
+
+    /**
+     * 是否序列号管理
+     */
+    @ApiModelProperty("是否序列号管理")
+    private Boolean isSerial;
+
+    /**
+     * 本次退货序列号
+     */
+    @ApiModelProperty("本次退货序列号")
+    private String serialNumberList;
+
+    /**
      * 仓库ID
      */
     @ApiModelProperty(value = "仓库ID", hidden = true)
@@ -395,6 +413,9 @@ public class GetPurchaseReturnBo extends BaseBo<PurchaseReturnFullDto> {
       this.spec = product.getSpec();
       this.categoryName = product.getCategoryName();
       this.brandName = product.getBrandName();
+      this.isBatch = product.getIsBatch();
+      this.isSerial = product.getIsSerial();
+      this.serialNumberList = dto.getSerialNumberList();
 
       if (!StringUtil.isBlank(dto.getReceiveSheetDetailId())) {
         ReceiveSheetDetailService receiveSheetDetailService = ApplicationUtil.getBean(
