@@ -16,6 +16,39 @@ function Add-Failure {
     $failures.Add($Message)
 }
 
+function Get-CanonicalMigrationHash {
+    <#
+        Versioned SQL is Git text content and may be checked out as CRLF on
+        Windows or LF on Linux.  The catalog deliberately hashes every byte
+        except the physical representation of line endings, so the same Git
+        content has one portable checksum while all non-line-ending changes
+        remain detectable.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    [byte[]]$sourceBytes = [System.IO.File]::ReadAllBytes($Path)
+    $canonicalBytes = [System.Collections.Generic.List[byte]]::new($sourceBytes.Length)
+
+    for ($index = 0; $index -lt $sourceBytes.Length; $index++) {
+        if ($sourceBytes[$index] -eq [byte]13) {
+            $canonicalBytes.Add([byte]10)
+            if (($index + 1) -lt $sourceBytes.Length -and $sourceBytes[$index + 1] -eq [byte]10) {
+                $index++
+            }
+            continue
+        }
+        $canonicalBytes.Add($sourceBytes[$index])
+    }
+
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        return ([System.BitConverter]::ToString($sha256.ComputeHash($canonicalBytes.ToArray()))).Replace('-', '').ToLowerInvariant()
+    }
+    finally {
+        $sha256.Dispose()
+    }
+}
+
 function Get-RiskTokens {
     param([Parameter(Mandatory = $true)][string]$Sql)
 
@@ -79,6 +112,9 @@ $migrationRoot = $null
 if ($catalog) {
     if ($catalog.schemaVersion -ne 1) {
         Add-Failure "Unsupported migration catalog schemaVersion '$($catalog.schemaVersion)'."
+    }
+    if ([string]$catalog.checksumAlgorithm -ne 'sha256-lf-bytes-v1') {
+        Add-Failure "Unsupported migration catalog checksumAlgorithm '$($catalog.checksumAlgorithm)'."
     }
     if ($catalog.policy.automaticExecution -ne $false) {
         Add-Failure 'Migration catalog must explicitly state automaticExecution=false.'
@@ -218,7 +254,7 @@ foreach ($migration in $actualMigrations) {
     }
 
     $entry = $entryByPath[$migration.Path]
-    $actualHash = (Get-FileHash -LiteralPath $migration.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actualHash = Get-CanonicalMigrationHash -Path $migration.FullName
     if ($actualHash -ne [string]$entry.sha256) {
         Add-Failure "Migration checksum differs from catalog: $($migration.Path)"
     }

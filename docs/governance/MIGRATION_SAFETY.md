@@ -2,7 +2,7 @@
 
 本仓库的 erp-backend/xingyun-api/src/main/resources/db/migration 是版本化的部署前 SQL 源文件，不是应用启动时的自动迁移队列。运行 jar 排除了 db/**，项目也没有 Flyway 运行时依赖；重启服务不会执行其中任何 SQL。
 
-唯一的机器可读清单是 [migration-catalog.json](migration-catalog.json)。它固定每个 SQL 的 SHA-256、风险标记和可执行范围。任何迁移文件、哈希、风险标记或既有库计划不一致时，下面的校验会失败：
+唯一的机器可读清单是 [migration-catalog.json](migration-catalog.json)。它固定每个 SQL 的 SHA-256、风险标记和可执行范围。`sha256-lf-bytes-v1` 只把 `CRLF` 或单独 `CR` 规范为 `LF` 后计算 SHA-256，其他每一个字节都纳入校验；因此 Windows/Linux 的文本检出差异不会误报，而任何实际 SQL 内容变化仍会被拦截。任何迁移文件、哈希、风险标记或既有库计划不一致时，下面的校验会失败：
 
 ~~~
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-migration-catalog.ps1

@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "checksumAlgorithm": "sha256-lf-bytes-v1",
   "updatedAt": "2026-08-15",
   "migrationRoot": "erp-backend/xingyun-api/src/main/resources/db/migration",
   "policy": {
@@ -278,7 +279,7 @@
       "scope": "tenant",
       "version": "1.18",
       "classification": "existing-database-delta",
-      "sha256": "9bff5540f8f65fcec5c20fd3f7c1282d08b30dc64de34ce7c4411f4baed72341",
+      "sha256": "126bd29f3e0c3c8462cc2f628b9fb0e1a931db4f6524f8aa302f3948683f60ee",
       "riskTokens": [],
       "controlledDataMutation": false,
       "note": "事务消息 Outbox/Inbox。"
@@ -288,7 +289,7 @@
       "scope": "tenant",
       "version": "1.21",
       "classification": "existing-database-delta",
-      "sha256": "c82c79ce2b187641a2651eceb7dabacfe3563d1c200e4fca01bcc5fd8fdf3bfb",
+      "sha256": "d4ee9c37afd3601b5f1bfacb46e8d61732556c285d46dc6f1bad2be001427385",
       "riskTokens": ["delete-data", "update-data", "temporary-table-cleanup"],
       "controlledDataMutation": true,
       "note": "受控菜单和角色基线；会更新租户名并删除租户 1000 的三个模块关系，执行前必须业务确认。"
@@ -298,7 +299,7 @@
       "scope": "tenant",
       "version": "1.22",
       "classification": "existing-database-delta",
-      "sha256": "3480a9c67594a048f520a261d2689dd1cb67897dc9a2d7527483030bc83e659f",
+      "sha256": "ca020e1e24528879750bd78cd737d4d9213a3e03ea5c9ff028a22ca83dda5b34",
       "riskTokens": [],
       "controlledDataMutation": false,
       "note": "自动化设备任务结构；预检重复 task_id。"
@@ -308,7 +309,7 @@
       "scope": "tenant",
       "version": "1.23",
       "classification": "existing-database-delta",
-      "sha256": "cd32f9f1a91c4a58fa3570fc0ef75a75a72b0049de563adffe2fa045435c76a6",
+      "sha256": "bcabd28abe9efcf72e434f85965f9eaa6ec85ee209c77e924ccbb087c25d064a",
       "riskTokens": [],
       "controlledDataMutation": false,
       "note": "合同任务流程结构；预检重复 contract_id。"
@@ -318,7 +319,7 @@
       "scope": "tenant",
       "version": "1.24",
       "classification": "existing-database-delta",
-      "sha256": "def3e14d94213ca20c8437e0dd3312092d29f2ee12636753ca2907beb6689920",
+      "sha256": "c0fefeb046326c00c765cf4abbf5f228e257a2d459a08ffe0e8867454efc8f9f",
       "riskTokens": [],
       "controlledDataMutation": false,
       "note": "采购收货追溯字段。"
@@ -328,7 +329,7 @@
       "scope": "tenant",
       "version": "1.25",
       "classification": "existing-database-delta",
-      "sha256": "d1f4fa51f5fa2f2d52a46e69f7e9b49439a1502ad4c174848f522da710f21b76",
+      "sha256": "97f5c8bde3d48c57a19c5f532b1a2d1d9924b69ae13bea1f355f3f56d2afed14",
       "riskTokens": [],
       "controlledDataMutation": false,
       "note": "采购退货序列号追溯字段。"
