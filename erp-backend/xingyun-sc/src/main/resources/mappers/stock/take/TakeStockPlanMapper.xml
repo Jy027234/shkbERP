@@ -177,6 +177,12 @@
         WHERE tb.id = #{id}
     </select>
 
+    <select id="selectByIdForUpdate" resultMap="TakeStockPlan">
+        <include refid="TakeStockPlanDto_sql"/>
+        WHERE tb.id = #{id}
+        FOR UPDATE
+    </select>
+
     <select id="getDetails" resultMap="TakeStockPlanFullDetailDto" parameterType="java.lang.String">
         <include refid="TakeStockPlanFullDetailDto_sql"/>
         ORDER BY tb.order_no

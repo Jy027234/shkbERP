@@ -55,6 +55,14 @@ public interface TakeStockPlanService extends BaseMpService<TakeStockPlan> {
   TakeStockPlanFullDto getDetail(String id);
 
   /**
+   * 根据ID查询并锁定盘点任务，仅允许在事务中调用。
+   *
+   * @param id 盘点任务ID
+   * @return 盘点任务
+   */
+  TakeStockPlan getByIdForUpdate(String id);
+
+  /**
    * 创建
    *
    * @param vo

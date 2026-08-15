@@ -43,8 +43,16 @@ public interface TakeStockPlanDetailMapper extends BaseMapper<TakeStockPlanDetai
    * @param productId
    * @param num
    */
-  void updateOriTakeNum(@Param("planId") String planId, @Param("productId") String productId,
+  int updateOriTakeNum(@Param("planId") String planId, @Param("productId") String productId,
       @Param("num") Integer num);
+
+  /**
+   * 删除单品盘点中已不再被任何盘点单引用的任务明细。
+   *
+   * @param planId 盘点任务ID
+   * @return 删除数量
+   */
+  int deleteUnusedSimpleDetails(@Param("planId") String planId);
 
   /**
    * 增加进项数量

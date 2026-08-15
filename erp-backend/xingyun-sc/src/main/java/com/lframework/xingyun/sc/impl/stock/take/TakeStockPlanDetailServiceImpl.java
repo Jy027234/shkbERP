@@ -75,8 +75,15 @@ public class TakeStockPlanDetailServiceImpl extends
 
   @Transactional(rollbackFor = Exception.class)
   @Override
-  public void updateOriTakeNum(String planId, String productId, Integer num) {
+  public int updateOriTakeNum(String planId, String productId, Integer num) {
 
-    getBaseMapper().updateOriTakeNum(planId, productId, num);
+    return getBaseMapper().updateOriTakeNum(planId, productId, num);
+  }
+
+  @Transactional(rollbackFor = Exception.class)
+  @Override
+  public int deleteUnusedSimpleDetails(String planId) {
+
+    return getBaseMapper().deleteUnusedSimpleDetails(planId);
   }
 }

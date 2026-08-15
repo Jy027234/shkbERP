@@ -51,6 +51,18 @@
         UPDATE tbl_take_stock_plan_detail set ori_take_num = IFNULL(ori_take_num, 0) + #{num}
         WHERE plan_id = #{planId} AND product_id = #{productId}
     </update>
+    <delete id="deleteUnusedSimpleDetails">
+        DELETE detail
+        FROM tbl_take_stock_plan_detail detail
+        WHERE detail.plan_id = #{planId}
+          AND NOT EXISTS (
+            SELECT 1
+            FROM tbl_take_stock_sheet sheet
+            INNER JOIN tbl_take_stock_sheet_detail sheet_detail ON sheet_detail.sheet_id = sheet.id
+            WHERE sheet.plan_id = detail.plan_id
+              AND sheet_detail.product_id = detail.product_id
+          )
+    </delete>
     <select id="getByPlanIdAndProductId" resultMap="GetTakeStockPlanDetailProductDto">
         <include refid="GetTakeStockPlanDetailProductDto_sql"/>
         WHERE tb.plan_id = #{planId}
