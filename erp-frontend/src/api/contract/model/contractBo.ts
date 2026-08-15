@@ -1,287 +1,96 @@
-export interface QueryContractBo {
-  /**
-   * ID
-   */
+export interface RepairTypeBo {
   id: string;
-
-  /**
-   * 编号
-   */
   code: string;
+  name: string;
+}
 
-  /**
-   * 合同类型
-   */
+export interface QueryContractBo {
+  id: string;
+  code: string;
+  name: string;
   contractType: number;
-
-  /**
-   * 合同类型名称
-   */
   contractTypeName: string;
-
-  /**
-   * 客户ID
-   */
+  contractStatus: number;
+  contractStatusName: string;
   customerId: string;
-
-  /**
-   * 客户名称
-   */
   customerName: string;
-
-   /**
-   * 客户简码
-   */
-   mnemonicCode: string;
-
-  /**
-   * 件号ID
-   */
+  mnemonicCode: string;
   partNumberId: string;
-
-  /**
-   * 件号编码
-   */
   partNumberCode: string;
-
-  /**
-   * 件号名称
-   */
   partNumberName: string;
-
-  /**
-   * 机型ID
-   */
   machineTypeId: string;
-
-  /**
-   * 机型编码
-   */
   machineTypeCode: string;
-
-  /**
-   * 机型名称
-   */
   machineTypeName: string;
-
-  /**
-   * 序号
-   */
-  serialNumber: string;
-
-  /**
-   * 维修类型ID
-   */
-  repairTypeId: string;
-
-  /**
-   * 维修类型编码
-   */
-  repairTypeCode: string;
-
-  /**
-   * 维修类型名称
-   */
-  repairTypeName: string;
-
-  /**
-   * 其他维修需求
-   */
-  otherRepairRequirements: string;
-
-  /**
-   * 合同时间
-   */
+  taskStatus?: string;
+  repairStatus?: string;
+  repairStatusName?: string;
+  repairTypes: RepairTypeBo[];
+  serialNumber?: string;
+  otherRepairRequirements?: string;
   contractTime: string;
-
-  /**
-   * 入库时间
-   */
-  storageTime: string;
-
-  /**
-   * 计划完工时间
-   */
-  plannedCompletionTime: string;
-
-  /**
-   * 交付时间
-   */
-  deliveryTime: string;
-
-  /**
-   * 合同价格
-   */
-  contractPrice: number;
-
-  /**
-   * 更换件价格
-   */
-  replacementPartPrice: number;
-
-  /**
-   * 实际完工时间
-   */
-  actualCompletionTime: string;
-
-  /**
-   * 状态
-   */
+  storageTime?: string;
+  plannedCompletionTime?: string;
+  deliveryTime?: string;
+  actualCompletionTime?: string;
+  contractPrice?: number;
+  replacementPartPrice?: number;
   available: boolean;
-
-  /**
-   * 备注
-   */
-  description: string;
-
-  /**
-   * 创建人ID
-   */
+  description?: string;
   createBy: string;
-
-  /**
-   * 创建时间
-   */
+  createByName?: string;
   createTime: string;
-
-  /**
-   * 修改人ID
-   */
   updateBy: string;
-
-  /**
-   * 修改时间
-   */
+  updateByName?: string;
   updateTime: string;
 }
 
 export interface CreateContractVo {
-  /**
-   * 合同类型
-   */
+  code: string;
+  name: string;
   contractType: number;
-
-  /**
-   * 客户编号
-   */
-  customerCode: string;
-
-  /**
-   * 件号ID
-   */
+  customerId: string;
   partNumberId: string;
-
-  /**
-   * 序号
-   */
-  serialNumber: string;
-
-  /**
-   * 维修类型ID
-   */
-  repairTypeId: string;
-
-  /**
-   * 其他维修需求
-   */
-  otherRepairRequirements: string;
-
-  /**
-   * 合同时间
-   */
+  repairTypeIds: string[];
+  serialNumber?: string;
+  otherRepairRequirements?: string;
   contractTime: string;
-
-  /**
-   * 入库时间
-   */
-  storageTime: string;
-
-  /**
-   * 计划完工时间
-   */
-  plannedCompletionTime: string;
-
-  /**
-   * 交付时间
-   */
-  deliveryTime: string;
-
-  /**
-   * 合同价格
-   */
-  contractPrice: number;
-
-  /**
-   * 更换件价格
-   */
-  replacementPartPrice: number;
-
-  /**
-   * 实际完工时间
-   */
-  actualCompletionTime: string;
-
-  /**
-   * 状态
-   */
-  available: boolean;
-
-  /**
-   * 备注
-   */
-  description: string;
+  storageTime?: string;
+  plannedCompletionTime?: string;
+  deliveryTime?: string;
+  actualCompletionTime?: string;
+  contractPrice?: number;
+  replacementPartPrice?: number;
+  description?: string;
+  available?: boolean;
+  // Resolved from the part number for display; the backend ignores this field.
+  machineTypeId?: string;
 }
 
 export interface UpdateContractVo extends CreateContractVo {
-  /**
-   * ID
-   */
   id: string;
+  available: boolean;
 }
 
 export interface QueryContractVo {
-  /**
-   * 编号
-   */
-  code: string;
-
-  /**
-   * 合同类型
-   */
-  contractType: number;
-
-  /**
-   * 客户编号
-   */
-  customerCode: string;
-
-  /**
-   * 件号ID
-   */
-  partNumberId: string;
-
-  /**
-   * 序号
-   */
-  serialNumber: string;
-
-  /**
-   * 维修类型ID
-   */
-  repairTypeId: string;
-
-  /**
-   * 状态
-   */
-  available: boolean;
-
-  /**
-   * 页码
-   */
-  pageIndex: number;
-
-  /**
-   * 页大小
-   */
-  pageSize: number;
+  code?: string;
+  name?: string;
+  available?: boolean;
+  contractType?: number;
+  contractStatus?: number;
+  taskStatus?: string;
+  customerId?: string;
+  partNumberId?: string;
+  partNumberCode?: string;
+  machineTypeId?: string;
+  repairTypeIds?: string;
+  serialNumber?: string;
+  startContractTime?: string;
+  endContractTime?: string;
+  startStorageTime?: string;
+  endStorageTime?: string;
+  startPlannedCompletionTime?: string;
+  endPlannedCompletionTime?: string;
+  ids?: string;
+  pageIndex?: number;
+  pageSize?: number;
 }

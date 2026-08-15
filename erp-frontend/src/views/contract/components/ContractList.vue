@@ -186,15 +186,6 @@
               >
                 关闭合同
               </a-button>
-              <a-button
-                :disabled="!selectedRowKeys.length || !canRestoreContract"
-                v-permission="['admin']"
-                :icon="h(RedoOutlined)"
-                :loading="restoreContractLoading"
-                @click="handleRestoreContract"
-              >
-                恢复合同
-              </a-button>
             </a-space>
           </template>
           <!-- 任务状态 列自定义内容 -->
@@ -291,7 +282,7 @@
   import Modify from '../components/ContractModify.vue';
   import Detail from '../components/ContractDetail.vue';
   import AttachmentManage from '../components/ContractAttachmentManage.vue';
-  import { PlusOutlined, SearchOutlined, ReloadOutlined, EditOutlined, EyeOutlined, DownOutlined, FormOutlined, CloseCircleOutlined, PaperClipOutlined, DownloadOutlined, RedoOutlined } from '@ant-design/icons-vue';
+  import { PlusOutlined, SearchOutlined, ReloadOutlined, EditOutlined, EyeOutlined, DownOutlined, FormOutlined, CloseCircleOutlined, PaperClipOutlined, DownloadOutlined } from '@ant-design/icons-vue';
   import * as api from '@/api/contract';
 import { CONTRACT_STATUS } from '@/enums/biz/contractStatus';
   import * as machineTypeApi from '@/api/base-data/machine-type/index';
@@ -315,7 +306,6 @@ import { CONTRACT_STATUS } from '@/enums/biz/contractStatus';
       DownOutlined,
       PaperClipOutlined,
       CloseCircleOutlined,
-      RedoOutlined,
     },
     props: {
       // 合同类型：aviation-航空维修合同，factory-l-工厂维修合同(L)，factory-wb-工厂维修合同(WB)
@@ -339,7 +329,6 @@ import { CONTRACT_STATUS } from '@/enums/biz/contractStatus';
       FormOutlined,
       CloseCircleOutlined,
       DownloadOutlined,
-      RedoOutlined,
         hasPermission,
         createMessage,
         createConfirm
@@ -391,8 +380,6 @@ import { CONTRACT_STATUS } from '@/enums/biz/contractStatus';
         closeContractLoading: false,
         // 关闭合同备注
         closeContractRemark: '',
-        // 恢复合同加载状态
-        restoreContractLoading: false,
         // 工具栏配置
         toolbarConfig: {
           // 自定义左侧工具栏
@@ -458,15 +445,6 @@ import { CONTRACT_STATUS } from '@/enums/biz/contractStatus';
           },
         },
       };
-    },
-    computed: {
-      canRestoreContract() {
-        if (!this.selectedRows || this.selectedRows.length === 0) {
-          return false;
-        }
-        const contractCloseStatus = CONTRACT_STATUS.get('CONTRACT_CLOSE').code;
-        return this.selectedRows.every(row => row.contractStatus === contractCloseStatus);
-      },
     },
     created() {
       // 设置合同类型
@@ -666,39 +644,6 @@ import { CONTRACT_STATUS } from '@/enums/biz/contractStatus';
         }
       },
       
-      // 恢复合同
-      async handleRestoreContract() {
-        if (this.selectedRowKeys.length === 0) {
-          this.createMessage.warning('请选择要恢复的合同');
-          return;
-        }
-
-        const contractCodes = this.selectedRows.map((row) => row.code).join(', ');
-        this.createConfirm({
-          title: '提示',
-          content: `确认要恢复选中的合同(${contractCodes})吗？`,
-          okText: '确认',
-          cancelText: '取消',
-          onOk: async () => {
-            this.restoreContractLoading = true;
-            try {
-              const promises = this.selectedRows.map((row) => {
-                return api.restoreContract(row.id);
-              });
-              await Promise.all(promises);
-              this.createMessage.success(`成功恢复 ${this.selectedRows.length} 个合同`);
-              this.search();
-              this.selectedRowKeys = [];
-              this.selectedRows = [];
-            } catch (error) {
-              this.createMessage.error(`恢复合同失败: ${error.message || '未知错误'}`);
-            } finally {
-              this.restoreContractLoading = false;
-            }
-          },
-        });
-      },
-
       /**
        * 处理附件管理
        */

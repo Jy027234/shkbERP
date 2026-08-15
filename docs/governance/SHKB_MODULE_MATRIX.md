@@ -13,19 +13,23 @@
 
 L5 才表示具备生产替换证据。当前没有任何升级模块达到 L5。
 
+## 范围规则
+
+源码中存在页面、接口或实体，不等于该模块属于上海凯奔当前产品范围。尚未纳入真实业务流程的半成品统一标记为“冻结/非发布范围”，不补 schema、不扩展功能、不纳入核心回归或发布；只有用户明确启用并重新完成范围、数据和流程验收后，才允许进入 L0-L5 可靠性升级。
+
 ## 业务模块
 
 | 模块 | 前端代码 | 后端代码 | Schema/配置基线 | 自动化或冒烟 | 当前等级 | 主要缺口 |
 | --- | --- | --- | --- | --- | --- | --- |
 | 登录、单租户、菜单、权限 | 登录/动态菜单/权限路由 | 认证、用户、角色、菜单 | 认证加固与菜单 `V1.21` 已进入唯一仓库 | 组合迁移两次幂等；直连/单体 Vite 菜单探针通过 | L3 | 补带标签候选和生产恢复副本验收 |
 | 维修数据看板 | `views/dashboard/maintenance-board` | `DashboardController` | `V1.13__shkb_dashboard_core.sql` | `verify-dashboard.ps1` | L3 | 补真实数据口径验收和前端交互 E2E |
-| 合同管理 | `views/contract` | `ContractController`、`ContractTaskController` | `V1.14__shkb_contract_core.sql` | `verify-contract.ps1` | L3 | 补合同新增、修改、附件和任务全流程 E2E |
+| 合同管理 | `views/contract` | `ContractController`、`ContractTaskController` | `V1.14__shkb_contract_core.sql`、`V1.23__shkb_contract_task_flow.sql` | 只读探针；隔离写流程覆盖新增、修改、附件归属、任务初始状态和重复生成拒绝 | L4 | 明确合同恢复业务规则；补附件物理存储生命周期和生产恢复副本验收 |
 | 工具与设备 | `views/equipment` | 工具、设备及记录 Controller | `V1.15__shkb_equipment_records.sql` | `verify-equipment.ps1` | L3 | 补附件上传、计量和维保写流程 |
 | 维修工卡 | `views/work-card` | `WorkCardController` | `V1.16__shkb_work_card_core.sql` | 工卡只读与隔离写流程脚本 | L4 | 补浏览器端完整业务流和生产恢复副本验收 |
 | 发料、出库与库存 | `views/material` | Material Order/Out Controller 与事务服务 | `V1.17__shkb_material_flow.sql`；Outbox `V1.18__mq_outbox.sql` | 写流程、并发、物料规则、Outbox 验证 | L4 | 对账菜单迁移后执行整套组合回归 |
 | 采购、销售、通用库存 | `views/sc` | `xingyun-sc` | 原通用迁移；部分航材字段迁移 | 打印、导出及部分 API 曾冒烟 | L2-L3 | 建立凯奔实际采购/收货/退货/盘点验收用例 |
 | 拧紧机、磁粉机任务 | `views/machine-task` | MachineTask 与 MachineInfo Controller/Service | `V1.22__shkb_machine_task_core.sql` | 管理端只读探针；状态规则单测；隔离写流程覆盖相同上报重试、冲突上报和重复下发 | L3 | 补真实设备协议联调、下发成功后的断电窗口与生产恢复副本验收 |
-| 成品出入库 | `views/product-storage` | `ProductStorageController` 及附件服务 | 未发现专门增量迁移 | 无专门验证脚本 | L2 | 补 schema、增删改查、附件和权限验证 |
+| 成品出入库（冻结） | `views/product-storage` | `ProductStorageController` 及附件服务 | 不补迁移 | 不纳入核心回归 | 非发布范围 | 半成品且未纳入上海凯奔实际流程；除非用户明确启用并重新验收，否则不投入、不发布 |
 | 人事、培训、证书、人员授权 | `views/hr`、`api/hr` | 已发现部分实体/Service/Mapper，未发现完整 HR Controller | 未发现专门增量迁移 | 仅部分前端 API 单测 | L1 | 先确认云端真实接口和表，再补后端入口、schema 与 E2E |
 | 航材基础信息 | 基础资料和航材页面 | `xingyun-basedata` 及 SHKB 扩展 | 部分字段迁移 | 主要依赖编译和通用冒烟 | L2 | 建立机型、件号、批次、序列号的业务验收集 |
 | 文件与业务附件 | 多模块上传组件 | `CommonFileController` 及各模块附件服务 | 部分模块已包含附件表 | 局部接口冒烟 | L2 | 验证存储持久化、权限、删除、恢复和大文件边界 |
