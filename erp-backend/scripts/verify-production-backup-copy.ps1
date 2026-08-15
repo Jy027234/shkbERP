@@ -17,6 +17,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $backendRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+$shellExecutable = (Get-Process -Id $PID -ErrorAction Stop).Path
+if ([string]::IsNullOrWhiteSpace($shellExecutable) -or -not (Test-Path -LiteralPath $shellExecutable)) {
+    throw 'Unable to resolve the current PowerShell executable for local backup-copy child scripts.'
+}
 
 if ($DbContainer -ne 'xingyun-smoke-mysql') {
     throw 'Production backup-copy verification is restricted to the local xingyun-smoke-mysql container.'
@@ -84,6 +88,38 @@ function Get-JsonEvidence {
     return Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
 }
 
+function Invoke-LocalPowerShellChild {
+    param(
+        [Parameter(Mandatory = $true)][string]$ScriptPath,
+        [Parameter(Mandatory = $true)][string[]]$Arguments
+    )
+
+    # Start-Process preserves Unicode script paths under Windows, unlike a nested command-line
+    # invocation that can transcode a Chinese workspace path through the legacy console code page.
+    $childDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ('kberp-backup-copy-child-' + [guid]::NewGuid().ToString('N'))
+    $stdoutPath = Join-Path $childDirectory 'stdout.log'
+    $stderrPath = Join-Path $childDirectory 'stderr.log'
+    [System.IO.Directory]::CreateDirectory($childDirectory) | Out-Null
+    try {
+        $childArguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $ScriptPath) + $Arguments
+        $child = Start-Process -FilePath $shellExecutable -ArgumentList $childArguments `
+            -WorkingDirectory $backendRoot -WindowStyle Hidden `
+            -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -PassThru
+        $child.WaitForExit()
+        return $child.ExitCode
+    }
+    finally {
+        foreach ($path in @($stdoutPath, $stderrPath)) {
+            if (Test-Path -LiteralPath $path) {
+                Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+            }
+        }
+        if (Test-Path -LiteralPath $childDirectory) {
+            Remove-Item -LiteralPath $childDirectory -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 $timestamp = Get-Date -Format 'yyyyMMddHHmmssfff'
 $suffix = [guid]::NewGuid().ToString('N').Substring(0, 6)
 $sourceDatabase = 'shkb_production_copy_{0}_{1}' -f $timestamp, $suffix
@@ -147,20 +183,20 @@ try {
     )
 
     $preflightScript = Join-Path $backendRoot 'scripts\verify-release-preflight.ps1'
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $preflightScript `
-        -DbContainer $DbContainer -Database $sourceDatabase -DbUsername $DbUsername -DbPassword $DbPassword `
-        -EvidencePath $preflightEvidencePath -AsJson | Out-Null
-    $preflightExitCode = $LASTEXITCODE
+    $preflightExitCode = Invoke-LocalPowerShellChild -ScriptPath $preflightScript -Arguments @(
+        '-DbContainer', $DbContainer, '-Database', $sourceDatabase, '-DbUsername', $DbUsername, '-DbPassword', $DbPassword,
+        '-EvidencePath', $preflightEvidencePath, '-AsJson'
+    )
     $preflightResult = Get-JsonEvidence -Path $preflightEvidencePath
     if ($preflightExitCode -ne 0 -or $null -eq $preflightResult -or $preflightResult.passed -ne $true) {
         throw 'Migration preflight failed against the restored production backup copy.'
     }
 
     $restoreScript = Join-Path $backendRoot 'scripts\verify-release-restore.ps1'
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $restoreScript `
-        -DbContainer $DbContainer -SourceDatabase $sourceDatabase -DbUsername $DbUsername -DbPassword $DbPassword `
-        -EvidencePath $restoreEvidencePath -AsJson | Out-Null
-    $restoreExitCode = $LASTEXITCODE
+    $restoreExitCode = Invoke-LocalPowerShellChild -ScriptPath $restoreScript -Arguments @(
+        '-DbContainer', $DbContainer, '-SourceDatabase', $sourceDatabase, '-DbUsername', $DbUsername, '-DbPassword', $DbPassword,
+        '-EvidencePath', $restoreEvidencePath, '-AsJson'
+    )
     $restoreResult = Get-JsonEvidence -Path $restoreEvidencePath
     if ($restoreExitCode -ne 0 -or $null -eq $restoreResult -or $restoreResult.passed -ne $true) {
         throw 'Restore rehearsal failed against the restored production backup copy.'

@@ -156,7 +156,7 @@ $manifest = [ordered]@{
     }
     deployment = [ordered]@{
         productionAllowed = $false
-        reason = 'A restored production-data copy, business confirmation for V1.21, and explicit deployment approval are still required.'
+        reason = 'Business confirmation for V1.21, business-owner workflow acceptance, a reviewed rollback plan, and explicit deployment approval are still required.'
     }
 }
 

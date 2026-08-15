@@ -18,17 +18,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-migration-catalog.ps1
 
 当前唯一允许进入“存量库候选计划”的 SQL 是：
 
-1. tenant/V1.13__shkb_dashboard_core.sql
-2. tenant/V1.14__shkb_contract_core.sql
-3. tenant/V1.15__shkb_equipment_records.sql
-4. tenant/V1.16__shkb_work_card_core.sql
-5. tenant/V1.17__shkb_material_flow.sql
-6. tenant/V1.18__mq_outbox.sql
-7. tenant/V1.21__shkb_menu_permission_baseline.sql
-8. tenant/V1.22__shkb_machine_task_core.sql
-9. tenant/V1.23__shkb_contract_task_flow.sql
-10. tenant/V1.24__purchase_receive_traceability.sql
-11. tenant/V1.25__purchase_return_serial_traceability.sql
+1. platform/V1.7__jugg5_tenant_compatibility.sql
+2. tenant/V1.13__shkb_dashboard_core.sql
+3. tenant/V1.14__shkb_contract_core.sql
+4. tenant/V1.15__shkb_equipment_records.sql
+5. tenant/V1.16__shkb_work_card_core.sql
+6. tenant/V1.17__shkb_material_flow.sql
+7. tenant/V1.18__mq_outbox.sql
+8. tenant/V1.21__shkb_menu_permission_baseline.sql
+9. tenant/V1.22__shkb_machine_task_core.sql
+10. tenant/V1.23__shkb_contract_task_flow.sql
+11. tenant/V1.24__purchase_receive_traceability.sql
+12. tenant/V1.25__purchase_return_serial_traceability.sql
 
 这不是“立即对生产执行”的指令。它仅定义了恢复副本通过后才可评审的有序候选集合。
 
@@ -49,7 +50,7 @@ cd erp-backend
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-release-preflight.ps1
 ~~~
 
-它检查 V1.13、V1.17、V1.21、V1.24、V1.25 所需的既有表/列，检查租户 1000，并在已有表存在时检查下列唯一约束将要保护的重复值：
+它在迁移前检查 `tenant` 的历史 Jugg 5 兼容前置列、V1.13、V1.17、V1.21、V1.24、V1.25 所需的既有表/列、租户 1000 和 API 验收所需的 `admin` 账号列；迁移后再检查 V1.7 补齐的 `server_name`、`is_platform`。它还会在已有表存在时检查下列唯一约束将要保护的重复值：
 
 - shkb_machine_task_tightening.task_id
 - shkb_machine_task_magnetic_powder.task_id
@@ -61,7 +62,7 @@ V1.21 是受控数据调整：它会更新租户名称，并删除租户 1000 �
 
 ## 恢复副本演练
 
-以下演练会从本地 shkb_platform 做逻辑备份，恢复到随机受限名称的临时库，比对恢复前后的逻辑导出 SHA-256，对临时库预检，并把 11 个候选 SQL 连续执行两轮以验证幂等性。结束时会精确删除临时库和容器内临时目录：
+以下演练会从本地 shkb_platform 做逻辑备份，恢复到随机受限名称的临时库，比对恢复前后的逻辑导出 SHA-256，对临时库预检，并把 12 个候选 SQL 连续执行两轮以验证幂等性。结束时会精确删除临时库和容器内临时目录：
 
 ~~~
 cd erp-backend
@@ -86,13 +87,17 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-production-backup-copy
 
 生成的 JSON 证据只包含文件名、大小、哈希、预检结果、迁移结果和清理状态，不包含数据库行、凭据或云端地址。即使技术验证通过，`productionDeploymentAllowed` 仍固定为 `false`；V1.21 业务影响确认、核心业务验收、回退方案和明确变更窗口批准仍是单独条件。
 
-2026-08-16 已对经授权的 `shkb_platform` 逻辑备份副本完成本地技术验收：15 项预检全部通过，11 个候选迁移连续两轮执行成功，7 项迁移后检查通过，逻辑恢复前后 SHA-256 一致，生成的本地源库和克隆库均已删除。该副本中 V1.21 会更新租户名称，待删除的三个租户模块关系为 0；菜单/角色语义仍须由业务负责人确认。
+2026-08-16 已对经授权的 `shkb_platform` 逻辑备份副本完成本地技术验收。最初的 11 项租户候选迁移连续两轮、15 项迁移前预检和 7 项迁移后检查均通过；发现该历史副本缺少 Jugg 5 所需的 `tenant.server_name`、`tenant.is_platform` 后，未重放破坏性的历史 V1.6，而是新增了由 `information_schema` 保护的 V1.7 条件 DDL。现行 12 项计划已在本地恢复演练中连续两轮通过，并得到 9 项迁移后检查；逻辑恢复前后 SHA-256 一致，生成的本地源库和克隆库均已删除。该副本中 V1.21 会更新租户名称，待删除的三个租户模块关系为 0；菜单/角色语义仍须由业务负责人确认。
 
 ## 授权生产备份副本的本地核心 API 验收
 
 技术恢复通过后，必须进一步用候选镜像启动**隔离的本地 API**，确认登录、菜单和主要只读业务接口能够读取恢复副本。使用 `verify-production-backup-api.ps1`：它会再次校验备份、运行预检与二次恢复演练、在随机本地库应用清单中的增量 SQL，然后将指定候选镜像仅绑定到 `127.0.0.1` 的临时端口。它运行健康、菜单、看板、合同、工具设备、工卡、航材查询和设备任务八组探针，最后精确删除本地 API 容器、恢复库与容器内文件。
 
 生产库中存在由 Jugg 密钥加密的租户 JDBC 配置。验收运行的 `JUGG_SECRET_KEY` 必须与历史加密数据连续；Java 升级、镜像重建或新建本机环境都不能生成替代值。该脚本只从**当前 PowerShell 进程**读取该环境变量，拒绝命令行参数、文件和仓库中的密钥，也不会把密钥或其指纹写入 JSON 证据。应由获授权人员通过密钥管理工具向一次性会话注入该变量；完成后按组织密钥管理规范关闭该会话。
+
+恢复副本里的已启用租户 JDBC URL 不能被候选容器拿来访问原服务器。脚本先在内存中用注入的历史 Jugg 密钥解密一段历史 `jdbc_password` 密文，证明密钥连续性；随后只在**随机本地恢复库**中把所有已启用租户的 JDBC URL、用户名和 JDBC 密码改写为本地 `xingyun-smoke-mysql` 验收库。新的本地密码会用同一历史 Jugg 密钥重新加密，因此 Jugg 的启动期数据源连接校验仍会实际注册租户数据源。原始备份、云端数据库和任何密钥、密文、明文或连接地址均不改写或持久化。
+
+为使只读 API 验收能够使用恢复副本原有的授权关系，脚本要求其中恰好存在一个启用且未锁定的 `admin` 账号；它仅将本地冒烟夹具的 `admin` 密码哈希复制到**生成副本中的同一账号**。账号 ID、启用/锁定状态、角色和菜单关系保持不变，不读取生产密码、不创建账号，也不更改原始备份。
 
 ~~~
 cd erp-backend
@@ -102,6 +107,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-production-backup-api.
   -ExpectedSha256 <由备份源独立记录的64位SHA-256> `
   -CandidateImage shkb-erp-api:<待验收候选标签>
 ~~~
+
+2026-08-16 已在受控的一次性本地会话完成该核心 API 验收：历史密文在内存中验证成功，候选镜像达到 readiness，健康、菜单基线、看板、合同、工具设备、工卡、航材查询和设备任务八组只读探针全部通过；生成的本地 API 容器、数据库和容器临时文件均已删除。该结果只证明隔离恢复副本上的技术可用性。
 
 该流程不连接云端，不上传 jar、前端文件或 SQL，也不会解除发布锁。认证过程可能只在隔离 Redis 或隔离副本中留下登录审计状态；它不会执行合同、采购、库存、盘点或调拨等业务写流程。若候选在启动期间出现 `jugg-secret-decryption-failed`，表示注入密钥无法解密历史数据，必须在受控密钥流程中处理，禁止通过重置或改写生产租户 JDBC 密码来绕过。
 

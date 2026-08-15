@@ -31,6 +31,10 @@ param(
 $ErrorActionPreference = 'Stop'
 $backendRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $backendRoot '..')).Path
+$shellExecutable = (Get-Process -Id $PID -ErrorAction Stop).Path
+if ([string]::IsNullOrWhiteSpace($shellExecutable) -or -not (Test-Path -LiteralPath $shellExecutable)) {
+    throw 'Unable to resolve the current PowerShell executable for local acceptance child scripts.'
+}
 
 if ($DbContainer -ne 'xingyun-smoke-mysql') {
     throw 'Production backup API acceptance is restricted to the local xingyun-smoke-mysql container.'
@@ -114,6 +118,38 @@ function Get-JsonEvidence {
     return Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
 }
 
+function Invoke-LocalPowerShellChild {
+    param(
+        [Parameter(Mandatory = $true)][string]$ScriptPath,
+        [Parameter(Mandatory = $true)][string[]]$Arguments
+    )
+
+    # Start-Process preserves Unicode script paths under Windows, unlike a nested command-line
+    # invocation that can transcode a Chinese workspace path through the legacy console code page.
+    $childDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ('kberp-api-child-' + [guid]::NewGuid().ToString('N'))
+    $stdoutPath = Join-Path $childDirectory 'stdout.log'
+    $stderrPath = Join-Path $childDirectory 'stderr.log'
+    [System.IO.Directory]::CreateDirectory($childDirectory) | Out-Null
+    try {
+        $childArguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $ScriptPath) + $Arguments
+        $child = Start-Process -FilePath $shellExecutable -ArgumentList $childArguments `
+            -WorkingDirectory $backendRoot -WindowStyle Hidden `
+            -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -PassThru
+        $child.WaitForExit()
+        return $child.ExitCode
+    }
+    finally {
+        foreach ($path in @($stdoutPath, $stderrPath)) {
+            if (Test-Path -LiteralPath $path) {
+                Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+            }
+        }
+        if (Test-Path -LiteralPath $childDirectory) {
+            Remove-Item -LiteralPath $childDirectory -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 function Invoke-ChildVerification {
     param(
         [Parameter(Mandatory = $true)][string]$ScriptPath,
@@ -121,15 +157,7 @@ function Invoke-ChildVerification {
         [Parameter(Mandatory = $true)][string]$FailureMessage
     )
 
-    $previousPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    try {
-        $ignoredOutput = & powershell -NoProfile -ExecutionPolicy Bypass -File $ScriptPath @Arguments 2>&1
-        $exitCode = $LASTEXITCODE
-    }
-    finally {
-        $ErrorActionPreference = $previousPreference
-    }
+    $exitCode = Invoke-LocalPowerShellChild -ScriptPath $ScriptPath -Arguments $Arguments
     if ($exitCode -ne 0) {
         throw $FailureMessage
     }
@@ -225,24 +253,227 @@ function Get-ApiStartupFailureKind {
     return 'api-not-ready-unclassified'
 }
 
+function ConvertFrom-JuggCiphertext {
+    param(
+        [Parameter(Mandatory = $true)][string]$Ciphertext,
+        [Parameter(Mandatory = $true)][string]$JuggSecretKey
+    )
+
+    if ($Ciphertext -notmatch '^(?:[A-Fa-f0-9]{2})+$') {
+        throw 'A restored tenant password ciphertext has an unsupported format.'
+    }
+
+    [byte[]]$keyBytes = $null
+    [byte[]]$cipherBytes = $null
+    [byte[]]$plainBytes = $null
+    $plaintext = $null
+    $aes = $null
+    try {
+        $keyBytes = [System.Convert]::FromBase64String($JuggSecretKey)
+        if ($keyBytes.Length -notin @(16, 24, 32)) {
+            throw 'The injected Jugg key does not decode to a supported AES key length.'
+        }
+        $cipherBytes = New-Object byte[] ($Ciphertext.Length / 2)
+        for ($index = 0; $index -lt $cipherBytes.Length; $index++) {
+            $cipherBytes[$index] = [System.Convert]::ToByte($Ciphertext.Substring($index * 2, 2), 16)
+        }
+        $aes = [System.Security.Cryptography.Aes]::Create()
+        $aes.Mode = [System.Security.Cryptography.CipherMode]::ECB
+        $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
+        $aes.Key = $keyBytes
+        $plainBytes = $aes.CreateDecryptor().TransformFinalBlock($cipherBytes, 0, $cipherBytes.Length)
+        $plaintext = [System.Text.Encoding]::UTF8.GetString($plainBytes)
+        if ([string]::IsNullOrWhiteSpace($plaintext)) {
+            throw 'A restored tenant password ciphertext decrypted to an empty value.'
+        }
+        return $plaintext
+    }
+    catch {
+        # Never include ciphertext, plaintext, secret material, or nested cryptography messages.
+        throw 'Historical tenant password ciphertext cannot be decrypted by the injected Jugg key.'
+    }
+    finally {
+        if ($null -ne $aes) { $aes.Dispose() }
+        foreach ($buffer in @($keyBytes, $cipherBytes, $plainBytes)) {
+            if ($null -ne $buffer) { [System.Array]::Clear($buffer, 0, $buffer.Length) }
+        }
+        $plaintext = $null
+    }
+}
+
+function ConvertTo-JuggCiphertext {
+    param(
+        [Parameter(Mandatory = $true)][string]$Plaintext,
+        [Parameter(Mandatory = $true)][string]$JuggSecretKey
+    )
+
+    [byte[]]$keyBytes = $null
+    [byte[]]$plainBytes = $null
+    [byte[]]$cipherBytes = $null
+    $aes = $null
+    try {
+        $keyBytes = [System.Convert]::FromBase64String($JuggSecretKey)
+        if ($keyBytes.Length -notin @(16, 24, 32)) {
+            throw 'The injected Jugg key does not decode to a supported AES key length.'
+        }
+        $plainBytes = [System.Text.Encoding]::UTF8.GetBytes($Plaintext)
+        $aes = [System.Security.Cryptography.Aes]::Create()
+        $aes.Mode = [System.Security.Cryptography.CipherMode]::ECB
+        $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
+        $aes.Key = $keyBytes
+        $cipherBytes = $aes.CreateEncryptor().TransformFinalBlock($plainBytes, 0, $plainBytes.Length)
+        return ([System.BitConverter]::ToString($cipherBytes)).Replace('-', '').ToLowerInvariant()
+    }
+    finally {
+        if ($null -ne $aes) { $aes.Dispose() }
+        foreach ($buffer in @($keyBytes, $plainBytes, $cipherBytes)) {
+            if ($null -ne $buffer) { [System.Array]::Clear($buffer, 0, $buffer.Length) }
+        }
+    }
+}
+
+function Assert-JuggCipherCompatibility {
+    # Jugg EncryptUtil delegates to Hutool SecureUtil.aes(base64DecodedKey).encryptHex,
+    # which is AES/ECB/PKCS5Padding. PKCS7 is the byte-compatible .NET spelling.
+    $testKey = 'AAECAwQFBgcICQoLDA0ODw=='
+    $testPlaintext = 'kberp-local-cipher-test'
+    $expectedCiphertext = '018d93824e7b39ee79a337243daee922bdd42138328853aacdf0a2577e513c8e'
+    $actualCiphertext = ConvertTo-JuggCiphertext -Plaintext $testPlaintext -JuggSecretKey $testKey
+    if ($actualCiphertext -ne $expectedCiphertext) {
+        throw 'The local Jugg-compatible cipher self-check failed.'
+    }
+}
+
+function Get-SafeMenuBaselineFailureDetail {
+    param([Parameter(Mandatory = $true)][string]$BaseUrl)
+
+    # Keep the script ASCII-only for Windows PowerShell 5 source decoding.
+    $tenantName = -join [char[]](
+        0x4E0A, 0x6D77, 0x51EF, 0x5954, 0x822A, 0x7A7A,
+        0x6280, 0x672F, 0x6709, 0x9650, 0x516C, 0x53F8
+    )
+    try {
+        $loginResponse = Invoke-WebRequest -UseBasicParsing -Uri "$BaseUrl/auth/login" -Method Post `
+            -ContentType 'application/x-www-form-urlencoded' -Body @{
+                tenantName = $tenantName
+                username = 'admin'
+                password = 'admin'
+            } -TimeoutSec 30
+        $login = $loginResponse.Content | ConvertFrom-Json
+        if ($login.code -ne 200) {
+            return "login-erp-code-$($login.code)"
+        }
+        $token = [string]$login.data.token
+        if ([string]::IsNullOrWhiteSpace($token)) {
+            return 'login-token-missing'
+        }
+
+        $menuResponse = Invoke-WebRequest -UseBasicParsing -Uri "$BaseUrl/auth/menus" -Method Get `
+            -Headers @{ 'X-Auth-Token' = $token } -TimeoutSec 30
+        $menus = $menuResponse.Content | ConvertFrom-Json
+        if ($menus.code -ne 200) {
+            return "menus-erp-code-$($menus.code)"
+        }
+        $paths = @(
+            $menus.data |
+                Where-Object { $_.meta.hideMenu -ne $true } |
+                ForEach-Object { [string]$_.path } |
+                Where-Object { $_ -match '^/[A-Za-z0-9_-]+$' }
+        )
+        if ($paths.Count -eq 0) {
+            return 'visible-root-paths-empty'
+        }
+        return 'visible-root-paths=' + ($paths -join ',')
+    }
+    catch {
+        # Do not include response bodies, trace IDs, credentials, or restored-copy data.
+        if ($null -ne $_.Exception.Response) {
+            try {
+                return "menu-diagnostic-http-$([int]$_.Exception.Response.StatusCode)"
+            }
+            catch {
+                # Fall through to the generic local-only diagnostic label.
+            }
+        }
+        return 'menu-diagnostic-http-failed'
+    }
+}
+
+function Get-LocalApiRequestFailureKind {
+    param([Parameter(Mandatory = $true)][string]$ContainerName)
+
+    $logs = Invoke-DockerCommand -Arguments @('logs', '--tail', '500', $ContainerName) -ReturnOutput
+    $joined = $logs -join [Environment]::NewLine
+    if ($joined -match 'Access denied for user') {
+        return 'local-tenant-datasource-auth-failed'
+    }
+    if ($joined -match 'Communications link failure|Connection refused') {
+        return 'local-tenant-datasource-connection-failed'
+    }
+    # Persist only source-level identifiers, never SQL text, database names, request values,
+    # credentials, trace identifiers, or log lines from the restored production copy.
+    if ($joined -match "(?i)Unknown column '([A-Za-z0-9_]+)'") {
+        return "local-schema-query-unknown-column-$($Matches[1].ToLowerInvariant())"
+    }
+    if ($joined -match "(?i)Table '[^']*\.([A-Za-z0-9_]+)' doesn't exist") {
+        return "local-schema-query-missing-table-$($Matches[1].ToLowerInvariant())"
+    }
+    if ($joined -match 'BadSqlGrammarException|SQLSyntaxErrorException|doesn.t exist') {
+        return 'local-schema-query-failed-unclassified'
+    }
+    if ($joined -match 'BadPaddingException|CryptoException') {
+        return 'jugg-secret-decryption-failed'
+    }
+    if ($joined -match 'StackOverflowError') {
+        return 'api-request-stack-overflow'
+    }
+    if ($joined -match 'NullPointerException') {
+        return 'api-request-null-pointer'
+    }
+    if ($joined -match 'ClassCastException|ResultMapException') {
+        return 'api-request-type-mapping-failed'
+    }
+    if ($joined -match 'IllegalArgumentException|IllegalStateException') {
+        return 'api-request-invalid-state'
+    }
+    if ($joined -match 'NoSuchMethodError|NoClassDefFoundError|AbstractMethodError') {
+        return 'api-request-binary-compatibility-failed'
+    }
+    # Exception type names are source/runtime metadata, not restored-copy data. Keep only
+    # the final simple class name so evidence cannot retain a message, stack trace, SQL,
+    # file path, endpoint, database name, request value, or credential.
+    $exceptionMatches = [System.Text.RegularExpressions.Regex]::Matches(
+        $joined,
+        '(?im)(?:caused by:\s*)?([A-Za-z_][A-Za-z0-9_$.]*(?:Exception|Error))(?=[:\s]|$)'
+    )
+    if ($exceptionMatches.Count -gt 0) {
+        $qualifiedName = $exceptionMatches[$exceptionMatches.Count - 1].Groups[1].Value
+        $simpleName = ($qualifiedName -split '\.')[-1].ToLowerInvariant()
+        if ($simpleName -match '^[a-z0-9_]+(?:exception|error)$') {
+            return "api-request-exception-$simpleName"
+        }
+    }
+    return 'api-request-failed-unclassified'
+}
+
 function Invoke-ReadOnlyApiProbe {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
         [Parameter(Mandatory = $true)][string]$ScriptPath,
         [Parameter(Mandatory = $true)][string]$BaseUrl,
-        [Parameter(Mandatory = $true)][System.Collections.Generic.List[object]]$Checks
+        [Parameter(Mandatory = $true)][string]$LocalApiContainer,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][System.Collections.Generic.List[object]]$Checks,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][System.Collections.Generic.List[object]]$ProbeFailures
     )
 
-    $previousPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    try {
-        $ignoredOutput = & powershell -NoProfile -ExecutionPolicy Bypass -File $ScriptPath -BaseUrl $BaseUrl 2>&1
-        $exitCode = $LASTEXITCODE
-    }
-    finally {
-        $ErrorActionPreference = $previousPreference
-    }
+    $exitCode = Invoke-LocalPowerShellChild -ScriptPath $ScriptPath -Arguments @('-BaseUrl', $BaseUrl)
     if ($exitCode -ne 0) {
+        $detail = 'probe-exited-nonzero'
+        if ($Name -eq 'menu-baseline') {
+            $detail = (Get-SafeMenuBaselineFailureDetail -BaseUrl $BaseUrl) + ';server-log=' +
+                (Get-LocalApiRequestFailureKind -ContainerName $LocalApiContainer)
+        }
+        $ProbeFailures.Add([ordered]@{ name = $Name; detail = $detail })
         throw "Core API acceptance probe '$Name' failed."
     }
     $Checks.Add([ordered]@{ name = $Name; passed = $true })
@@ -274,6 +505,9 @@ if ($sourceDbUrl -notmatch '^(jdbc:mysql://[^/]+)/[^?]+(.*)$') {
     throw 'The local runtime template JDBC URL does not have the expected MySQL database form.'
 }
 $isolatedDbUrl = $Matches[1] + "/$sourceDatabase" + $Matches[2]
+if ($isolatedDbUrl -match "'") {
+    throw 'The generated local JDBC URL contains an unsupported SQL quote character.'
+}
 
 $containerBackupPath = "$containerWorkDirectory/source.sql.gz"
 $migrationDirectory = "$containerWorkDirectory/migrations"
@@ -292,8 +526,13 @@ $restoreResult = $null
 $candidateImageId = $null
 $apiStartup = $null
 $apiStartupFailureKind = $null
+$availableTenantDataSourcesRebound = 0
+$historicalTenantPasswordCiphertextsValidated = $false
+$tenantDatasourcePasswordReencryptedForLocalSmoke = $false
+$localAcceptanceUserPrepared = $false
 $migrationRuns = [System.Collections.Generic.List[object]]::new()
 $apiChecks = [System.Collections.Generic.List[object]]::new()
+$apiProbeFailures = [System.Collections.Generic.List[object]]::new()
 $containerWorkCreated = $false
 $sourceDatabaseCreated = $false
 $apiContainerStarted = $false
@@ -386,12 +625,81 @@ try {
 
     Invoke-ChildVerification -ScriptPath $preflightScript -Arguments @(
         '-DbContainer', $DbContainer, '-Database', $sourceDatabase, '-DbUsername', $DbUsername, '-DbPassword', $DbPassword,
-        '-EvidencePath', $preflightAfterPath, '-AsJson'
+        '-Stage', 'AfterMigration', '-EvidencePath', $preflightAfterPath, '-AsJson'
     ) -FailureMessage 'Migration preflight failed after preparing the local API acceptance copy.'
     $preflightAfter = Get-JsonEvidence -Path $preflightAfterPath
     if ($null -eq $preflightAfter -or $preflightAfter.passed -ne $true) {
         throw 'Post-migration preflight did not produce a successful evidence record.'
     }
+
+    # Never allow a restored tenant JDBC URL to direct the candidate at cloud infrastructure.
+    # All connection fields are rebound only in this generated local database, but historical
+    # ciphertext is decrypted in memory before the local smoke password is re-encrypted with
+    # the same key. Startup therefore still proves key continuity and real Jugg datasource use.
+    $availableTenantRows = Invoke-DockerCommand -Arguments @(
+        'exec', $DbContainer, 'mysql', $userArg, $passwordArg, '-N', '-B', $sourceDatabase,
+        '-e', 'SELECT COUNT(*) FROM tenant WHERE available = 1;'
+    ) -ReturnOutput | Where-Object { $_ -notmatch '^mysql: \[Warning\] Using a password on the command line interface can be insecure\.$' }
+    $availableTenantCountText = ([string]($availableTenantRows | Select-Object -Last 1)).Trim()
+    if ($availableTenantCountText -notmatch '^\d+$' -or [int]$availableTenantCountText -lt 1) {
+        throw 'The restored local copy must contain at least one enabled tenant to verify encrypted datasource continuity.'
+    }
+    $availableTenantDataSourcesRebound = [int]$availableTenantCountText
+    Assert-JuggCipherCompatibility
+    $historicalCiphertexts = @(
+        Invoke-DockerCommand -Arguments @(
+            'exec', $DbContainer, 'mysql', $userArg, $passwordArg, '-N', '-B', $sourceDatabase,
+            '-e', 'SELECT jdbc_password FROM tenant WHERE available = 1 ORDER BY id;'
+        ) -ReturnOutput |
+            Where-Object { $_ -notmatch '^mysql: \[Warning\] Using a password on the command line interface can be insecure\.$' } |
+            ForEach-Object { ([string]$_).Trim() } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    )
+    if ($historicalCiphertexts.Count -ne $availableTenantDataSourcesRebound) {
+        throw 'The restored enabled tenants must each provide one encrypted JDBC password before local rebinding.'
+    }
+    foreach ($historicalCiphertext in $historicalCiphertexts) {
+        # Retain no plaintext: successful in-memory decryption proves historical key continuity.
+        $null = ConvertFrom-JuggCiphertext -Ciphertext $historicalCiphertext -JuggSecretKey $juggSecretKey
+    }
+    $historicalTenantPasswordCiphertextsValidated = $true
+    $localTenantPasswordCiphertext = ConvertTo-JuggCiphertext -Plaintext $DbPassword -JuggSecretKey $juggSecretKey
+
+    Invoke-DockerCommand -Arguments @(
+        'exec', $DbContainer, 'mysql', $userArg, $passwordArg, $sourceDatabase, '-e',
+        "UPDATE tenant SET jdbc_url = '$isolatedDbUrl', jdbc_username = '$DbUsername', jdbc_password = '$localTenantPasswordCiphertext' WHERE available = 1;"
+    )
+    $tenantDatasourcePasswordReencryptedForLocalSmoke = $true
+
+    # Production credentials are never read. The active admin's local-fixture password hash is
+    # copied only into the generated source database, preserving its production user ID, roles,
+    # menu relations, availability and lock state for representative read-only API acceptance.
+    $fixturePasswordHashes = @(
+        Invoke-DockerCommand -Arguments @(
+            'exec', $DbContainer, 'mysql', $userArg, $passwordArg, '-N', '-B', 'shkb_platform',
+            '-e', "SELECT password FROM sys_user WHERE username = 'admin' AND available = 1 AND lock_status = 0;"
+        ) -ReturnOutput |
+            Where-Object { $_ -notmatch '^mysql: \[Warning\] Using a password on the command line interface can be insecure\.$' } |
+            ForEach-Object { ([string]$_).Trim() } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    )
+    if ($fixturePasswordHashes.Count -ne 1 -or $fixturePasswordHashes[0] -notmatch '^[./$A-Za-z0-9]{20,200}$') {
+        throw 'The local smoke fixture must provide exactly one active admin password hash with a supported format.'
+    }
+    $sourceAdminRows = Invoke-DockerCommand -Arguments @(
+        'exec', $DbContainer, 'mysql', $userArg, $passwordArg, '-N', '-B', $sourceDatabase,
+        '-e', "SELECT COUNT(*) FROM sys_user WHERE username = 'admin' AND available = 1 AND lock_status = 0;"
+    ) -ReturnOutput | Where-Object { $_ -notmatch '^mysql: \[Warning\] Using a password on the command line interface can be insecure\.$' }
+    $sourceAdminCountText = ([string]($sourceAdminRows | Select-Object -Last 1)).Trim()
+    if ($sourceAdminCountText -ne '1') {
+        throw 'The restored production copy must contain exactly one active, unlocked admin account for local API acceptance.'
+    }
+    $fixturePasswordHash = [string]$fixturePasswordHashes[0]
+    Invoke-DockerCommand -Arguments @(
+        'exec', $DbContainer, 'mysql', $userArg, $passwordArg, $sourceDatabase, '-e',
+        "UPDATE sys_user SET password = '$fixturePasswordHash' WHERE username = 'admin' AND available = 1 AND lock_status = 0;"
+    )
+    $localAcceptanceUserPrepared = $true
 
     $overrides = [ordered]@{
         'SHKB_DB_URL' = $isolatedDbUrl
@@ -443,7 +751,7 @@ try {
     )) {
         Invoke-ReadOnlyApiProbe -Name $probe.name `
             -ScriptPath (Join-Path $backendRoot (Join-Path 'scripts' $probe.script)) `
-            -BaseUrl $baseUrl -Checks $apiChecks
+            -BaseUrl $baseUrl -LocalApiContainer $apiContainer -Checks $apiChecks -ProbeFailures $apiProbeFailures
     }
 }
 catch {
@@ -512,6 +820,10 @@ $result = [ordered]@{
         localApiPort = $HostPort
         isolatedRedisDatabase = $IsolatedRedisDatabase
         isolatedTokenRedisDatabase = $IsolatedTokenRedisDatabase
+        availableTenantDataSourcesReboundToLocalMysql = $availableTenantDataSourcesRebound
+        historicalTenantPasswordCiphertextsValidatedInMemory = $historicalTenantPasswordCiphertextsValidated
+        tenantDatasourcePasswordReencryptedForLocalSmoke = $tenantDatasourcePasswordReencryptedForLocalSmoke
+        localAcceptanceAdminPreparedFromSmokeFixture = $localAcceptanceUserPrepared
         generatedSourceDatabase = $sourceDatabase
         backgroundBusinessWritersDisabled = @('outbox', 'quartz', 'rabbitmq-listeners')
         sourceDatabaseRemoved = $sourceDatabaseRemoved
@@ -527,6 +839,7 @@ $result = [ordered]@{
         candidateReadinessPassed = if ($null -eq $apiStartup) { $false } else { $apiStartup.Ready -eq $true }
         readinessAttempts = if ($null -eq $apiStartup) { 0 } else { $apiStartup.Attempts }
         probes = @($apiChecks)
+        probeFailures = @($apiProbeFailures)
         businessWriteFlowsExecuted = $false
         authenticationMayWriteOnlyToIsolatedRedisOrAuditState = $true
     }
