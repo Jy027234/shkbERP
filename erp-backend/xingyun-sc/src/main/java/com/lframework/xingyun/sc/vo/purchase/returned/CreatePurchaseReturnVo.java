@@ -18,6 +18,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -150,6 +151,15 @@ public class CreatePurchaseReturnVo implements BaseVo, Serializable {
         if (StringUtil.isNotBlank(product.getReceiveSheetDetailId())) {
           ReceiveSheetDetail detail = receiveSheetDetailService.getById(
               product.getReceiveSheetDetailId());
+          if (detail == null) {
+            throw new InputErrorException("第" + orderNo + "行采购收货单明细不存在！");
+          }
+          if (!Objects.equals(detail.getSheetId(), this.getReceiveSheetId())) {
+            throw new InputErrorException("第" + orderNo + "行采购收货单明细不属于所选采购收货单！");
+          }
+          if (!Objects.equals(detail.getProductId(), product.getProductId())) {
+            throw new InputErrorException("第" + orderNo + "行商品与采购收货单明细不一致！");
+          }
           product.setPurchasePrice(detail.getTaxPrice());
         } else {
           product.setPurchasePrice(BigDecimal.ZERO);

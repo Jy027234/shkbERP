@@ -36,6 +36,9 @@ public class PurchaseOrderDetailServiceImpl extends
     Assert.greaterThanZero(num);
 
     PurchaseOrderDetail orderDetail = getBaseMapper().selectById(id);
+    if (orderDetail == null) {
+      throw new DefaultClientException("采购订单明细不存在！");
+    }
 
     Integer remainNum = NumberUtil.sub(orderDetail.getOrderNum(), orderDetail.getReceiveNum())
         .intValue();
@@ -64,6 +67,9 @@ public class PurchaseOrderDetailServiceImpl extends
     Assert.greaterThanZero(num);
 
     PurchaseOrderDetail orderDetail = getBaseMapper().selectById(id);
+    if (orderDetail == null) {
+      throw new DefaultClientException("采购订单明细不存在！");
+    }
 
     if (NumberUtil.lt(orderDetail.getReceiveNum(), num)) {
       Product product = productService.findById(orderDetail.getProductId());
