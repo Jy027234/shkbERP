@@ -85,6 +85,7 @@ foreach ($requiredPath in @(
     'erp-backend/scripts/verify-release-preflight.ps1',
     'erp-backend/scripts/verify-release-restore.ps1',
     'erp-backend/scripts/verify-production-backup-copy.ps1',
+    'erp-backend/scripts/verify-production-backup-api.ps1',
     'erp-backend/xingyun-api/src/main/resources/db/migration/tenant/V1.21__shkb_menu_permission_baseline.sql'
 )) {
     if (-not (Test-Path -LiteralPath (Join-Path $repoRoot $requiredPath))) {

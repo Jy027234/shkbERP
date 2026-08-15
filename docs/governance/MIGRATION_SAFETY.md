@@ -88,6 +88,23 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-production-backup-copy
 
 2026-08-16 已对经授权的 `shkb_platform` 逻辑备份副本完成本地技术验收：15 项预检全部通过，11 个候选迁移连续两轮执行成功，7 项迁移后检查通过，逻辑恢复前后 SHA-256 一致，生成的本地源库和克隆库均已删除。该副本中 V1.21 会更新租户名称，待删除的三个租户模块关系为 0；菜单/角色语义仍须由业务负责人确认。
 
+## 授权生产备份副本的本地核心 API 验收
+
+技术恢复通过后，必须进一步用候选镜像启动**隔离的本地 API**，确认登录、菜单和主要只读业务接口能够读取恢复副本。使用 `verify-production-backup-api.ps1`：它会再次校验备份、运行预检与二次恢复演练、在随机本地库应用清单中的增量 SQL，然后将指定候选镜像仅绑定到 `127.0.0.1` 的临时端口。它运行健康、菜单、看板、合同、工具设备、工卡、航材查询和设备任务八组探针，最后精确删除本地 API 容器、恢复库与容器内文件。
+
+生产库中存在由 Jugg 密钥加密的租户 JDBC 配置。验收运行的 `JUGG_SECRET_KEY` 必须与历史加密数据连续；Java 升级、镜像重建或新建本机环境都不能生成替代值。该脚本只从**当前 PowerShell 进程**读取该环境变量，拒绝命令行参数、文件和仓库中的密钥，也不会把密钥或其指纹写入 JSON 证据。应由获授权人员通过密钥管理工具向一次性会话注入该变量；完成后按组织密钥管理规范关闭该会话。
+
+~~~
+cd erp-backend
+# 先由获授权人员通过受控密钥工具向当前会话注入 JUGG_SECRET_KEY。
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-production-backup-api.ps1 `
+  -BackupPath C:\safe-staging\shkb_platform.sql.gz `
+  -ExpectedSha256 <由备份源独立记录的64位SHA-256> `
+  -CandidateImage shkb-erp-api:<待验收候选标签>
+~~~
+
+该流程不连接云端，不上传 jar、前端文件或 SQL，也不会解除发布锁。认证过程可能只在隔离 Redis 或隔离副本中留下登录审计状态；它不会执行合同、采购、库存、盘点或调拨等业务写流程。若候选在启动期间出现 `jugg-secret-decryption-failed`，表示注入密钥无法解密历史数据，必须在受控密钥流程中处理，禁止通过重置或改写生产租户 JDBC 密码来绕过。
+
 ## 生产恢复副本的外部前置条件
 
 解除生产发布锁之前，仍必须由授权人员提供生产逻辑备份或数据库快照，并在与云端隔离的本地/专用恢复环境完成：
@@ -96,7 +113,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-production-backup-copy
 2. 以该恢复库作为本地预检与恢复演练的 -SourceDatabase；可用 `verify-production-backup-copy.ps1` 自动完成本地导入、预检和二次恢复演练；
 3. 处理全部重复键和 schema 差异，不得在生产库猜测修复；
 4. 由业务负责人确认 V1.21 的菜单/模块影响；
-5. 在恢复副本上执行认证、菜单、合同、采购、库存等对应冒烟，并准备数据库回退备份；
+5. 通过 `verify-production-backup-api.ps1` 在恢复副本上执行认证、菜单和主要只读业务 API 冒烟；随后由业务负责人完成合同、采购、库存等人工验收，并准备数据库回退备份；
 6. 获得明确生产发布授权后，才可单独拟定云端变更窗口。
 
 在这些条件完成前，source-baseline.json 中的 deploymentAllowed 必须保持 false。
