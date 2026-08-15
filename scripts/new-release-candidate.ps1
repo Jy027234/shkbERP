@@ -58,8 +58,11 @@ $branch = (& git -C $repoRoot branch --show-current).Trim()
 if ($branch -ne 'main') {
     throw "Release candidate creation is restricted to main, found '$branch'."
 }
-$existingTag = (& git -C $repoRoot tag -l $Version).Trim()
-if ($existingTag) {
+$existingTags = @(& git -C $repoRoot tag -l $Version)
+if ($LASTEXITCODE -ne 0) {
+    throw "Unable to inspect existing release candidate tag '$Version'."
+}
+if ($existingTags.Count -gt 0) {
     throw "Tag '$Version' already exists locally."
 }
 
