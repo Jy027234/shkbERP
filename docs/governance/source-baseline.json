@@ -30,7 +30,7 @@
     }
   ],
   "reconciliation": {
-    "status": "candidate-required",
+    "status": "production-copy-required",
     "backend": {
       "sameFiles": 2319,
       "differentFiles": 33,
@@ -50,10 +50,10 @@
       "run-combined-static-and-runtime-gates",
       "create-clean-governance-commit",
       "catalog-all-versioned-migrations-with-checksums-and-safety-classification",
-      "verify-local-isolated-backup-restore-and-approved-delta-idempotency"
+      "verify-local-isolated-backup-restore-and-approved-delta-idempotency",
+      "create-tagged-release-candidate-v2026.08.15-rc.1"
     ],
     "blockingItems": [
-      "create-tagged-release-candidate",
       "restore-and-accept-a-production-data-copy",
       "obtain-explicit-production-deployment-approval"
     ]
@@ -69,6 +69,14 @@
     "deploymentAllowed": false,
     "requiresCleanWorktree": true,
     "requiresVersionTag": true,
-    "requiresSingleCommitForFrontendBackendAndMigrations": true
+    "requiresSingleCommitForFrontendBackendAndMigrations": true,
+    "candidateEvidence": {
+      "tag": "v2026.08.15-rc.1",
+      "tagObject": "a0b6d42816106ad62fa39ee53850cbf223c13b82",
+      "sourceCommit": "edfd802562689a5b9521d53fd9533d370feeb6d0",
+      "manifestSha256": "bd72c45c861d3dfc6aa3c0be9f14113cf513a3c7ca771ca147bc6e849de11e0a",
+      "scope": "local-isolated-only",
+      "productionAllowed": false
+    }
   }
 }
