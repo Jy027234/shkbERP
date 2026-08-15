@@ -54,6 +54,7 @@
             <result column="detail_description" property="description"/>
             <result column="detail_order_no" property="orderNo"/>
             <result column="detail_receive_sheet_detail_id" property="receiveSheetDetailId"/>
+            <result column="detail_serial_number_list" property="serialNumberList"/>
         </collection>
     </resultMap>
 
@@ -110,7 +111,8 @@
             d.tax_rate AS detail_tax_rate,
             d.description AS detail_description,
             d.order_no AS detail_order_no,
-            d.receive_sheet_detail_id AS detail_receive_sheet_detail_id
+            d.receive_sheet_detail_id AS detail_receive_sheet_detail_id,
+            d.serial_number_list AS detail_serial_number_list
         FROM tbl_purchase_return AS r
         LEFT JOIN tbl_purchase_return_detail AS d ON d.return_id = r.id
     </sql>

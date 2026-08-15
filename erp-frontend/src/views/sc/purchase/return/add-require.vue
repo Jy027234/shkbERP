@@ -129,7 +129,17 @@
 
         <!-- 序列号 列自定义内容 -->
         <template #serialNumberList_default="{ row }">
-          <a-input v-if="row.isSerial" v-model:value="row.serialNumberList" placeholder="多个序列号用逗号分隔" />
+          <a-select
+            v-if="row.isSerial"
+            v-model:value="row.selectedSerialNumbers"
+            mode="multiple"
+            style="width: 100%"
+            placeholder="选择本次退货序列号"
+            :options="row.serialOptions"
+            :loading="row.serialLoading"
+            :max-tag-count="1"
+            @dropdown-visible-change="(visible) => visible && loadAvailableSerials(row)"
+          />
           <span v-else>-</span>
         </template>
       </vxe-grid>
@@ -380,6 +390,9 @@
           isSerial: false,
           batchNumber: '',
           serialNumberList: '',
+          selectedSerialNumbers: [],
+          serialOptions: [],
+          serialLoading: false,
         };
       },
       // 新增航材
@@ -545,6 +558,7 @@
           return false;
         }
 
+        const selectedSerialNumbers = new Set();
         for (let i = 0; i < this.tableData.length; i++) {
           const product = this.tableData[i];
 
@@ -614,6 +628,23 @@
                 return false;
               }
             }
+
+            if (product.isSerial) {
+              const rowSerialNumbers = product.selectedSerialNumbers || [];
+              if (rowSerialNumbers.length !== Number(product.returnNum)) {
+                this.$msg.createError(
+                  '第' + (i + 1) + '行序列号数量必须与退货数量一致！',
+                );
+                return false;
+              }
+              for (const serialNumber of rowSerialNumbers) {
+                if (selectedSerialNumbers.has(serialNumber)) {
+                  this.$msg.createError('序列号[' + serialNumber + ']被重复选择！');
+                  return false;
+                }
+                selectedSerialNumbers.add(serialNumber);
+              }
+            }
           } else {
             if (!product.isFixed) {
               this.$msg.createError('第' + (i + 1) + '行航材退货数量不允许为空！');
@@ -630,6 +661,25 @@
         }
 
         return true;
+      },
+      // 加载当前采购收货明细仍在库、可退货的序列号
+      loadAvailableSerials(row) {
+        const receiveSheetDetailId = row.receiveSheetDetailId || (row.isFixed ? row.id : '');
+        if (!receiveSheetDetailId || row.serialLoading) {
+          return;
+        }
+        row.serialLoading = true;
+        api
+          .getAvailableSerials(receiveSheetDetailId)
+          .then((serials) => {
+            row.serialOptions = (serials || []).map((serial) => ({
+              label: serial.serialNumber,
+              value: serial.serialNumber,
+            }));
+          })
+          .finally(() => {
+            row.serialLoading = false;
+          });
       },
       // 创建订单
       createOrder() {
@@ -653,7 +703,7 @@
                 returnNum: t.returnNum,
                 description: t.description,
                 batchNumber: t.batchNumber || '',
-                serialNumberList: t.serialNumberList || '',
+                serialNumberList: (t.selectedSerialNumbers || []).join(','),
               };
 
               if (t.isFixed) {
@@ -737,7 +787,7 @@
                 returnNum: t.returnNum,
                 description: t.description,
                 batchNumber: t.batchNumber || '',
-                serialNumberList: t.serialNumberList || '',
+                serialNumberList: (t.selectedSerialNumbers || []).join(','),
               };
 
               if (t.isFixed) {

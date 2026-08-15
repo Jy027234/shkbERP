@@ -4,6 +4,7 @@ import com.lframework.starter.web.core.components.resp.PageResult;
 import com.lframework.starter.web.core.service.BaseMpService;
 import com.lframework.xingyun.sc.dto.purchase.returned.PurchaseReturnFullDto;
 import com.lframework.xingyun.sc.entity.PurchaseReturn;
+import com.lframework.xingyun.sc.entity.ProductStockSerial;
 import com.lframework.xingyun.sc.enums.SettleStatus;
 import com.lframework.xingyun.sc.vo.purchase.returned.ApprovePassPurchaseReturnVo;
 import com.lframework.xingyun.sc.vo.purchase.returned.ApproveRefusePurchaseReturnVo;
@@ -40,6 +41,14 @@ public interface PurchaseReturnService extends BaseMpService<PurchaseReturn> {
    * @return
    */
   PurchaseReturnFullDto getDetail(String id);
+
+  /**
+   * 查询指定采购收货明细当前仍在库、可退货的序列号。
+   *
+   * @param receiveSheetDetailId 采购收货单明细ID
+   * @return 可退货序列号
+   */
+  List<ProductStockSerial> getAvailableSerials(String receiveSheetDetailId);
 
   /**
    * 创建

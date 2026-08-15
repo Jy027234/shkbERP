@@ -74,12 +74,14 @@ function Assert-ErpRejected {
     param(
         [Parameter(Mandatory = $true)][string]$Uri,
         [Parameter(Mandatory = $true)][hashtable]$Headers,
-        [Parameter(Mandatory = $true)][string]$JsonBody
+        [Parameter(Mandatory = $true)][string]$JsonBody,
+        [ValidateSet('Post', 'Patch')][string]$Method = 'Post'
     )
 
     $client = [System.Net.Http.HttpClient]::new()
     $client.Timeout = [TimeSpan]::FromSeconds(30)
-    $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Post, $Uri)
+    $httpMethod = if ($Method -eq 'Patch') { [System.Net.Http.HttpMethod]::new('PATCH') } else { [System.Net.Http.HttpMethod]::Post }
+    $request = [System.Net.Http.HttpRequestMessage]::new($httpMethod, $Uri)
     foreach ($entry in $Headers.GetEnumerator()) {
         [void]$request.Headers.TryAddWithoutValidation([string]$entry.Key, [string]$entry.Value)
     }
@@ -112,6 +114,7 @@ $otherOrderDetailId = "$prefix-pod2"
 $otherReceiveId = "$prefix-rs2"
 $otherReceiveDetailId = "$prefix-rsd2"
 $descriptionPrefix = 'V1.24 purchase flow'
+$serialNumbers = 1..6 | ForEach-Object { "V125-$runKey-SN$_" }
 $cleanupSql = @"
 DELETE FROM sys_mq_inbox WHERE event_id IN (
   SELECT id FROM sys_mq_outbox WHERE payload LIKE '%v124pf%' OR payload LIKE '%V124-%');
@@ -152,6 +155,15 @@ AND column_name IN ('batch_number','serial_number_list','production_date','expir
         throw 'V1.24 traceability columns are not applied to the local smoke database.'
     }
 
+    $returnSerialColumns = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT COUNT(*) FROM information_schema.columns
+WHERE table_schema='$Database' AND table_name='tbl_purchase_return_detail'
+AND column_name='serial_number_list';
+"@)
+    if ($returnSerialColumns.Count -ne 1 -or [int]$returnSerialColumns[0] -ne 1) {
+        throw 'V1.25 purchase-return serial traceability is not applied to the local smoke database.'
+    }
+
     Invoke-SmokeSql -Sql @"
 INSERT INTO base_data_store_center
 (id,code,name,available,description,create_by,create_by_id,create_time,update_by,update_by_id,update_time) VALUES
@@ -161,7 +173,7 @@ INSERT INTO base_data_supplier
 ('$supplierId','V124-$runKey-SUP','V124 supplier','V124',1,2,1,'smoke','smoke','smoke',NOW(),'smoke','smoke',NOW());
 INSERT INTO base_data_product
 (id,code,name,sku_code,category_id,brand_id,product_type,tax_rate,sale_tax_rate,spec,unit,available,is_batch,is_serial,create_by,create_by_id,create_time,update_by,update_by_id,update_time) VALUES
-('$productId','V124-$runKey-P1','V124 product 1','V124-$runKey-SKU1','1','1',1,13,13,'FLOW','EA',1,1,0,'smoke','smoke',NOW(),'smoke','smoke',NOW()),
+('$productId','V124-$runKey-P1','V124 product 1','V124-$runKey-SKU1','1','1',1,13,13,'FLOW','EA',1,1,1,'smoke','smoke',NOW(),'smoke','smoke',NOW()),
 ('$otherProductId','V124-$runKey-P2','V124 product 2','V124-$runKey-SKU2','1','1',1,13,13,'FLOW','EA',1,0,0,'smoke','smoke',NOW(),'smoke','smoke',NOW());
 INSERT INTO base_data_product_purchase (id,price) VALUES
 ('$productId',10),('$otherProductId',20);
@@ -232,7 +244,7 @@ INSERT INTO tbl_receive_sheet_detail
         receiveNum = 6
         purchaseOrderDetailId = $orderDetailId
         batchNumber = 'V124-BATCH'
-        serialNumberList = ''
+        serialNumberList = ($serialNumbers -join ',')
         productionDate = '2026-08-01'
         expiryDate = '2027-08-01'
         description = 'flow receipt line'
@@ -256,6 +268,14 @@ INSERT INTO tbl_receive_sheet_detail
     if ($stockAfterReceive.Count -ne 1 -or [int]$stockAfterReceive[0] -ne 6) {
         throw "Receipt approval did not add six units to stock: $($stockAfterReceive -join ',')"
     }
+    $serialsAfterReceive = @(Invoke-SmokeSql -ReturnOutput -Sql "SELECT CONCAT(serial_number, ':', stock_status) FROM tbl_product_stock_serial WHERE product_id='$productId' ORDER BY serial_number;")
+    if ($serialsAfterReceive.Count -ne 6 -or @($serialsAfterReceive | Where-Object { $_ -notmatch ':1$' }).Count -ne 0) {
+        throw "Receipt approval did not create six in-stock serials: $($serialsAfterReceive -join ',')"
+    }
+    $availableSerials = Invoke-ErpJson -Uri "$baseUri/purchase/return/available-serials?receiveSheetDetailId=$receiveDetailId" -Headers $headers
+    if (@($availableSerials.data).Count -ne 6) {
+        throw "Available-serial endpoint returned $(@($availableSerials.data).Count) rows instead of six."
+    }
 
     $returnBase = @{
         scId = $scId
@@ -272,12 +292,22 @@ INSERT INTO tbl_receive_sheet_detail
     Assert-ErpRejected -Uri "$baseUri/purchase/return" -Headers $headers -JsonBody ($invalidReturn | ConvertTo-Json -Depth 6)
     $invalidReturn.products = @(@{ productId = $otherProductId; returnNum = 1; receiveSheetDetailId = $receiveDetailId })
     Assert-ErpRejected -Uri "$baseUri/purchase/return" -Headers $headers -JsonBody ($invalidReturn | ConvertTo-Json -Depth 6)
+    $invalidReturn.products = @(@{ productId = $productId; returnNum = 2; receiveSheetDetailId = $receiveDetailId; serialNumberList = $serialNumbers[0] })
+    Assert-ErpRejected -Uri "$baseUri/purchase/return" -Headers $headers -JsonBody ($invalidReturn | ConvertTo-Json -Depth 6)
+    $invalidReturn.products = @(@{ productId = $productId; returnNum = 2; receiveSheetDetailId = $receiveDetailId; serialNumberList = "$($serialNumbers[0]),$($serialNumbers[0])" })
+    Assert-ErpRejected -Uri "$baseUri/purchase/return" -Headers $headers -JsonBody ($invalidReturn | ConvertTo-Json -Depth 6)
+    $invalidReturn.products = @(@{ productId = $productId; returnNum = 1; receiveSheetDetailId = $receiveDetailId; serialNumberList = "V125-$runKey-NOT-FROM-RECEIPT" })
+    Assert-ErpRejected -Uri "$baseUri/purchase/return" -Headers $headers -JsonBody ($invalidReturn | ConvertTo-Json -Depth 6)
 
     $returnBody = $returnBase.Clone()
-    $returnBody.products = @(@{ productId = $productId; returnNum = 2; receiveSheetDetailId = $receiveDetailId; description = 'flow return line' })
+    $returnBody.products = @(@{ productId = $productId; returnNum = 2; receiveSheetDetailId = $receiveDetailId; serialNumberList = "$($serialNumbers[0]),$($serialNumbers[1])"; description = 'flow return line' })
     $createdReturn = Invoke-ErpJson -Uri "$baseUri/purchase/return" -Method Post -Headers $headers -JsonBody ($returnBody | ConvertTo-Json -Depth 6)
     $returnId = [string]$createdReturn.data
     if (-not $returnId) { throw 'Purchase-return creation returned an empty ID.' }
+    $returnDetail = Invoke-ErpJson -Uri "$baseUri/purchase/return?id=$returnId" -Headers $headers
+    if ($returnDetail.data.details[0].serialNumberList -ne "$($serialNumbers[0]),$($serialNumbers[1])") {
+        throw 'Purchase-return serial selection did not round-trip through the API.'
+    }
 
     $overReturn = $returnBase.Clone()
     $overReturn.description = "$descriptionPrefix over return"
@@ -286,17 +316,49 @@ INSERT INTO tbl_receive_sheet_detail
     Assert-ErpRejected -Uri "$baseUri/purchase/return" -Headers $headers -JsonBody ($overReturn | ConvertTo-Json -Depth 6)
     Invoke-ErpJson -Uri "$baseUri/purchase/return/approve/pass" -Method Patch -Headers $headers -JsonBody (@{ id = $returnId; description = "$descriptionPrefix returned" } | ConvertTo-Json) | Out-Null
 
+    $returnedSerialState = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT stock_status FROM tbl_product_stock_serial WHERE serial_number='$($serialNumbers[0])';
+SELECT stock_status FROM tbl_product_stock_serial WHERE serial_number='$($serialNumbers[1])';
+SELECT stock_status FROM tbl_product_stock_serial WHERE serial_number='$($serialNumbers[2])';
+"@)
+    if ($returnedSerialState.Count -ne 3 -or [int]$returnedSerialState[0] -ne 0 -or [int]$returnedSerialState[1] -ne 0 -or [int]$returnedSerialState[2] -ne 1) {
+        throw "Partial return updated the wrong serial state: $($returnedSerialState -join ',')"
+    }
+
+    $usedSerialReturn = $returnBase.Clone()
+    $usedSerialReturn.description = "$descriptionPrefix used serial"
+    $usedSerialReturn.products = @(@{ productId = $productId; returnNum = 1; receiveSheetDetailId = $receiveDetailId; serialNumberList = $serialNumbers[0] })
+    Assert-ErpRejected -Uri "$baseUri/purchase/return" -Headers $headers -JsonBody ($usedSerialReturn | ConvertTo-Json -Depth 6)
+
+    $raceReturn = $returnBase.Clone()
+    $raceReturn.description = "$descriptionPrefix serial race"
+    $raceReturn.products = @(@{ productId = $productId; returnNum = 2; receiveSheetDetailId = $receiveDetailId; serialNumberList = "$($serialNumbers[2]),$($serialNumbers[3])" })
+    $createdRaceReturn = Invoke-ErpJson -Uri "$baseUri/purchase/return" -Method Post -Headers $headers -JsonBody ($raceReturn | ConvertTo-Json -Depth 6)
+    $raceReturnId = [string]$createdRaceReturn.data
+    Invoke-SmokeSql -Sql "UPDATE tbl_product_stock_serial SET stock_status=0 WHERE serial_number='$($serialNumbers[3])';"
+    Assert-ErpRejected -Uri "$baseUri/purchase/return/approve/pass" -Method Patch -Headers $headers -JsonBody (@{ id = $raceReturnId; description = "$descriptionPrefix race rejected" } | ConvertTo-Json)
+    $raceRollbackState = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT stock_num FROM tbl_product_stock WHERE sc_id='$scId' AND product_id='$productId';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$scId' AND product_id='$productId' AND batch_number='V124-BATCH';
+SELECT stock_status FROM tbl_product_stock_serial WHERE serial_number='$($serialNumbers[2])';
+SELECT status FROM tbl_purchase_return WHERE id='$raceReturnId';
+"@)
+    if ($raceRollbackState.Count -ne 4 -or [int]$raceRollbackState[0] -ne 4 -or [int]$raceRollbackState[1] -ne 4 -or [int]$raceRollbackState[2] -ne 1 -or [int]$raceRollbackState[3] -ne 0) {
+        throw "Serial race did not roll back the purchase return transaction: $($raceRollbackState -join ',')"
+    }
+    Invoke-SmokeSql -Sql "UPDATE tbl_product_stock_serial SET stock_status=1 WHERE serial_number='$($serialNumbers[3])';"
+
     $finalState = @(Invoke-SmokeSql -ReturnOutput -Sql @"
 SELECT stock_num FROM tbl_product_stock WHERE sc_id='$scId' AND product_id='$productId';
 SELECT receive_num FROM tbl_purchase_order_detail WHERE id='$orderDetailId';
 SELECT return_num FROM tbl_receive_sheet_detail WHERE id='$receiveDetailId';
 SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$scId' AND product_id='$productId' AND batch_number='V124-BATCH';
 "@)
-    if ($finalState.Count -ne 4 -or [int]$finalState[0] -ne 4 -or [int]$finalState[1] -ne 6 -or [int]$finalState[2] -ne 2 -or [int]$finalState[3] -ne 4) {
+    if ($finalState.Count -ne 4 -or [int]$finalState[0] -ne 4 -or [int]$finalState[1] -ne 6 -or [int]$finalState[2] -ne 4 -or [int]$finalState[3] -ne 4) {
         throw "Purchase-flow state is inconsistent: $($finalState -join ',')"
     }
 
-    Write-Host "Purchase-flow verification passed: order=$orderId receive=$receiveId return=$returnId; linkage guards, traceability, quantity limits and stock 0->6->4 verified."
+    Write-Host "Purchase-flow verification passed: order=$orderId receive=$receiveId return=$returnId; linkage guards, batch/serial traceability, partial serial return and transactional rollback verified."
 } finally {
     Invoke-SmokeSql -Sql $cleanupSql
 }

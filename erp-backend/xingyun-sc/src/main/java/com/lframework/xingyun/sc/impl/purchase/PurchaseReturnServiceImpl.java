@@ -37,6 +37,7 @@ import com.lframework.xingyun.sc.entity.PurchaseConfig;
 import com.lframework.xingyun.sc.entity.PurchaseReturn;
 import com.lframework.xingyun.sc.entity.PurchaseReturnDetail;
 import com.lframework.xingyun.sc.entity.ProductStockBatch;
+import com.lframework.xingyun.sc.entity.ProductStockSerial;
 import com.lframework.xingyun.sc.entity.ReceiveSheet;
 import com.lframework.xingyun.sc.entity.ReceiveSheetDetail;
 import com.lframework.xingyun.sc.enums.ProductStockBizType;
@@ -51,6 +52,7 @@ import com.lframework.xingyun.sc.service.purchase.PurchaseReturnService;
 import com.lframework.xingyun.sc.service.purchase.ReceiveSheetDetailService;
 import com.lframework.xingyun.sc.service.purchase.ReceiveSheetService;
 import com.lframework.xingyun.sc.service.stock.ProductStockBatchService;
+import com.lframework.xingyun.sc.service.stock.ProductStockSerialService;
 import com.lframework.xingyun.sc.service.stock.ProductStockService;
 import com.lframework.xingyun.sc.vo.purchase.returned.ApprovePassPurchaseReturnVo;
 import com.lframework.xingyun.sc.vo.purchase.returned.ApproveRefusePurchaseReturnVo;
@@ -64,8 +66,14 @@ import com.lframework.xingyun.template.inner.service.system.SysUserService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -108,6 +116,9 @@ public class PurchaseReturnServiceImpl extends
   @Autowired
   private ProductStockBatchService productStockBatchService;
 
+  @Autowired
+  private ProductStockSerialService productStockSerialService;
+
   @Override
   public PageResult<PurchaseReturn> query(Integer pageIndex, Integer pageSize,
       QueryPurchaseReturnVo vo) {
@@ -131,6 +142,43 @@ public class PurchaseReturnServiceImpl extends
   public PurchaseReturnFullDto getDetail(String id) {
 
     return getBaseMapper().getDetail(id);
+  }
+
+  @Override
+  public List<ProductStockSerial> getAvailableSerials(String receiveSheetDetailId) {
+
+    ReceiveSheetDetail receiveDetail = receiveSheetDetailService.getById(receiveSheetDetailId);
+    if (receiveDetail == null) {
+      throw new InputErrorException("采购收货单明细不存在！");
+    }
+
+    ReceiveSheet receiveSheet = receiveSheetService.getById(receiveDetail.getSheetId());
+    if (receiveSheet == null) {
+      throw new InputErrorException("采购收货单不存在！");
+    }
+
+    Product product = productService.findById(receiveDetail.getProductId());
+    if (product == null || !Boolean.TRUE.equals(product.getIsSerial())) {
+      return List.of();
+    }
+
+    List<String> sourceSerialNumbers = parseSerialNumbers(receiveDetail.getSerialNumberList());
+    if (sourceSerialNumbers.isEmpty()) {
+      return List.of();
+    }
+
+    ProductStockBatch batch = findReturnBatch(receiveSheet.getScId(), product, receiveDetail);
+    if (batch == null) {
+      return List.of();
+    }
+
+    return productStockSerialService.list(
+        Wrappers.lambdaQuery(ProductStockSerial.class)
+            .eq(ProductStockSerial::getProductId, product.getId())
+            .eq(ProductStockSerial::getBatchId, batch.getId())
+            .eq(ProductStockSerial::getStockStatus, 1)
+            .in(ProductStockSerial::getSerialNumber, sourceSerialNumbers)
+            .orderByAsc(ProductStockSerial::getSerialNumber));
   }
 
   @OpLog(type = ScOpLogType.PURCHASE, name = "创建采购退货单，单号：{}", params = "#code")
@@ -257,6 +305,14 @@ public class PurchaseReturnServiceImpl extends
       }
     }
 
+    Wrapper<PurchaseReturnDetail> queryDetailWrapper = Wrappers.lambdaQuery(
+            PurchaseReturnDetail.class)
+        .eq(PurchaseReturnDetail::getReturnId, purchaseReturn.getId())
+        .orderByAsc(PurchaseReturnDetail::getOrderNo);
+    List<PurchaseReturnDetail> details = purchaseReturnDetailService.list(queryDetailWrapper);
+    Map<String, List<ProductStockSerial>> serialsByDetail = validateSerialsOnApprove(
+        purchaseReturn, details);
+
     purchaseReturn.setStatus(PurchaseReturnStatus.APPROVE_PASS);
 
     List<PurchaseReturnStatus> statusList = new ArrayList<>();
@@ -276,11 +332,6 @@ public class PurchaseReturnServiceImpl extends
       throw new DefaultClientException("采购退货单信息已过期，请刷新重试！");
     }
 
-    Wrapper<PurchaseReturnDetail> queryDetailWrapper = Wrappers.lambdaQuery(
-            PurchaseReturnDetail.class)
-        .eq(PurchaseReturnDetail::getReturnId, purchaseReturn.getId())
-        .orderByAsc(PurchaseReturnDetail::getOrderNo);
-    List<PurchaseReturnDetail> details = purchaseReturnDetailService.list(queryDetailWrapper);
     for (PurchaseReturnDetail detail : details) {
       SubProductStockVo subproductStockVo = new SubProductStockVo();
 
@@ -295,6 +346,7 @@ public class PurchaseReturnServiceImpl extends
 
       productStockService.subStock(subproductStockVo);
       this.subBatchStock(purchaseReturn, detail);
+      this.subSerialStock(detail, serialsByDetail.getOrDefault(detail.getId(), List.of()));
     }
 
     this.sendApprovePassEvent(purchaseReturn);
@@ -520,21 +572,23 @@ public class PurchaseReturnServiceImpl extends
     int giftNum = 0;
     BigDecimal totalAmount = BigDecimal.ZERO;
     int orderNo = 1;
+    Set<String> selectedSerialNumbers = new HashSet<>();
     for (ReturnProductVo productVo : vo.getProducts()) {
+      ReceiveSheetDetail receiveDetail = null;
       if (requireReceive) {
         if (!StringUtil.isBlank(productVo.getReceiveSheetDetailId())) {
-          ReceiveSheetDetail detail = receiveSheetDetailService.getById(
+          receiveDetail = receiveSheetDetailService.getById(
               productVo.getReceiveSheetDetailId());
-          if (detail == null) {
+          if (receiveDetail == null) {
             throw new InputErrorException("第" + orderNo + "行采购收货单明细不存在！");
           }
-          if (!Objects.equals(detail.getSheetId(), vo.getReceiveSheetId())) {
+          if (!Objects.equals(receiveDetail.getSheetId(), vo.getReceiveSheetId())) {
             throw new InputErrorException("第" + orderNo + "行采购收货单明细不属于所选采购收货单！");
           }
-          if (!Objects.equals(detail.getProductId(), productVo.getProductId())) {
+          if (!Objects.equals(receiveDetail.getProductId(), productVo.getProductId())) {
             throw new InputErrorException("第" + orderNo + "行商品与采购收货单明细不一致！");
           }
-          productVo.setPurchasePrice(detail.getTaxPrice());
+          productVo.setPurchasePrice(receiveDetail.getTaxPrice());
         } else {
           productVo.setPurchasePrice(BigDecimal.ZERO);
         }
@@ -572,6 +626,16 @@ public class PurchaseReturnServiceImpl extends
         throw new InputErrorException("第" + orderNo + "行商品采购价最多允许2位小数！");
       }
 
+      List<ProductStockSerial> selectedSerials = validateSerialSelection(purchaseReturn.getScId(),
+          product, receiveDetail, productVo.getReturnNum(), productVo.getSerialNumberList(),
+          "第" + orderNo + "行");
+      for (ProductStockSerial selectedSerial : selectedSerials) {
+        if (!selectedSerialNumbers.add(selectedSerial.getSerialNumber())) {
+          throw new InputErrorException(
+              "第" + orderNo + "行序列号[" + selectedSerial.getSerialNumber() + "]重复选择！");
+        }
+      }
+
       detail.setProductId(productVo.getProductId());
       detail.setReturnNum(productVo.getReturnNum());
       detail.setTaxPrice(productVo.getPurchasePrice());
@@ -581,6 +645,9 @@ public class PurchaseReturnServiceImpl extends
           StringUtil.isBlank(productVo.getDescription()) ? StringPool.EMPTY_STR
               : productVo.getDescription());
       detail.setOrderNo(orderNo);
+      detail.setSerialNumberList(selectedSerials.stream()
+          .map(ProductStockSerial::getSerialNumber)
+          .collect(Collectors.joining(",")));
       if (requireReceive && !StringUtil.isBlank(productVo.getReceiveSheetDetailId())) {
         detail.setReceiveSheetDetailId(productVo.getReceiveSheetDetailId());
         receiveSheetDetailService.addReturnNum(productVo.getReceiveSheetDetailId(),
@@ -661,5 +728,148 @@ public class PurchaseReturnServiceImpl extends
       throw new DefaultClientException(
           "（" + product.getCode() + "）" + product.getName() + "对应批次库存不足，不允许退货！");
     }
+  }
+
+  private Map<String, List<ProductStockSerial>> validateSerialsOnApprove(
+      PurchaseReturn purchaseReturn, List<PurchaseReturnDetail> details) {
+
+    Map<String, List<ProductStockSerial>> result = new HashMap<>();
+    Set<String> selectedSerialNumbers = new HashSet<>();
+    int orderNo = 1;
+    for (PurchaseReturnDetail detail : details) {
+      Product product = productService.findById(detail.getProductId());
+      if (product == null) {
+        throw new InputErrorException("第" + orderNo + "行采购退货商品不存在！");
+      }
+
+      ReceiveSheetDetail receiveDetail = null;
+      if (!StringUtil.isBlank(detail.getReceiveSheetDetailId())) {
+        receiveDetail = receiveSheetDetailService.getById(detail.getReceiveSheetDetailId());
+      }
+      List<ProductStockSerial> serials = validateSerialSelection(purchaseReturn.getScId(), product,
+          receiveDetail, detail.getReturnNum(), detail.getSerialNumberList(), "第" + orderNo + "行");
+      for (ProductStockSerial serial : serials) {
+        if (!selectedSerialNumbers.add(serial.getSerialNumber())) {
+          throw new InputErrorException(
+              "第" + orderNo + "行序列号[" + serial.getSerialNumber() + "]重复选择！");
+        }
+      }
+      result.put(detail.getId(), serials);
+      orderNo++;
+    }
+    return result;
+  }
+
+  private List<ProductStockSerial> validateSerialSelection(String scId, Product product,
+      ReceiveSheetDetail receiveDetail, Integer returnNum, String serialNumberList,
+      String rowLabel) {
+
+    List<String> serialNumbers = parseSerialNumbers(serialNumberList);
+    if (!Boolean.TRUE.equals(product.getIsSerial())) {
+      if (!serialNumbers.isEmpty()) {
+        throw new InputErrorException(rowLabel + "商品未启用序列号管理，不允许选择序列号！");
+      }
+      return List.of();
+    }
+
+    if (serialNumbers.size() != returnNum) {
+      throw new InputErrorException(
+          rowLabel + "序列号数量必须与退货数量一致！应为：" + returnNum + "，实际：" + serialNumbers.size());
+    }
+
+    Set<String> sourceSerialNumbers = null;
+    ProductStockBatch expectedBatch = null;
+    if (receiveDetail != null) {
+      if (!Objects.equals(receiveDetail.getProductId(), product.getId())) {
+        throw new InputErrorException(rowLabel + "采购收货单明细与商品不一致！");
+      }
+      sourceSerialNumbers = new HashSet<>(parseSerialNumbers(receiveDetail.getSerialNumberList()));
+      expectedBatch = findReturnBatch(scId, product, receiveDetail);
+      if (expectedBatch == null) {
+        throw new DefaultClientException(rowLabel + "采购收货批次库存不存在，无法校验序列号！");
+      }
+    }
+
+    List<ProductStockSerial> result = new ArrayList<>();
+    for (String serialNumber : serialNumbers) {
+      if (sourceSerialNumbers != null && !sourceSerialNumbers.contains(serialNumber)) {
+        throw new InputErrorException(
+            rowLabel + "序列号[" + serialNumber + "]不属于所选采购收货明细！");
+      }
+
+      ProductStockSerial serial = productStockSerialService.getOne(
+          Wrappers.lambdaQuery(ProductStockSerial.class)
+              .eq(ProductStockSerial::getSerialNumber, serialNumber));
+      if (serial == null) {
+        throw new InputErrorException(rowLabel + "序列号[" + serialNumber + "]不存在！");
+      }
+      if (!Objects.equals(serial.getProductId(), product.getId())) {
+        throw new InputErrorException(rowLabel + "序列号[" + serialNumber + "]与商品不匹配！");
+      }
+      if (!Objects.equals(serial.getStockStatus(), 1)) {
+        throw new DefaultClientException(rowLabel + "序列号[" + serialNumber + "]已不在库！");
+      }
+
+      ProductStockBatch serialBatch = productStockBatchService.findById(serial.getBatchId());
+      if (serialBatch == null || !Objects.equals(serialBatch.getScId(), scId)
+          || !Objects.equals(serialBatch.getProductId(), product.getId())) {
+        throw new InputErrorException(rowLabel + "序列号[" + serialNumber + "]不属于当前仓库商品库存！");
+      }
+      if (expectedBatch != null && !Objects.equals(expectedBatch.getId(), serial.getBatchId())) {
+        throw new InputErrorException(
+            rowLabel + "序列号[" + serialNumber + "]不属于所选采购收货批次！");
+      }
+      result.add(serial);
+    }
+    return result;
+  }
+
+  private void subSerialStock(PurchaseReturnDetail detail,
+      List<ProductStockSerial> serials) {
+
+    for (ProductStockSerial serial : serials) {
+      boolean updated = productStockSerialService.update(
+          Wrappers.lambdaUpdate(ProductStockSerial.class)
+              .set(ProductStockSerial::getStockStatus, 0)
+              .eq(ProductStockSerial::getId, serial.getId())
+              .eq(ProductStockSerial::getProductId, detail.getProductId())
+              .eq(ProductStockSerial::getBatchId, serial.getBatchId())
+              .eq(ProductStockSerial::getStockStatus, 1));
+      if (!updated) {
+        throw new DefaultClientException(
+            "序列号[" + serial.getSerialNumber() + "]库存状态已变化，采购退货失败！");
+      }
+    }
+  }
+
+  private ProductStockBatch findReturnBatch(String scId, Product product,
+      ReceiveSheetDetail receiveDetail) {
+
+    String batchNumber = StringUtil.isBlank(receiveDetail.getBatchNumber()) ? "DEFAULT"
+        : receiveDetail.getBatchNumber();
+    return productStockBatchService.getOne(
+        Wrappers.lambdaQuery(ProductStockBatch.class)
+            .eq(ProductStockBatch::getScId, scId)
+            .eq(ProductStockBatch::getProductId, product.getId())
+            .eq(ProductStockBatch::getBatchNumber, batchNumber));
+  }
+
+  private List<String> parseSerialNumbers(String serialNumberList) {
+
+    if (StringUtil.isBlank(serialNumberList)) {
+      return List.of();
+    }
+
+    Set<String> serialNumbers = new LinkedHashSet<>();
+    for (String value : serialNumberList.split("[,，\\r\\n]+")) {
+      String serialNumber = value.trim();
+      if (StringUtil.isBlank(serialNumber)) {
+        continue;
+      }
+      if (!serialNumbers.add(serialNumber)) {
+        throw new InputErrorException("序列号[" + serialNumber + "]重复！");
+      }
+    }
+    return new ArrayList<>(serialNumbers);
   }
 }

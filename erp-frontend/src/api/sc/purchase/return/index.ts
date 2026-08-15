@@ -80,6 +80,29 @@ export function get(id: string): Promise<GetPurchaseReturnBo> {
 }
 
 /**
+ * 查询采购收货明细当前可退货的序列号
+ */
+export function getAvailableSerials(
+  receiveSheetDetailId: string,
+): Promise<PurchaseReturnSerialBo[]> {
+  return defHttp.get<PurchaseReturnSerialBo[]>(
+    {
+      url: baseUrl + '/available-serials',
+      params: { receiveSheetDetailId },
+    },
+    { region },
+  );
+}
+
+export interface PurchaseReturnSerialBo {
+  id: string;
+  serialNumber: string;
+  batchId: string;
+  productionDate: string;
+  expiryDate: string;
+}
+
+/**
  * 新增
  */
 export function create(data: CreatePurchaseReturnVo): Promise<void> {

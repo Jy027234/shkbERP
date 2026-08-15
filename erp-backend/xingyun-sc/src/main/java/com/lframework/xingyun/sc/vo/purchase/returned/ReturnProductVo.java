@@ -40,4 +40,10 @@ public class ReturnProductVo implements BaseVo, Serializable {
    */
   @ApiModelProperty("收货单明细ID")
   private String receiveSheetDetailId;
+
+  /**
+   * 本次退货序列号，多个序列号用逗号分隔
+   */
+  @ApiModelProperty("本次退货序列号")
+  private String serialNumberList;
 }
