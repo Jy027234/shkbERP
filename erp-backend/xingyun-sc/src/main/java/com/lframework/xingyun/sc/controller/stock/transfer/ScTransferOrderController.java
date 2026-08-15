@@ -260,6 +260,8 @@ public class ScTransferOrderController extends DefaultBaseController {
   @PostMapping("/approve/pass/direct")
   public InvokeResult<Void> directApprovePass(@RequestBody @Valid CreateScTransferOrderVo vo) {
 
+    vo.validate();
+
     scTransferOrderService.directApprovePass(vo);
 
     return InvokeResultBuilder.success();

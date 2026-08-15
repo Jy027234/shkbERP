@@ -16,7 +16,9 @@ import com.lframework.starter.web.core.utils.IdUtil;
 import com.lframework.starter.web.core.utils.PageHelperUtil;
 import com.lframework.starter.web.core.utils.PageResultUtil;
 import com.lframework.xingyun.basedata.entity.Product;
+import com.lframework.xingyun.basedata.enums.ProductType;
 import com.lframework.xingyun.basedata.service.product.ProductService;
+import com.lframework.xingyun.basedata.service.storecenter.StoreCenterService;
 import com.lframework.xingyun.core.annotations.OpLog;
 import com.lframework.xingyun.core.annotations.OrderTimeLineLog;
 import com.lframework.xingyun.core.dto.stock.ProductStockChangeDto;
@@ -52,7 +54,11 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -76,6 +82,9 @@ public class ScTransferOrderServiceImpl extends
 
   @Autowired
   private ProductService productService;
+
+  @Autowired
+  private StoreCenterService storeCenterService;
 
   @Override
   public PageResult<ScTransferOrder> query(Integer pageIndex, Integer pageSize,
@@ -128,7 +137,7 @@ public class ScTransferOrderServiceImpl extends
   @Override
   public void update(UpdateScTransferOrderVo vo) {
 
-    ScTransferOrder data = getBaseMapper().selectById(vo.getId());
+    ScTransferOrder data = getBaseMapper().selectByIdForUpdate(vo.getId());
     if (ObjectUtil.isNull(data)) {
       throw new DefaultClientException("仓库调拨单不存在！");
     }
@@ -178,7 +187,7 @@ public class ScTransferOrderServiceImpl extends
   @Override
   public void deleteById(String id) {
 
-    ScTransferOrder data = getBaseMapper().selectById(id);
+    ScTransferOrder data = getBaseMapper().selectByIdForUpdate(id);
     if (ObjectUtil.isNull(data)) {
       throw new DefaultClientException("仓库调拨单不存在！");
     }
@@ -213,7 +222,7 @@ public class ScTransferOrderServiceImpl extends
   @Override
   public void approvePass(ApprovePassScTransferOrderVo vo) {
 
-    ScTransferOrder data = getBaseMapper().selectById(vo.getId());
+    ScTransferOrder data = getBaseMapper().selectByIdForUpdate(vo.getId());
     if (ObjectUtil.isNull(data)) {
       throw new DefaultClientException("仓库调拨单不存在！");
     }
@@ -228,6 +237,14 @@ public class ScTransferOrderServiceImpl extends
       throw new DefaultClientException("仓库调拨单无法审核通过！");
     }
 
+    Wrapper<ScTransferOrderDetail> queryDetailWrapper = Wrappers.lambdaQuery(
+            ScTransferOrderDetail.class)
+        .eq(ScTransferOrderDetail::getOrderId, data.getId())
+        .orderByAsc(ScTransferOrderDetail::getOrderNo);
+    List<ScTransferOrderDetail> details = scTransferOrderDetailService.list(
+        queryDetailWrapper);
+    validateStoredOrder(data, details);
+
     LocalDateTime now = LocalDateTime.now();
     Wrapper<ScTransferOrder> updateWrapper = Wrappers.lambdaUpdate(ScTransferOrder.class)
         .eq(ScTransferOrder::getId, data.getId())
@@ -241,13 +258,6 @@ public class ScTransferOrderServiceImpl extends
     if (getBaseMapper().update(updateWrapper) != 1) {
       throw new DefaultClientException("仓库调拨单信息已过期，请刷新重试！");
     }
-
-    Wrapper<ScTransferOrderDetail> queryDetailWrapper = Wrappers.lambdaQuery(
-            ScTransferOrderDetail.class)
-        .eq(ScTransferOrderDetail::getOrderId, data.getId())
-        .orderByAsc(ScTransferOrderDetail::getOrderNo);
-    List<ScTransferOrderDetail> details = scTransferOrderDetailService.list(
-        queryDetailWrapper);
 
     BigDecimal totalAmount = BigDecimal.ZERO;
     for (ScTransferOrderDetail detail : details) {
@@ -303,7 +313,7 @@ public class ScTransferOrderServiceImpl extends
   @Override
   public void approveRefuse(ApproveRefuseScTransferOrderVo vo) {
 
-    ScTransferOrder data = getBaseMapper().selectById(vo.getId());
+    ScTransferOrder data = getBaseMapper().selectByIdForUpdate(vo.getId());
     if (ObjectUtil.isNull(data)) {
       throw new DefaultClientException("仓库调拨单不存在！");
     }
@@ -338,7 +348,7 @@ public class ScTransferOrderServiceImpl extends
   @Transactional(rollbackFor = Exception.class)
   @Override
   public void receive(ReceiveScTransferOrderVo vo) {
-    ScTransferOrder data = getBaseMapper().selectById(vo.getId());
+    ScTransferOrder data = getBaseMapper().selectByIdForUpdate(vo.getId());
     if (ObjectUtil.isNull(data)) {
       throw new DefaultClientException("仓库调拨单不存在！");
     }
@@ -349,12 +359,22 @@ public class ScTransferOrderServiceImpl extends
       throw new DefaultClientException("仓库调拨单信息已过期，请刷新重试！");
     }
 
+    Wrapper<ScTransferOrderDetail> queryDetailWrapper = Wrappers.lambdaQuery(
+            ScTransferOrderDetail.class)
+        .eq(ScTransferOrderDetail::getOrderId, data.getId())
+        .orderByAsc(ScTransferOrderDetail::getOrderNo);
+    List<ScTransferOrderDetail> details = scTransferOrderDetailService.list(queryDetailWrapper);
+    validateStoredOrder(data, details);
+    Map<String, ScTransferOrderDetail> detailMap = indexDetails(details);
+    validateReceiveProducts(vo.getProducts(), detailMap);
+
     for (ReceiveScTransferProductVo productVo : vo.getProducts()) {
       if (scTransferOrderDetailService.receive(data.getId(), productVo.getProductId(),
           productVo.getReceiveNum()) != 1) {
-        Product product = productService.findById(productVo.getProductId());
+        ScTransferOrderDetail detail = detailMap.get(productVo.getProductId());
+        Product product = productService.findById(detail.getProductId());
         throw new DefaultClientException(
-            "商品（" + product.getCode() + "）" + product.getName() + "待收货数量不足，请检查！");
+            "航材（" + product.getCode() + "）" + product.getName() + "待收货数量不足，请检查！");
       }
     }
 
@@ -371,10 +391,7 @@ public class ScTransferOrderServiceImpl extends
 
     LocalDateTime now = LocalDateTime.now();
     for (ReceiveScTransferProductVo productVo : vo.getProducts()) {
-      Wrapper<ScTransferOrderDetail> queryWrapper = Wrappers.lambdaQuery(
-              ScTransferOrderDetail.class).eq(ScTransferOrderDetail::getOrderId, data.getId())
-          .eq(ScTransferOrderDetail::getProductId, productVo.getProductId());
-      ScTransferOrderDetail detail = scTransferOrderDetailService.getOne(queryWrapper);
+      ScTransferOrderDetail detail = detailMap.get(productVo.getProductId());
       // 入库
       AddProductStockVo addProductStockVo = new AddProductStockVo();
       addProductStockVo.setProductId(detail.getProductId());
@@ -448,6 +465,9 @@ public class ScTransferOrderServiceImpl extends
     data.setDescription(
         StringUtil.isBlank(vo.getDescription()) ? StringPool.EMPTY_STR : vo.getDescription());
 
+    validateWarehouses(data);
+    validateProducts(vo.getProducts());
+
     int totalNum = 0;
     int orderNo = 1;
     for (ScTransferProductVo product : vo.getProducts()) {
@@ -466,5 +486,120 @@ public class ScTransferOrderServiceImpl extends
       scTransferOrderDetailService.save(detail);
     }
     data.setTotalNum(totalNum);
+  }
+
+  private void validateWarehouses(ScTransferOrder data) {
+
+    if (storeCenterService.findById(data.getSourceScId()) == null) {
+      throw new DefaultClientException("转出仓库不存在！");
+    }
+    if (storeCenterService.findById(data.getTargetScId()) == null) {
+      throw new DefaultClientException("转入仓库不存在！");
+    }
+  }
+
+  private void validateProducts(List<ScTransferProductVo> products) {
+
+    if (products == null || products.isEmpty()) {
+      throw new DefaultClientException("请录入航材！");
+    }
+    Set<String> productIds = new HashSet<>();
+    int orderNo = 1;
+    for (ScTransferProductVo productVo : products) {
+      if (productVo == null || StringUtil.isBlank(productVo.getProductId())) {
+        throw new DefaultClientException("第" + orderNo + "行航材不能为空！");
+      }
+      if (!productIds.add(productVo.getProductId())) {
+        throw new DefaultClientException("第" + orderNo + "行航材重复录入！");
+      }
+      if (productVo.getTransferNum() == null || productVo.getTransferNum() <= 0) {
+        throw new DefaultClientException("第" + orderNo + "行航材的调拨数量必须大于0！");
+      }
+      validateProduct(productVo.getProductId(), orderNo);
+      orderNo++;
+    }
+  }
+
+  private void validateStoredOrder(ScTransferOrder data, List<ScTransferOrderDetail> details) {
+
+    validateWarehouses(data);
+    if (details == null || details.isEmpty()) {
+      throw new DefaultClientException("仓库调拨单不存在航材明细，不允许继续处理！");
+    }
+    Set<String> productIds = new HashSet<>();
+    int orderNo = 1;
+    for (ScTransferOrderDetail detail : details) {
+      if (detail == null || StringUtil.isBlank(detail.getProductId())) {
+        throw new DefaultClientException("第" + orderNo + "行航材不存在！");
+      }
+      if (!productIds.add(detail.getProductId())) {
+        throw new DefaultClientException("第" + orderNo + "行航材重复，调拨单不允许继续处理！");
+      }
+      if (detail.getTransferNum() == null || detail.getTransferNum() <= 0) {
+        throw new DefaultClientException("第" + orderNo + "行航材的调拨数量必须大于0！");
+      }
+      if (detail.getReceiveNum() == null || detail.getReceiveNum() < 0
+          || detail.getReceiveNum() > detail.getTransferNum()) {
+        throw new DefaultClientException("第" + orderNo + "行航材的已收货数量异常！");
+      }
+      validateProduct(detail.getProductId(), orderNo);
+      orderNo++;
+    }
+  }
+
+  private Map<String, ScTransferOrderDetail> indexDetails(List<ScTransferOrderDetail> details) {
+
+    Map<String, ScTransferOrderDetail> detailMap = new HashMap<>();
+    for (ScTransferOrderDetail detail : details) {
+      if (detailMap.put(detail.getProductId(), detail) != null) {
+        throw new DefaultClientException("仓库调拨单存在重复航材明细，不允许继续收货！");
+      }
+    }
+    return detailMap;
+  }
+
+  private void validateReceiveProducts(List<ReceiveScTransferProductVo> products,
+      Map<String, ScTransferOrderDetail> detailMap) {
+
+    if (products == null || products.isEmpty()) {
+      throw new DefaultClientException("收货航材不能为空！");
+    }
+    Set<String> productIds = new HashSet<>();
+    int orderNo = 1;
+    for (ReceiveScTransferProductVo productVo : products) {
+      if (productVo == null || StringUtil.isBlank(productVo.getProductId())) {
+        throw new DefaultClientException("第" + orderNo + "行收货航材不能为空！");
+      }
+      if (!productIds.add(productVo.getProductId())) {
+        throw new DefaultClientException("第" + orderNo + "行收货航材重复录入！");
+      }
+      if (productVo.getReceiveNum() == null || productVo.getReceiveNum() <= 0) {
+        throw new DefaultClientException("第" + orderNo + "行航材的收货数量必须大于0！");
+      }
+      ScTransferOrderDetail detail = detailMap.get(productVo.getProductId());
+      if (detail == null) {
+        throw new DefaultClientException("第" + orderNo + "行航材不属于当前调拨单！");
+      }
+      if (productVo.getReceiveNum() > detail.getTransferNum() - detail.getReceiveNum()) {
+        throw new DefaultClientException("第" + orderNo + "行航材待收货数量不足，请检查！");
+      }
+      if (detail.getTaxPrice() == null) {
+        throw new DefaultClientException("第" + orderNo + "行航材缺少调拨价格，不允许收货！");
+      }
+      orderNo++;
+    }
+  }
+
+  private void validateProduct(String productId, int orderNo) {
+
+    Product product = productService.findById(productId);
+    if (product == null || product.getProductType() != ProductType.NORMAL) {
+      throw new DefaultClientException("第" + orderNo + "行航材不存在或类型不支持库存调拨！");
+    }
+    if (Boolean.TRUE.equals(product.getIsBatch()) || Boolean.TRUE.equals(product.getIsSerial())) {
+      throw new DefaultClientException(
+          "航材（" + product.getCode() + "）" + product.getName()
+              + "启用了批次或序列号管理，当前仓库调拨单缺少批次/序列号明细，不允许调拨！");
+    }
   }
 }

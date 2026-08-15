@@ -132,6 +132,12 @@
         ORDER BY tb.update_time DESC
     </select>
 
+    <select id="selectByIdForUpdate" resultType="com.lframework.xingyun.sc.entity.ScTransferOrder">
+        <include refid="ScTransferOrderDto_sql"/>
+        WHERE tb.id = #{id}
+        FOR UPDATE
+    </select>
+
     <select id="getDetail" resultMap="ScTransferOrderFullDto">
         <include refid="ScTransferOrderFullDto_sql"/>
         WHERE tb.id = #{id}

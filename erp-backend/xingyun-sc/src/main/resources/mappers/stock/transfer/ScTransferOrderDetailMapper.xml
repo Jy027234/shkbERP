@@ -5,6 +5,7 @@
     UPDATE tbl_sc_transfer_order_detail SET receive_num = receive_num + #{receiveNum}
     WHERE order_id = #{orderId}
     AND product_id = #{productId}
+    AND #{receiveNum} > 0
     AND transfer_num - receive_num >= #{receiveNum}
   </update>
 

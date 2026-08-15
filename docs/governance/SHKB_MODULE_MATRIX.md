@@ -30,6 +30,7 @@ L5 才表示具备生产替换证据。当前没有任何升级模块达到 L5�
 | 采购、收货、退货与通用库存 | `views/sc/purchase` | 采购订单、收货单、采购退货与库存事务服务 | `V1.24__purchase_receive_traceability.sql` 补收货追溯列；`V1.25__purchase_return_serial_traceability.sql` 补退货序列号快照 | `verify-purchase-flow.ps1` 在直连与 Vite 代理覆盖主单/商品归属、超量守卫、批次扣减、序列号部分退货与并发回滚 | L4 | 销售仍需独立验收；补浏览器业务验收和生产恢复副本验收 |
 | 库存盘点 | `views/sc/stock/take` | TakeStock Plan/Sheet Controller 与库存事务服务 | 沿用已版本化通用库存/盘点表；V1.33 无新增 DDL | `verify-stocktake-flow.ps1` 在直连与 Vite 代理覆盖仓库不可变、输入/归属守卫、单品残留清理、普通库存差异调整及追溯型库存安全阻断 | L4 | 批次/序列号尚无明细级盘点契约，只能阻断非零差异；补完整功能、浏览器验收和生产恢复副本验收 |
 | 库存调整 | `views/sc/stock/adjust` | StockAdjust Sheet/Reason Controller 与库存事务服务 | 沿用已版本化库存调整表；V1.34 无新增 DDL | `verify-stock-adjust-flow.ps1` 在直连与 Vite 代理覆盖直接审核输入/引用守卫、普通库存入出、重复审批及追溯型库存安全阻断 | L4 | 批次/序列号尚无明细级调整契约；补完整功能、浏览器验收和生产恢复副本验收 |
+| 库存调拨 | `views/sc/stock/transfer` | ScTransfer Order Controller 与库存事务服务 | 沿用已版本化仓库调拨表；V1.35 无新增 DDL | `verify-stock-transfer-flow.ps1` 在直连与 Vite 代理覆盖输入/引用守卫、审核扣转出仓、部分/最终收货、并发重复收货及追溯型库存安全阻断 | L4 | 批次/序列号尚无明细级调拨契约；补完整功能、浏览器验收和生产恢复副本验收 |
 | 拧紧机、磁粉机任务 | `views/machine-task` | MachineTask 与 MachineInfo Controller/Service | `V1.22__shkb_machine_task_core.sql` | 管理端只读探针；状态规则单测；隔离写流程覆盖相同上报重试、冲突上报和重复下发 | L3 | 补真实设备协议联调、下发成功后的断电窗口与生产恢复副本验收 |
 | 成品出入库（冻结） | `views/product-storage` | `ProductStorageController` 及附件服务 | 不补迁移 | 不纳入核心回归 | 非发布范围 | 半成品且未纳入上海凯奔实际流程；除非用户明确启用并重新验收，否则不投入、不发布 |
 | 人事、培训、证书、人员授权 | `views/hr`、`api/hr` | 已发现部分实体/Service/Mapper，未发现完整 HR Controller | 未发现专门增量迁移 | 仅部分前端 API 单测 | L1 | 先确认云端真实接口和表，再补后端入口、schema 与 E2E |

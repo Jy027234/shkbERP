@@ -24,6 +24,14 @@ import org.apache.ibatis.annotations.Param;
 public interface ScTransferOrderMapper extends BaseMapper<ScTransferOrder> {
 
   /**
+   * 根据ID查询并锁定调拨单。
+   *
+   * @param id 调拨单ID
+   * @return 调拨单
+   */
+  ScTransferOrder selectByIdForUpdate(@Param("id") String id);
+
+  /**
    * 查询列表
    *
    * @param vo
