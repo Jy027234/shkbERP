@@ -30,7 +30,7 @@
     }
   ],
   "reconciliation": {
-    "status": "business-acceptance-required",
+    "status": "business-acceptance-and-secret-continuity-required",
     "backend": {
       "sameFiles": 2319,
       "differentFiles": 33,
@@ -52,9 +52,11 @@
       "catalog-all-versioned-migrations-with-checksums-and-safety-classification",
       "verify-local-isolated-backup-restore-and-approved-delta-idempotency",
       "create-tagged-release-candidate-v2026.08.15-rc.1",
-      "verify-authorized-production-backup-copy-20260815-technical-gates"
+      "verify-authorized-production-backup-copy-20260815-technical-gates",
+      "identify-and-gate-encrypted-tenant-datasource-key-continuity"
     ],
     "blockingItems": [
+      "inject-historical-jugg-secret-through-approved-session-and-run-local-api-acceptance",
       "obtain-v121-business-confirmation-and-core-business-acceptance",
       "obtain-explicit-production-deployment-approval"
     ]
@@ -99,6 +101,25 @@
       "v121ModuleRelationsToRemove": 0,
       "generatedLocalCopiesRemoved": true,
       "manualBusinessConfirmationRequired": true,
+      "productionAllowed": false
+    },
+    "encryptedDataContinuity": {
+      "status": "secure-runtime-injection-required",
+      "observedAt": "2026-08-16",
+      "scope": "authorized-production-backup-copy-local-startup-diagnostic",
+      "finding": "The local-only Jugg key cannot decrypt historical tenant dynamic-datasource configuration; no key, key fingerprint, encrypted row, credential, or cloud address is retained in this repository.",
+      "requiredEvidence": [
+        "approved session injects the historical JUGG_SECRET_KEY without persisting it",
+        "the exact candidate image reaches local readiness against a restored production backup copy",
+        "the local core API acceptance probes pass and generated local resources are removed"
+      ],
+      "controlledNegativeGateVerification": {
+        "candidateImage": "shkb-erp-api:v2026.08.16-rc.1",
+        "localOnlyWrongKeyRejected": true,
+        "failureKind": "jugg-secret-decryption-failed",
+        "generatedLocalResourcesRemoved": true,
+        "secretOrFingerprintRetained": false
+      },
       "productionAllowed": false
     }
   }
