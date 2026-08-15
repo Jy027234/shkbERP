@@ -28,6 +28,7 @@
 - 修改菜单、租户模块或业务角色基线时，运行 `scripts/verify-menu-baseline.ps1`，并对 Vite `/api` 再运行一次；默认租户为上海凯奔航空技术有限公司。
 - 修改自动化设备、拧紧机或磁粉机任务时，运行 `scripts/verify-machine-task.ps1`；涉及设备上报、重复下发或状态流转时，仅在本地隔离环境运行 `scripts/verify-machine-task-flow.ps1`。
 - 修改合同新增、修改、附件或任务生成时，运行 `scripts/verify-contract.ps1`；涉及写入和状态流转时，仅在本地隔离环境运行 `scripts/verify-contract-flow.ps1`，并对 Vite `/api` 再运行一次。
+- 修改工具、设备、计量/维保记录或其附件时，运行 `scripts/verify-equipment.ps1`；涉及写入时，仅在本地隔离环境运行 `scripts/verify-equipment-flow.ps1`，并对 Vite `/api` 再运行一次。
 - 涉及物料出库审批、库存、批次、序列号或单据状态流转时，在本地隔离冒烟库运行 `powershell -ExecutionPolicy Bypass -File .\scripts\verify-material-concurrency.ps1 -Iterations 5`；该脚本会直接造数，禁止指向真实业务库。
 - Windows 上重新打包 `xingyun-api` 前先停止正在运行的 JVM，否则胖 jar 可能因文件锁没有更新。
 
