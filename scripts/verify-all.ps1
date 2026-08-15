@@ -20,12 +20,12 @@ if ($Release -and $Candidate) {
 }
 
 $sourceScript = Join-Path $repoRoot 'scripts\verify-source-baseline.ps1'
-$sourceArgs = @()
+$sourceArgs = @{}
 if ($Release) {
-    $sourceArgs += '-Release'
+    $sourceArgs.Release = $true
 }
 if ($Candidate) {
-    $sourceArgs += '-Candidate'
+    $sourceArgs.Candidate = $true
 }
 
 Push-Location $repoRoot
@@ -40,7 +40,7 @@ finally {
 }
 
 $migrationScript = Join-Path $repoRoot 'scripts\verify-migration-catalog.ps1'
-$migrationArgs = @()
+$migrationArgs = @{}
 Push-Location $repoRoot
 try {
     & $migrationScript @migrationArgs
@@ -53,9 +53,9 @@ finally {
 }
 
 $backendScript = Join-Path $repoRoot 'erp-backend\scripts\verify.ps1'
-$backendArgs = @()
+$backendArgs = @{}
 if ($Full) {
-    $backendArgs += '-Full'
+    $backendArgs.Full = $true
 }
 
 Push-Location (Join-Path $repoRoot 'erp-backend')
@@ -70,9 +70,9 @@ finally {
 }
 
 $frontendScript = Join-Path $repoRoot 'erp-frontend\scripts\verify.ps1'
-$frontendArgs = @()
+$frontendArgs = @{}
 if ($Install) {
-    $frontendArgs += '-Install'
+    $frontendArgs.Install = $true
 }
 
 Push-Location (Join-Path $repoRoot 'erp-frontend')
