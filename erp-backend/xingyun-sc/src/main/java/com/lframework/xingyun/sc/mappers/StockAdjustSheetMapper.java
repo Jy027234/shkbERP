@@ -48,6 +48,14 @@ public interface StockAdjustSheetMapper extends BaseMapper<StockAdjustSheet> {
   StockAdjustSheetFullDto getDetail(@Param("id") String id);
 
   /**
+   * 根据ID查询并锁定库存调整单。
+   *
+   * @param id 库存调整单ID
+   * @return 库存调整单
+   */
+  StockAdjustSheet selectByIdForUpdate(@Param("id") String id);
+
+  /**
    * 根据关键字查询库存调整单商品信息
    *
    * @param scId

@@ -136,6 +136,12 @@
         ORDER BY d.order_no
     </select>
 
+    <select id="selectByIdForUpdate" resultType="com.lframework.xingyun.sc.entity.StockAdjustSheet">
+        <include refid="StockAdjustSheetDto_sql"/>
+        WHERE tb.id = #{id}
+        FOR UPDATE
+    </select>
+
     <select id="queryStockAdjustByCondition" resultMap="StockAdjustProductDto">
         <include refid="StockAdjustProductDto_sql"/>
         <where>
