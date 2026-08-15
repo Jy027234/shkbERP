@@ -238,12 +238,14 @@ try {
         }
     }
 
-    & $preflightScript -DbContainer $DbContainer -Database $cloneDatabase -DbUsername $DbUsername -DbPassword $DbPassword -EvidencePath $preflightAfterPath -AsJson | Out-Null
+    & $preflightScript -DbContainer $DbContainer -Database $cloneDatabase -DbUsername $DbUsername -DbPassword $DbPassword -Stage AfterMigration -EvidencePath $preflightAfterPath -AsJson | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw 'Migration preflight failed against the clone after applying deltas.'
     }
 
     foreach ($expected in @(
+        [pscustomobject]@{ Table = 'tenant'; Column = 'server_name' },
+        [pscustomobject]@{ Table = 'tenant'; Column = 'is_platform' },
         [pscustomobject]@{ Table = 'sys_mq_outbox'; Column = $null },
         [pscustomobject]@{ Table = 'sys_mq_inbox'; Column = $null },
         [pscustomobject]@{ Table = 'shkb_machine_info'; Column = $null },

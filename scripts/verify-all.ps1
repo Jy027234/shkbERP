@@ -19,7 +19,8 @@ if ($Release -and $Candidate) {
     throw 'Release and Candidate modes are mutually exclusive.'
 }
 
-$sourceArgs = @('-ExecutionPolicy', 'Bypass', '-File', '.\scripts\verify-source-baseline.ps1')
+$sourceScript = Join-Path $repoRoot 'scripts\verify-source-baseline.ps1'
+$sourceArgs = @()
 if ($Release) {
     $sourceArgs += '-Release'
 }
@@ -29,53 +30,56 @@ if ($Candidate) {
 
 Push-Location $repoRoot
 try {
-    & powershell @sourceArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "Source baseline verification failed with exit code $LASTEXITCODE."
+    & $sourceScript @sourceArgs
+    if (-not $?) {
+        throw 'Source baseline verification failed.'
     }
 }
 finally {
     Pop-Location
 }
 
-$migrationArgs = @('-ExecutionPolicy', 'Bypass', '-File', '.\scripts\verify-migration-catalog.ps1')
+$migrationScript = Join-Path $repoRoot 'scripts\verify-migration-catalog.ps1'
+$migrationArgs = @()
 Push-Location $repoRoot
 try {
-    & powershell @migrationArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "Migration catalog verification failed with exit code $LASTEXITCODE."
+    & $migrationScript @migrationArgs
+    if (-not $?) {
+        throw 'Migration catalog verification failed.'
     }
 }
 finally {
     Pop-Location
 }
 
-$backendArgs = @('-ExecutionPolicy', 'Bypass', '-File', '.\scripts\verify.ps1')
+$backendScript = Join-Path $repoRoot 'erp-backend\scripts\verify.ps1'
+$backendArgs = @()
 if ($Full) {
     $backendArgs += '-Full'
 }
 
 Push-Location (Join-Path $repoRoot 'erp-backend')
 try {
-    & powershell @backendArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "Backend verification failed with exit code $LASTEXITCODE."
+    & $backendScript @backendArgs
+    if (-not $?) {
+        throw 'Backend verification failed.'
     }
 }
 finally {
     Pop-Location
 }
 
-$frontendArgs = @('-ExecutionPolicy', 'Bypass', '-File', '.\scripts\verify.ps1')
+$frontendScript = Join-Path $repoRoot 'erp-frontend\scripts\verify.ps1'
+$frontendArgs = @()
 if ($Install) {
     $frontendArgs += '-Install'
 }
 
 Push-Location (Join-Path $repoRoot 'erp-frontend')
 try {
-    & powershell @frontendArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "Frontend verification failed with exit code $LASTEXITCODE."
+    & $frontendScript @frontendArgs
+    if (-not $?) {
+        throw 'Frontend verification failed.'
     }
 }
 finally {

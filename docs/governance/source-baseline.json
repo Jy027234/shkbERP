@@ -5,7 +5,7 @@
   "canonical": {
     "repository": "git@github.com:Jy027234/shkbERP.git",
     "branch": "main",
-    "observedCommit": "ee2af4ddff85c4d8b686f1f88394270f38ec8d3e",
+    "observedCommit": "4eff706ac6afbc3680252b676183e90a71390680",
     "contains": [
       "erp-backend",
       "erp-frontend"
@@ -30,7 +30,7 @@
     }
   ],
   "reconciliation": {
-    "status": "business-acceptance-and-secret-continuity-required",
+    "status": "business-acceptance-and-production-approval-required",
     "backend": {
       "sameFiles": 2319,
       "differentFiles": 33,
@@ -53,11 +53,14 @@
       "verify-local-isolated-backup-restore-and-approved-delta-idempotency",
       "create-tagged-release-candidate-v2026.08.15-rc.1",
       "verify-authorized-production-backup-copy-20260815-technical-gates",
-      "identify-and-gate-encrypted-tenant-datasource-key-continuity"
+      "identify-and-gate-encrypted-tenant-datasource-key-continuity",
+      "repair-and-verify-jugg5-tenant-schema-compatibility",
+      "verify-historical-jugg-secret-continuity-on-authorized-production-copy",
+      "verify-restored-production-copy-core-read-only-api-acceptance"
     ],
     "blockingItems": [
-      "inject-historical-jugg-secret-through-approved-session-and-run-local-api-acceptance",
-      "obtain-v121-business-confirmation-and-core-business-acceptance",
+      "obtain-v121-business-confirmation-and-business-owner-core-workflow-acceptance",
+      "prepare-reviewed-rollback-plan",
       "obtain-explicit-production-deployment-approval"
     ]
   },
@@ -81,10 +84,10 @@
     "requiresVersionTag": true,
     "requiresSingleCommitForFrontendBackendAndMigrations": true,
     "candidateEvidence": {
-      "tag": "v2026.08.15-rc.2",
-      "tagObject": "072defae0cfa46c6f8843e9aef59c60d82c3bc99",
-      "sourceCommit": "d4cd9c95741532f01ace947d8e1de1103c28c3a2",
-      "manifestSha256": "550763ccbb141717e8e9ed669c86614af9b1f56d60b0f78e9a402b71409cd249",
+      "tag": "v2026.08.16-rc.2",
+      "tagObject": "a9e0542f85f9ba3c012c616149ec7ad302b9431e",
+      "sourceCommit": "4eff706ac6afbc3680252b676183e90a71390680",
+      "manifestSha256": "5fbcf99386845dbe76e452aac333ae651afe45dd93cce37e2374c3c7959586eb",
       "scope": "local-isolated-only",
       "productionAllowed": false
     },
@@ -92,31 +95,70 @@
       "checkedAt": "2026-08-16",
       "scope": "authorized-production-backup-copy-restored-locally-only",
       "backupCompressedSha256": "ff3b467e1de0bd3aef42233653b2cd26a2dad4a66205dd4b1c83f3428e000a2d",
-      "evidenceSha256": "f6d6ebfdccf2383a634112aea9d5ace707515c0c15ebae770910cc165b27c41e",
-      "migrationCatalogSha256": "aea66a5419eb8795bbd276d03555eb85f4346ed550896353bfb2369a389100fb",
-      "technicalPreflightChecks": 15,
-      "migrationRuns": 22,
-      "postMigrationChecks": 7,
+      "evidenceSha256": "29721631534ebeed75d3fbaf7ef6dd4991d81bfa698d84cc4aef8685e14a2282",
+      "migrationCatalogSha256": "5c9ad8f3bf0e3105fa5bcee1ee0b0be4e7d950a62746202395c97ccb34428bd3",
+      "technicalPreflightChecks": 16,
+      "migrationRuns": 24,
+      "postMigrationChecks": 9,
       "v121TenantNameUpdateIsNoOp": false,
       "v121ModuleRelationsToRemove": 0,
       "generatedLocalCopiesRemoved": true,
       "manualBusinessConfirmationRequired": true,
       "productionAllowed": false
     },
+    "productionBackupApiEvidence": {
+      "checkedAt": "2026-08-16",
+      "scope": "authorized-production-backup-copy-local-core-read-only-api-acceptance",
+      "candidateImage": "shkb-erp-api:v2026.08.16-rc.2",
+      "candidateImageId": "sha256:f12a483fb2f694805ddc4e4947dd4198145a2d311a25ad9f462de7ad3b207860",
+      "evidenceSha256": "f87889428e6a225c76a9b7590a64193002edf7fe881fb9e69ba151feda393b71",
+      "migrationCatalogSha256": "5c9ad8f3bf0e3105fa5bcee1ee0b0be4e7d950a62746202395c97ccb34428bd3",
+      "technicalPreflightChecks": 16,
+      "migrationRuns": 24,
+      "postMigrationChecks": 9,
+      "startupValidated": true,
+      "historicalCiphertextsValidatedInMemory": true,
+      "tenantPasswordReencryptedForLocalSmoke": true,
+      "localAcceptanceAdminPreparedFromSmokeFixture": true,
+      "coreReadOnlyProbes": [
+        "health",
+        "menu-baseline",
+        "dashboard",
+        "contract",
+        "equipment",
+        "work-card",
+        "material-read",
+        "machine-task"
+      ],
+      "generatedLocalResourcesRemoved": true,
+      "secretOrFingerprintRetained": false,
+      "productionAllowed": false
+    },
     "encryptedDataContinuity": {
-      "status": "secure-runtime-injection-required",
+      "status": "local-production-copy-core-api-acceptance-passed",
       "observedAt": "2026-08-16",
-      "scope": "authorized-production-backup-copy-local-startup-diagnostic",
-      "finding": "The local-only Jugg key cannot decrypt historical tenant dynamic-datasource configuration; no key, key fingerprint, encrypted row, credential, or cloud address is retained in this repository.",
+      "scope": "authorized-production-backup-copy-local-core-api-acceptance",
+      "finding": "The historical Jugg key was injected only into an approved current process. A historical tenant JDBC ciphertext was decrypted in memory before the generated local copy rewrote enabled tenant JDBC URLs, usernames, and locally re-encrypted JDBC passwords for smoke connectivity. No key, key fingerprint, encrypted row, plaintext credential, or cloud address is retained in this repository.",
       "requiredEvidence": [
         "approved session injects the historical JUGG_SECRET_KEY without persisting it",
         "the exact candidate image reaches local readiness against a restored production backup copy",
-        "the local core API acceptance probes pass and generated local resources are removed"
+        "historical ciphertext validation and local core API acceptance probes pass with generated resources removed"
       ],
       "controlledNegativeGateVerification": {
         "candidateImage": "shkb-erp-api:v2026.08.16-rc.1",
         "localOnlyWrongKeyRejected": true,
         "failureKind": "jugg-secret-decryption-failed",
+        "generatedLocalResourcesRemoved": true,
+        "secretOrFingerprintRetained": false
+      },
+      "approvedLocalAcceptance": {
+        "candidateImage": "shkb-erp-api:v2026.08.16-rc.2",
+        "candidateImageId": "sha256:f12a483fb2f694805ddc4e4947dd4198145a2d311a25ad9f462de7ad3b207860",
+        "evidenceSha256": "f87889428e6a225c76a9b7590a64193002edf7fe881fb9e69ba151feda393b71",
+        "startupValidated": true,
+        "historicalCiphertextsValidatedInMemory": true,
+        "tenantPasswordReencryptedOnlyInGeneratedCopy": true,
+        "localAdminFixturePreparedOnlyInGeneratedCopy": true,
         "generatedLocalResourcesRemoved": true,
         "secretOrFingerprintRetained": false
       },

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "checksumAlgorithm": "sha256-lf-bytes-v1",
-  "updatedAt": "2026-08-15",
+  "updatedAt": "2026-08-16",
   "migrationRoot": "erp-backend/xingyun-api/src/main/resources/db/migration",
   "policy": {
     "newInstallOnly": "只能用于空库初始化；绝不能对已有业务数据的库执行。",
@@ -11,6 +11,7 @@
     "productionDeploymentAllowed": false
   },
   "existingDatabasePlan": [
+    "platform/V1.7__jugg5_tenant_compatibility.sql",
     "tenant/V1.13__shkb_dashboard_core.sql",
     "tenant/V1.14__shkb_contract_core.sql",
     "tenant/V1.15__shkb_equipment_records.sql",
@@ -93,6 +94,16 @@
       "riskTokens": ["update-data"],
       "controlledDataMutation": false,
       "note": "jugg 5 租户兼容历史修订。"
+    },
+    {
+      "path": "platform/V1.7__jugg5_tenant_compatibility.sql",
+      "scope": "platform",
+      "version": "1.7",
+      "classification": "existing-database-delta",
+      "sha256": "89b6fca4eae44ce466fda519316faf7011be028200015939741fa7cbfb1493d6",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "为缺少历史 V1.6 列的存量平台库补齐 Jugg 5 tenant schema；information_schema 保护的 MySQL 条件 DDL，可重复执行。"
     },
     {
       "path": "tenant/V1.0__init.sql",

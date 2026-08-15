@@ -4,6 +4,8 @@ param(
     [string]$Database = 'shkb_platform',
     [string]$DbUsername = 'root',
     [string]$DbPassword = '335577',
+    [ValidateSet('BeforeMigration', 'AfterMigration')]
+    [string]$Stage = 'BeforeMigration',
     [string]$EvidencePath,
     [switch]$AsJson
 )
@@ -213,7 +215,10 @@ if ($databaseExists) {
     Test-RequiredColumns -Table 'tbl_receive_sheet_detail' -Columns @('return_num') -Purpose 'V1.24'
     Test-RequiredColumns -Table 'tbl_purchase_return_detail' -Columns @('receive_sheet_detail_id') -Purpose 'V1.25'
 
-    Test-RequiredColumns -Table 'tenant' -Columns @('id', 'name') -Purpose 'V1.21'
+    Test-RequiredColumns -Table 'tenant' -Columns @('id', 'name', 'jdbc_password') -Purpose 'platform/V1.7 and V1.21'
+    if ($Stage -eq 'AfterMigration') {
+        Test-RequiredColumns -Table 'tenant' -Columns @('server_name', 'is_platform') -Purpose 'platform/V1.7'
+    }
     Test-RequiredColumns -Table 'sys_module_tenant' -Columns @('tenant_id', 'module_id') -Purpose 'V1.21'
     Test-RequiredColumns -Table 'sys_menu' -Columns @(
         'id', 'code', 'name', 'title', 'icon', 'component_type', 'component', 'request_param',
@@ -226,6 +231,7 @@ if ($databaseExists) {
         'create_time', 'update_by', 'update_by_id', 'update_time'
     ) -Purpose 'V1.21'
     Test-RequiredColumns -Table 'sys_role_menu' -Columns @('id', 'role_id', 'menu_id') -Purpose 'V1.21'
+    Test-RequiredColumns -Table 'sys_user' -Columns @('username', 'password', 'available', 'lock_status') -Purpose 'local API acceptance'
 
     if (Test-Table -Table 'tenant') {
         $tenantCount = [int](Invoke-MySqlScalar -Sql "SELECT COUNT(*) FROM tenant WHERE id = '1000';" -UseDatabase)
@@ -264,6 +270,7 @@ $result = [ordered]@{
     passed = ($failures.Count -eq 0)
     checkedAt = (Get-Date).ToUniversalTime().ToString('o')
     scope = 'local-isolated-only'
+    stage = $Stage
     container = $DbContainer
     database = $Database
     migrationPlan = $plan
