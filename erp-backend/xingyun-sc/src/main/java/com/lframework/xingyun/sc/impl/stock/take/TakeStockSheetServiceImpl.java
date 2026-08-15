@@ -16,6 +16,9 @@ import com.lframework.starter.web.core.components.resp.PageResult;
 import com.lframework.starter.web.core.utils.IdUtil;
 import com.lframework.starter.web.core.utils.PageHelperUtil;
 import com.lframework.starter.web.core.utils.PageResultUtil;
+import com.lframework.xingyun.basedata.entity.Product;
+import com.lframework.xingyun.basedata.enums.ProductType;
+import com.lframework.xingyun.basedata.service.product.ProductService;
 import com.lframework.xingyun.core.annotations.OpLog;
 import com.lframework.xingyun.core.annotations.OrderTimeLineLog;
 import com.lframework.xingyun.core.enums.OrderTimeLineBizType;
@@ -46,7 +49,9 @@ import com.lframework.xingyun.sc.vo.stock.take.sheet.TakeStockSheetProductVo;
 import com.lframework.xingyun.sc.vo.stock.take.sheet.UpdateTakeStockSheetVo;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
@@ -69,6 +74,9 @@ public class TakeStockSheetServiceImpl extends
 
   @Autowired
   private TakeStockPlanDetailService takeStockPlanDetailService;
+
+  @Autowired
+  private ProductService productService;
 
   @Override
   public PageResult<TakeStockSheet> query(Integer pageIndex, Integer pageSize,
@@ -112,7 +120,7 @@ public class TakeStockSheetServiceImpl extends
     data.setPlanId(vo.getPlanId());
     data.setPreSheetId(vo.getPreSheetId());
 
-    TakeStockPlan takeStockPlan = takeStockPlanService.getById(vo.getPlanId());
+    TakeStockPlan takeStockPlan = takeStockPlanService.getByIdForUpdate(vo.getPlanId());
     if (takeStockPlan == null) {
       throw new DefaultClientException("盘点任务不存在！");
     }
@@ -120,6 +128,7 @@ public class TakeStockSheetServiceImpl extends
     if (takeStockPlan.getTakeStatus() != TakeStockPlanStatus.CREATED) {
       throw new DefaultClientException("关联盘点任务的盘点状态已改变，不允许进行新增！");
     }
+    validateProducts(takeStockPlan, vo.getProducts());
 
     data.setScId(takeStockPlan.getScId());
     data.setStatus(TakeStockSheetStatus.CREATED);
@@ -167,7 +176,7 @@ public class TakeStockSheetServiceImpl extends
       throw new DefaultClientException("盘点单不存在！");
     }
 
-    TakeStockPlan takeStockPlan = takeStockPlanService.getById(data.getPlanId());
+    TakeStockPlan takeStockPlan = takeStockPlanService.getByIdForUpdate(data.getPlanId());
     if (takeStockPlan == null) {
       throw new DefaultClientException("盘点任务不存在！");
     }
@@ -175,6 +184,7 @@ public class TakeStockSheetServiceImpl extends
     if (takeStockPlan.getTakeStatus() != TakeStockPlanStatus.CREATED) {
       throw new DefaultClientException("关联盘点任务的盘点状态已改变，不允许进行修改！");
     }
+    validateProducts(takeStockPlan, vo.getProducts());
 
     LambdaUpdateWrapper<TakeStockSheet> updateWrapper = Wrappers.lambdaUpdate(TakeStockSheet.class)
         .set(TakeStockSheet::getDescription,
@@ -216,6 +226,7 @@ public class TakeStockSheetServiceImpl extends
       takeStockPlanDetailService.savePlanDetailBySimple(takeStockPlan.getId(),
           vo.getProducts().stream().map(TakeStockSheetProductVo::getProductId)
               .collect(Collectors.toList()));
+      takeStockPlanDetailService.deleteUnusedSimpleDetails(takeStockPlan.getId());
     }
 
     OpLogUtil.setVariable("id", data.getId());
@@ -233,7 +244,7 @@ public class TakeStockSheetServiceImpl extends
       throw new DefaultClientException("盘点单不存在！");
     }
 
-    TakeStockPlan takeStockPlan = takeStockPlanService.getById(data.getPlanId());
+    TakeStockPlan takeStockPlan = takeStockPlanService.getByIdForUpdate(data.getPlanId());
     if (takeStockPlan == null) {
       throw new DefaultClientException("盘点任务不存在！");
     }
@@ -259,8 +270,10 @@ public class TakeStockSheetServiceImpl extends
         .orderByAsc(TakeStockSheetDetail::getOrderNo);
     List<TakeStockSheetDetail> details = takeStockSheetDetailService.list(queryDetailWrapper);
     for (TakeStockSheetDetail detail : details) {
-      takeStockPlanDetailService.updateOriTakeNum(data.getPlanId(), detail.getProductId(),
-          detail.getTakeNum());
+      if (takeStockPlanDetailService.updateOriTakeNum(data.getPlanId(), detail.getProductId(),
+          detail.getTakeNum()) != 1) {
+        throw new DefaultClientException("盘点商品不属于关联盘点任务，请刷新后重试！");
+      }
     }
 
     OpLogUtil.setVariable("id", data.getId());
@@ -295,7 +308,7 @@ public class TakeStockSheetServiceImpl extends
       throw new DefaultClientException("盘点单不存在！");
     }
 
-    TakeStockPlan takeStockPlan = takeStockPlanService.getById(data.getPlanId());
+    TakeStockPlan takeStockPlan = takeStockPlanService.getByIdForUpdate(data.getPlanId());
     if (takeStockPlan == null) {
       throw new DefaultClientException("盘点任务不存在！");
     }
@@ -331,7 +344,7 @@ public class TakeStockSheetServiceImpl extends
       throw new DefaultClientException("盘点单不存在！");
     }
 
-    TakeStockPlan takeStockPlan = takeStockPlanService.getById(data.getPlanId());
+    TakeStockPlan takeStockPlan = takeStockPlanService.getByIdForUpdate(data.getPlanId());
     if (takeStockPlan == null) {
       throw new DefaultClientException("盘点任务不存在！");
     }
@@ -357,8 +370,10 @@ public class TakeStockSheetServiceImpl extends
         .orderByAsc(TakeStockSheetDetail::getOrderNo);
     List<TakeStockSheetDetail> details = takeStockSheetDetailService.list(queryDetailWrapper);
     for (TakeStockSheetDetail detail : details) {
-      takeStockPlanDetailService.updateOriTakeNum(data.getPlanId(), detail.getProductId(),
-          -detail.getTakeNum());
+      if (takeStockPlanDetailService.updateOriTakeNum(data.getPlanId(), detail.getProductId(),
+          -detail.getTakeNum()) != 1) {
+        throw new DefaultClientException("盘点商品不属于关联盘点任务，请刷新后重试！");
+      }
     }
 
     OpLogUtil.setVariable("id", data.getId());
@@ -375,6 +390,11 @@ public class TakeStockSheetServiceImpl extends
       throw new DefaultClientException("盘点单不存在！");
     }
 
+    TakeStockPlan takeStockPlan = takeStockPlanService.getByIdForUpdate(data.getPlanId());
+    if (takeStockPlan == null) {
+      throw new DefaultClientException("盘点任务不存在！");
+    }
+
     Wrapper<TakeStockSheet> deleteWrapper = Wrappers.lambdaQuery(TakeStockSheet.class)
         .eq(TakeStockSheet::getId, id)
         .in(TakeStockSheet::getStatus, TakeStockSheetStatus.CREATED,
@@ -387,6 +407,9 @@ public class TakeStockSheetServiceImpl extends
             TakeStockSheetDetail.class)
         .eq(TakeStockSheetDetail::getSheetId, data.getId());
     takeStockSheetDetailService.remove(deleteDetailWrapper);
+    if (takeStockPlan.getTakeType() == TakeStockPlanType.SIMPLE) {
+      takeStockPlanDetailService.deleteUnusedSimpleDetails(takeStockPlan.getId());
+    }
   }
 
   @Override
@@ -435,6 +458,32 @@ public class TakeStockSheetServiceImpl extends
   @Override
   public void cleanCacheByKey(Serializable key) {
 
+  }
+
+  private void validateProducts(TakeStockPlan takeStockPlan,
+      List<TakeStockSheetProductVo> products) {
+
+    Set<String> productIds = new HashSet<>();
+    int orderNo = 1;
+    for (TakeStockSheetProductVo productVo : products) {
+      if (!productIds.add(productVo.getProductId())) {
+        throw new DefaultClientException("第" + orderNo + "行航材重复录入！");
+      }
+      if (productVo.getTakeNum() == null || productVo.getTakeNum() < 0) {
+        throw new DefaultClientException("第" + orderNo + "行盘点数量不能小于0！");
+      }
+
+      Product product = productService.findById(productVo.getProductId());
+      if (product == null || product.getProductType() != ProductType.NORMAL) {
+        throw new DefaultClientException("第" + orderNo + "行航材不存在或类型不支持盘点！");
+      }
+      if (takeStockPlan.getTakeType() != TakeStockPlanType.SIMPLE
+          && takeStockPlanDetailService.getByPlanIdAndProductId(takeStockPlan.getId(),
+          productVo.getProductId()) == null) {
+        throw new DefaultClientException("第" + orderNo + "行航材不属于关联盘点任务！");
+      }
+      orderNo++;
+    }
   }
 
   @Service

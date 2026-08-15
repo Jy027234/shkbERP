@@ -153,6 +153,9 @@ public class TakeStockSheetController extends DefaultBaseController {
     }
 
     TakeStockPlan takeStockPlan = takeStockPlanService.getById(planId);
+    if (takeStockPlan == null) {
+      throw new DefaultClientException("盘点任务不存在！");
+    }
     if (takeStockPlan.getTakeType() == TakeStockPlanType.SIMPLE) {
       planId = null;
     }
@@ -181,6 +184,9 @@ public class TakeStockSheetController extends DefaultBaseController {
       @Valid QueryTakeStockSheetProductVo vo) {
 
     TakeStockPlan takeStockPlan = takeStockPlanService.getById(vo.getPlanId());
+    if (takeStockPlan == null) {
+      throw new DefaultClientException("盘点任务不存在！");
+    }
     if (takeStockPlan.getTakeType() == TakeStockPlanType.SIMPLE) {
       vo.setPlanId(null);
     }

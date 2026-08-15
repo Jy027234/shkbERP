@@ -65,4 +65,12 @@ public interface TakeStockPlanMapper extends BaseMapper<TakeStockPlan> {
    * @return
    */
   TakeStockPlanFullDto getDetail(String id);
+
+  /**
+   * 根据ID查询并锁定盘点任务。
+   *
+   * @param id 盘点任务ID
+   * @return 盘点任务
+   */
+  TakeStockPlan selectByIdForUpdate(@Param("id") String id);
 }

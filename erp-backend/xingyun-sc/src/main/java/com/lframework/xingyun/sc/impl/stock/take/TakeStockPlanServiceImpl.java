@@ -23,6 +23,7 @@ import com.lframework.xingyun.basedata.entity.ProductPurchase;
 import com.lframework.xingyun.basedata.enums.ProductType;
 import com.lframework.xingyun.basedata.service.product.ProductPurchaseService;
 import com.lframework.xingyun.basedata.service.product.ProductService;
+import com.lframework.xingyun.basedata.service.storecenter.StoreCenterService;
 import com.lframework.xingyun.basedata.vo.product.info.QueryProductVo;
 import com.lframework.xingyun.core.annotations.OpLog;
 import com.lframework.xingyun.core.components.qrtz.QrtzJob;
@@ -59,7 +60,10 @@ import com.lframework.xingyun.sc.vo.stock.take.plan.QueryTakeStockPlanVo;
 import com.lframework.xingyun.sc.vo.stock.take.plan.TakeStockPlanSelectorVo;
 import com.lframework.xingyun.sc.vo.stock.take.plan.UpdateTakeStockPlanVo;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.JobExecutionContext;
@@ -100,6 +104,9 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
   @Autowired
   private ProductPurchaseService productPurchaseService;
 
+  @Autowired
+  private StoreCenterService storeCenterService;
+
 
   @Override
   public PageResult<TakeStockPlan> query(Integer pageIndex, Integer pageSize,
@@ -139,10 +146,20 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
     return getBaseMapper().getDetail(id);
   }
 
+  @Override
+  public TakeStockPlan getByIdForUpdate(String id) {
+
+    return getBaseMapper().selectByIdForUpdate(id);
+  }
+
   @OpLog(type = ScOpLogType.TAKE_STOCK, name = "新增盘点任务，ID：{}", params = {"#id"})
   @Transactional(rollbackFor = Exception.class)
   @Override
   public String create(CreateTakeStockPlanVo vo) {
+
+    if (storeCenterService.findById(vo.getScId()) == null) {
+      throw new DefaultClientException("仓库不存在！");
+    }
 
     TakeStockPlan data = new TakeStockPlan();
     data.setId(IdUtil.getId());
@@ -225,17 +242,26 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
   @Override
   public void update(UpdateTakeStockPlanVo vo) {
 
-    TakeStockPlan data = getBaseMapper().selectById(vo.getId());
+    TakeStockPlan data = getBaseMapper().selectByIdForUpdate(vo.getId());
     if (ObjectUtil.isNull(data)) {
       throw new DefaultClientException("盘点任务不存在！");
     }
+    if (data.getTakeStatus() != TakeStockPlanStatus.CREATED) {
+      throw new DefaultClientException("盘点任务状态已改变，不允许修改！");
+    }
+    if (!Objects.equals(data.getScId(), vo.getScId())) {
+      throw new DefaultClientException("盘点任务创建后不允许修改仓库！");
+    }
 
     LambdaUpdateWrapper<TakeStockPlan> updateWrapper = Wrappers.lambdaUpdate(TakeStockPlan.class)
-        .set(TakeStockPlan::getScId, vo.getScId())
         .set(TakeStockPlan::getDescription, vo.getDescription())
-        .eq(TakeStockPlan::getId, vo.getId());
+        .eq(TakeStockPlan::getId, vo.getId())
+        .eq(TakeStockPlan::getTakeStatus, TakeStockPlanStatus.CREATED)
+        .eq(TakeStockPlan::getScId, data.getScId());
 
-    getBaseMapper().update(updateWrapper);
+    if (getBaseMapper().update(updateWrapper) != 1) {
+      throw new DefaultClientException("盘点任务信息已过期，请刷新重试！");
+    }
 
     OpLogUtil.setVariable("id", data.getId());
     OpLogUtil.setExtra(vo);
@@ -252,7 +278,7 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
   @Override
   public void createDiff(String id) {
 
-    TakeStockPlan data = getBaseMapper().selectById(id);
+    TakeStockPlan data = getBaseMapper().selectByIdForUpdate(id);
     if (data == null) {
       throw new DefaultClientException("盘点任务不存在！");
     }
@@ -295,19 +321,12 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
   @Override
   public void handleDiff(HandleTakeStockPlanVo vo) {
 
-    TakeStockPlan data = getBaseMapper().selectById(vo.getId());
+    TakeStockPlan data = getBaseMapper().selectByIdForUpdate(vo.getId());
     if (data == null) {
       throw new DefaultClientException("盘点任务不存在！");
     }
-
-    LambdaUpdateWrapper<TakeStockPlan> updateWrapper = Wrappers.lambdaUpdate(TakeStockPlan.class)
-        .set(TakeStockPlan::getDescription,
-            StringUtil.isBlank(vo.getDescription()) ? StringPool.EMPTY_STR : vo.getDescription())
-        .set(TakeStockPlan::getTakeStatus, TakeStockPlanStatus.FINISHED)
-        .eq(TakeStockPlan::getId, data.getId())
-        .eq(TakeStockPlan::getTakeStatus, TakeStockPlanStatus.DIFF_CREATED);
-    if (getBaseMapper().update(updateWrapper) != 1) {
-      throw new DefaultClientException("盘点任务信息已过期，请刷新重试！");
+    if (data.getTakeStatus() != TakeStockPlanStatus.DIFF_CREATED) {
+      throw new DefaultClientException("盘点任务尚未生成差异或已经处理！");
     }
 
     TakeStockConfig config = takeStockConfigService.get();
@@ -326,11 +345,26 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
       throw new DefaultClientException("系统参数发生改变，请刷新页面后重试！");
     }
 
+    Map<String, ProductVo> submittedProducts = new HashMap<>();
+    for (ProductVo productVo : vo.getProducts()) {
+      if (submittedProducts.putIfAbsent(productVo.getProductId(), productVo) != null) {
+        throw new DefaultClientException("盘点商品[" + productVo.getProductId() + "]重复提交！");
+      }
+    }
+    if (submittedProducts.size() != details.size()) {
+      throw new DefaultClientException("盘点商品信息与任务明细不一致，请刷新后重试！");
+    }
+
     for (TakeStockPlanDetail detail : details) {
-      ProductVo productVo = vo.getProducts().stream()
-          .filter(t -> t.getProductId().equals(detail.getProductId())).findFirst().get();
+      ProductVo productVo = submittedProducts.get(detail.getProductId());
+      if (productVo == null) {
+        throw new DefaultClientException("盘点商品信息与任务明细不一致，请刷新后重试！");
+      }
       if (config.getAllowChangeNum()) {
         // 如果允许修改盘点数量
+        if (productVo.getTakeNum() == null) {
+          throw new DefaultClientException("盘点数量不能为空！");
+        }
         detail.setTakeNum(productVo.getTakeNum());
       } else {
         // 如果允许自动调整，那么盘点数量=盘点单的盘点数量 - 进项数量 + 出项数量，否则就等于盘点单的盘点数量
@@ -338,10 +372,37 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
             detail.getOriTakeNum() - detail.getTotalInNum() + detail.getTotalOutNum() :
             detail.getOriTakeNum());
       }
+      if (detail.getTakeNum() == null || detail.getTakeNum() < 0) {
+        throw new DefaultClientException("盘点数量不能小于0！");
+      }
+
+      Product product = productService.findById(detail.getProductId());
+      if (product == null) {
+        throw new DefaultClientException("盘点商品不存在！");
+      }
+      if (!NumberUtil.equal(detail.getStockNum(), detail.getTakeNum())
+          && (Boolean.TRUE.equals(product.getIsBatch())
+          || Boolean.TRUE.equals(product.getIsSerial()))) {
+        throw new DefaultClientException(
+            "航材（" + product.getCode() + "）" + product.getName()
+                + "启用了批次或序列号管理，当前盘点单缺少批次/序列号差异明细，不允许自动调整库存！");
+      }
       detail.setDescription(
           StringUtil.isBlank(productVo.getDescription()) ? StringPool.EMPTY_STR
               : productVo.getDescription());
+    }
 
+    LambdaUpdateWrapper<TakeStockPlan> updateWrapper = Wrappers.lambdaUpdate(TakeStockPlan.class)
+        .set(TakeStockPlan::getDescription,
+            StringUtil.isBlank(vo.getDescription()) ? StringPool.EMPTY_STR : vo.getDescription())
+        .set(TakeStockPlan::getTakeStatus, TakeStockPlanStatus.FINISHED)
+        .eq(TakeStockPlan::getId, data.getId())
+        .eq(TakeStockPlan::getTakeStatus, TakeStockPlanStatus.DIFF_CREATED);
+    if (getBaseMapper().update(updateWrapper) != 1) {
+      throw new DefaultClientException("盘点任务信息已过期，请刷新重试！");
+    }
+
+    for (TakeStockPlanDetail detail : details) {
       LambdaUpdateWrapper<TakeStockPlanDetail> updateDetailWrapper = Wrappers.lambdaUpdate(
               TakeStockPlanDetail.class).set(TakeStockPlanDetail::getTakeNum, detail.getTakeNum())
           .set(TakeStockPlanDetail::getDescription, detail.getDescription())
@@ -357,6 +418,10 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
         if (NumberUtil.lt(detail.getStockNum(), detail.getTakeNum())) {
           Product product = productService.findById(detail.getProductId());
           ProductPurchase purchase = productPurchaseService.getById(product.getId());
+          if (purchase == null || purchase.getPrice() == null) {
+            throw new DefaultClientException(
+                "航材（" + product.getCode() + "）" + product.getName() + "没有采购价格，无法执行盘盈入库！");
+          }
           // 如果库存数量小于盘点数量，则报溢
           AddProductStockVo addProductStockVo = new AddProductStockVo();
           addProductStockVo.setProductId(detail.getProductId());
@@ -394,7 +459,7 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
   @Override
   public void cancel(CancelTakeStockPlanVo vo) {
 
-    TakeStockPlan data = getBaseMapper().selectById(vo.getId());
+    TakeStockPlan data = getBaseMapper().selectByIdForUpdate(vo.getId());
     if (data == null) {
       throw new DefaultClientException("盘点任务不存在！");
     }
@@ -417,7 +482,7 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
   @Override
   public void deleteById(String id) {
 
-    TakeStockPlan data = getBaseMapper().selectById(id);
+    TakeStockPlan data = getBaseMapper().selectByIdForUpdate(id);
     if (data == null) {
       throw new DefaultClientException("盘点任务不存在！");
     }

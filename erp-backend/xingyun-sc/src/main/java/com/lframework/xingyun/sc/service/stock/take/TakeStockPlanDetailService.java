@@ -39,5 +39,13 @@ public interface TakeStockPlanDetailService extends BaseMpService<TakeStockPlanD
    * @param productId
    * @param num
    */
-  void updateOriTakeNum(String planId, String productId, Integer num);
+  int updateOriTakeNum(String planId, String productId, Integer num);
+
+  /**
+   * 删除单品盘点中已不再被任何盘点单引用的任务明细。
+   *
+   * @param planId 盘点任务ID
+   * @return 删除数量
+   */
+  int deleteUnusedSimpleDetails(String planId);
 }
