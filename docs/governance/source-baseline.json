@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "product": "SHKB ERP",
-  "observedAt": "2026-08-14",
+  "observedAt": "2026-08-15",
   "canonical": {
     "repository": "git@github.com:Jy027234/shkbERP.git",
     "branch": "main",
@@ -48,10 +48,14 @@
       "review-and-classify-33-divergent-backend-files",
       "retain-canonical-frontend-package-workspace-semantics",
       "run-combined-static-and-runtime-gates",
-      "create-clean-governance-commit"
+      "create-clean-governance-commit",
+      "catalog-all-versioned-migrations-with-checksums-and-safety-classification",
+      "verify-local-isolated-backup-restore-and-approved-delta-idempotency"
     ],
     "blockingItems": [
-      "create-tagged-release-candidate"
+      "create-tagged-release-candidate",
+      "restore-and-accept-a-production-data-copy",
+      "obtain-explicit-production-deployment-approval"
     ]
   },
   "cloudReference": {

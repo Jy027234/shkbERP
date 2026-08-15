@@ -17,6 +17,13 @@
 - 产品后续按单租户部署。保留现有租户上下文与登录租户字段以兼容 jugg 和存量数据，但不主动扩展跨租户能力或测试矩阵；权限和数据范围语义仍必须保持。涉及认证、打印、导出、消息或定时任务时，编译通过不等于完成，必须补相应运行时验证。
 - Swagger 2 注解和 jugg inner 双栈目前是兼容层，除非任务专门治理该风险，不要顺手删除。
 
+## 发布恢复与迁移治理
+
+- migration-catalog.json 是全部版本化 SQL 的哈希和安全分类基线。现有数据的库只能考虑 catalog 中 existingDatabasePlan 的 SQL；V1.0 和历史重建 SQL 永远不得补跑。
+- 涉及迁移目录、发布或 schema 时，先运行根目录 verify-migration-catalog.ps1；再在本地 xingyun-smoke-mysql 运行 verify-release-preflight.ps1。两个脚本不会连接云端。
+- verify-release-restore.ps1 只会把本地源库恢复到受限名称的随机克隆库，对候选迁移连续执行两轮并在 finally 中清理。它通过不代表生产恢复副本通过。
+- V1.21 会更新租户名称并移除三个租户模块关系；即使技术预检通过，生产前也必须获得业务负责人确认。
+
 ## 验证
 
 - 标准门禁：`powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1`。

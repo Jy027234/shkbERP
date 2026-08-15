@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-15",
+  "migrationRoot": "erp-backend/xingyun-api/src/main/resources/db/migration",
+  "policy": {
+    "newInstallOnly": "只能用于空库初始化；绝不能对已有业务数据的库执行。",
+    "historicalBaselineOnly": "历史重建或升级脚本，仅作版本来源记录；不得在未知存量库上补跑。",
+    "existingDatabaseDelta": "仅可在已验证备份、隔离恢复副本和本目录预检通过后，按 existingDatabasePlan 顺序单独执行。",
+    "automaticExecution": false,
+    "productionDeploymentAllowed": false
+  },
+  "existingDatabasePlan": [
+    "tenant/V1.13__shkb_dashboard_core.sql",
+    "tenant/V1.14__shkb_contract_core.sql",
+    "tenant/V1.15__shkb_equipment_records.sql",
+    "tenant/V1.16__shkb_work_card_core.sql",
+    "tenant/V1.17__shkb_material_flow.sql",
+    "tenant/V1.18__mq_outbox.sql",
+    "tenant/V1.21__shkb_menu_permission_baseline.sql",
+    "tenant/V1.22__shkb_machine_task_core.sql",
+    "tenant/V1.23__shkb_contract_task_flow.sql",
+    "tenant/V1.24__purchase_receive_traceability.sql",
+    "tenant/V1.25__purchase_return_serial_traceability.sql"
+  ],
+  "entries": [
+    {
+      "path": "platform/V1.0__init.sql",
+      "scope": "platform",
+      "version": "1.0",
+      "classification": "new-install-only",
+      "sha256": "2c02b80a3f82b39ab7ab0b379f8ca9bd5f8a65609d18ca5a38e04bd8adf3227a",
+      "riskTokens": ["drop-table-or-database"],
+      "controlledDataMutation": false,
+      "note": "平台空库初始化。"
+    },
+    {
+      "path": "platform/V1.1__sys_module.sql",
+      "scope": "platform",
+      "version": "1.1",
+      "classification": "historical-baseline-only",
+      "sha256": "dd3fa9e4da51f225d181be4aa2ea725a774c727d11205bc6d2aaa481122ff9d4",
+      "riskTokens": ["drop-table-or-database"],
+      "controlledDataMutation": false,
+      "note": "重建 sys_module 与 sys_module_tenant 的历史脚本。"
+    },
+    {
+      "path": "platform/V1.2__dynamic_api.sql",
+      "scope": "platform",
+      "version": "1.2",
+      "classification": "historical-baseline-only",
+      "sha256": "d26f5fc74e4e1aabb7ea2113c0e52c5cbbef54b2659fe78dc8595e391f35ee15",
+      "riskTokens": ["drop-table-or-database"],
+      "controlledDataMutation": false,
+      "note": "重建动态 API 表的历史脚本。"
+    },
+    {
+      "path": "platform/V1.3__update_qrtz_details.sql",
+      "scope": "platform",
+      "version": "1.3",
+      "classification": "historical-baseline-only",
+      "sha256": "6e6e7f3ef70b4c19b1bba6f3aa5446a356d92612becd2a4d3f92f77a4e8a0a12",
+      "riskTokens": ["update-data"],
+      "controlledDataMutation": false,
+      "note": "Quartz 历史数据修订。"
+    },
+    {
+      "path": "platform/V1.4__v3.sql",
+      "scope": "platform",
+      "version": "1.4",
+      "classification": "historical-baseline-only",
+      "sha256": "e074fe468920a3ece85c3a77b8413c6513d2c5d753aeeb66ef452f8312ac4229",
+      "riskTokens": ["update-data"],
+      "controlledDataMutation": false,
+      "note": "平台 v3 历史数据修订。"
+    },
+    {
+      "path": "platform/v1.5__update_function.sql",
+      "scope": "platform",
+      "version": "1.5",
+      "classification": "historical-baseline-only",
+      "sha256": "df44d06ca8146162c61590d0c18c1296c52dd89a5da8af3e74243064733a82dc",
+      "riskTokens": ["update-data"],
+      "controlledDataMutation": false,
+      "note": "平台函数历史变更。"
+    },
+    {
+      "path": "platform/V1.6__jugg5_tenant_columns.sql",
+      "scope": "platform",
+      "version": "1.6",
+      "classification": "historical-baseline-only",
+      "sha256": "31ea72332ffeacef1f0f6774d9a6754e62cbab115f9234eb13027f7c9d34f545",
+      "riskTokens": ["update-data"],
+      "controlledDataMutation": false,
+      "note": "jugg 5 租户兼容历史修订。"
+    },
+    {
+      "path": "tenant/V1.0__init.sql",
+      "scope": "tenant",
+      "version": "1.0",
+      "classification": "new-install-only",
+      "sha256": "96d18bc4f04d2c285cb431ddbf9eff3759a2a60cfc8f75d721f8a428bca4597a",
+      "riskTokens": ["drop-table-or-database"],
+      "controlledDataMutation": false,
+      "note": "租户空库初始化；含全量 DROP/CREATE。"
+    },
+    {
+      "path": "tenant/V1.1__paytype.sql",
+      "scope": "tenant",
+      "version": "1.1",
+      "classification": "historical-baseline-only",
+      "sha256": "afa42ebcc4e957106df43717ddb7e83d9b1881813974b872b23da9f098a844b3",
+      "riskTokens": ["drop-table-or-database", "drop-column"],
+      "controlledDataMutation": false,
+      "note": "含重建表和删除列的历史脚本。"
+    },
+    {
+      "path": "tenant/V1.2__stock_adjust.sql",
+      "scope": "tenant",
+      "version": "1.2",
+      "classification": "historical-baseline-only",
+      "sha256": "f4764f567feff5ba26612f529afb239823b1bb7f72299574b53192d743dba3a4",
+      "riskTokens": ["drop-table-or-database"],
+      "controlledDataMutation": false,
+      "note": "重建库存调整表的历史脚本。"
+    },
+    {
+      "path": "tenant/V1.3__sc_transfer.sql",
+      "scope": "tenant",
+      "version": "1.3",
+      "classification": "historical-baseline-only",
+      "sha256": "a7ae8fc46db903b2bc3bbc0109acac673898d16924c2c816a76e609aac540590",
+      "riskTokens": ["drop-table-or-database", "drop-column"],
+      "controlledDataMutation": false,
+      "note": "重建调拨表和删除列的历史脚本。"
+    },
+    {
+      "path": "tenant/V1.4__bundle_product.sql",
+      "scope": "tenant",
+      "version": "1.4",
+      "classification": "historical-baseline-only",
+      "sha256": "33ff1af0fa760fdea2489b4249f7d5b5a00f21fdfa38edf357162ed00f543168",
+      "riskTokens": ["drop-table-or-database"],
+      "controlledDataMutation": false,
+      "note": "重建组合商品表的历史脚本。"
+    },
+    {
+      "path": "tenant/V1.5__logistics.sql",
+      "scope": "tenant",
+      "version": "1.5",
+      "classification": "historical-baseline-only",
+      "sha256": "cfdd2afddbaf7133e9167902d80ce849a27edb0f83dc1ce3b48941fc40d2e019",
+      "riskTokens": ["drop-table-or-database", "update-data"],
+      "controlledDataMutation": false,
+      "note": "物流重建和历史数据修订。"
+    },
+    {
+      "path": "tenant/V1.6__custom_page.sql",
+      "scope": "tenant",
+      "version": "1.6",
+      "classification": "historical-baseline-only",
+      "sha256": "ab26dedb586f329e6bee574364059e90589346cb49dc082ca10fb0933c70d8d5",
+      "riskTokens": ["drop-table-or-database"],
+      "controlledDataMutation": false,
+      "note": "重建自定义页面表的历史脚本。"
+    },
+    {
+      "path": "tenant/V1.7__upload_to_oss.sql",
+      "scope": "tenant",
+      "version": "1.7",
+      "classification": "historical-baseline-only",
+      "sha256": "fe5075ec022cf125ea57d901983517e960d1642147d0ef1f4ddb537c19af7fa7",
+      "riskTokens": ["delete-data"],
+      "controlledDataMutation": false,
+      "note": "OSS 参数历史修订。"
+    },
+    {
+      "path": "tenant/V1.8__v3.sql",
+      "scope": "tenant",
+      "version": "1.8",
+      "classification": "historical-baseline-only",
+      "sha256": "8036d91a6b99699806c6c964f2900a4ace38dbe41c1371d5fba33862377c6d62",
+      "riskTokens": ["drop-column", "delete-data", "update-data"],
+      "controlledDataMutation": false,
+      "note": "v3 菜单和列历史重构。"
+    },
+    {
+      "path": "tenant/V1.9__login_captcha_require.sql",
+      "scope": "tenant",
+      "version": "1.9",
+      "classification": "historical-baseline-only",
+      "sha256": "3c49cb8d988dd5fb085c329b342d291224ee47d7afda3886b8062438ef64e1f9",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "验证码开关历史变更。"
+    },
+    {
+      "path": "tenant/V1.10__generate_code_rule.sql",
+      "scope": "tenant",
+      "version": "1.10",
+      "classification": "historical-baseline-only",
+      "sha256": "7e399ac2cb32b4dd5f4c0d2d6fbefdeb5855ba355f63920322c0a11c90774d37",
+      "riskTokens": ["drop-table-or-database", "delete-data", "update-data"],
+      "controlledDataMutation": false,
+      "note": "编码规则历史重建脚本。"
+    },
+    {
+      "path": "tenant/V1.11__sys_notify_group.sql",
+      "scope": "tenant",
+      "version": "1.11",
+      "classification": "historical-baseline-only",
+      "sha256": "72aecdfc5c0a65fd5e3cc5cc752b77abdc253fae9e2ed0870c2723de59a383f8",
+      "riskTokens": ["update-data"],
+      "controlledDataMutation": false,
+      "note": "通知组历史数据修订。"
+    },
+    {
+      "path": "tenant/V1.12__product_batch_serial.sql",
+      "scope": "tenant",
+      "version": "1.12",
+      "classification": "historical-baseline-only",
+      "sha256": "43b7a2a5f29a727c21a1473be609604432ff5812100ce90beb6684fd794f1725",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "产品批次/序列号历史变更。"
+    },
+    {
+      "path": "tenant/V1.13__shkb_dashboard_core.sql",
+      "scope": "tenant",
+      "version": "1.13",
+      "classification": "existing-database-delta",
+      "sha256": "d11eae968a84790eca0a14454324adfeb9bb729d5c1e4d9210e6d9e4e694dff1",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "SHKB 看板、合同、工具和设备核心结构。"
+    },
+    {
+      "path": "tenant/V1.14__shkb_contract_core.sql",
+      "scope": "tenant",
+      "version": "1.14",
+      "classification": "existing-database-delta",
+      "sha256": "429d8d9ffcb26ce875ca8a2cf76c6b03081fe1dd79d2bf28014c01523305cfe0",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "SHKB 合同核心补充。"
+    },
+    {
+      "path": "tenant/V1.15__shkb_equipment_records.sql",
+      "scope": "tenant",
+      "version": "1.15",
+      "classification": "existing-database-delta",
+      "sha256": "d9e1612be391e0905926d94d2f28811217f92e0d3dfcd9427eed021cd5ff6ef1",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "工具和设备从属记录。"
+    },
+    {
+      "path": "tenant/V1.16__shkb_work_card_core.sql",
+      "scope": "tenant",
+      "version": "1.16",
+      "classification": "existing-database-delta",
+      "sha256": "3ccf65aed17ea3da70a0bcb5343a964121635375e10ad3c48ddbb50b3c26332c",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "维修工卡和任务关联。"
+    },
+    {
+      "path": "tenant/V1.17__shkb_material_flow.sql",
+      "scope": "tenant",
+      "version": "1.17",
+      "classification": "existing-database-delta",
+      "sha256": "2c318b4dfcb8a7a48a7ff6a2c5c5267ad0ecdbff629a28f6c89da25db84c1a76",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "物料、批次和序列号库存结构。"
+    },
+    {
+      "path": "tenant/V1.18__mq_outbox.sql",
+      "scope": "tenant",
+      "version": "1.18",
+      "classification": "existing-database-delta",
+      "sha256": "9bff5540f8f65fcec5c20fd3f7c1282d08b30dc64de34ce7c4411f4baed72341",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "事务消息 Outbox/Inbox。"
+    },
+    {
+      "path": "tenant/V1.21__shkb_menu_permission_baseline.sql",
+      "scope": "tenant",
+      "version": "1.21",
+      "classification": "existing-database-delta",
+      "sha256": "c82c79ce2b187641a2651eceb7dabacfe3563d1c200e4fca01bcc5fd8fdf3bfb",
+      "riskTokens": ["delete-data", "update-data", "temporary-table-cleanup"],
+      "controlledDataMutation": true,
+      "note": "受控菜单和角色基线；会更新租户名并删除租户 1000 的三个模块关系，执行前必须业务确认。"
+    },
+    {
+      "path": "tenant/V1.22__shkb_machine_task_core.sql",
+      "scope": "tenant",
+      "version": "1.22",
+      "classification": "existing-database-delta",
+      "sha256": "3480a9c67594a048f520a261d2689dd1cb67897dc9a2d7527483030bc83e659f",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "自动化设备任务结构；预检重复 task_id。"
+    },
+    {
+      "path": "tenant/V1.23__shkb_contract_task_flow.sql",
+      "scope": "tenant",
+      "version": "1.23",
+      "classification": "existing-database-delta",
+      "sha256": "cd32f9f1a91c4a58fa3570fc0ef75a75a72b0049de563adffe2fa045435c76a6",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "合同任务流程结构；预检重复 contract_id。"
+    },
+    {
+      "path": "tenant/V1.24__purchase_receive_traceability.sql",
+      "scope": "tenant",
+      "version": "1.24",
+      "classification": "existing-database-delta",
+      "sha256": "def3e14d94213ca20c8437e0dd3312092d29f2ee12636753ca2907beb6689920",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "采购收货追溯字段。"
+    },
+    {
+      "path": "tenant/V1.25__purchase_return_serial_traceability.sql",
+      "scope": "tenant",
+      "version": "1.25",
+      "classification": "existing-database-delta",
+      "sha256": "d1f4fa51f5fa2f2d52a46e69f7e9b49439a1502ad4c174848f522da710f21b76",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "采购退货序列号追溯字段。"
+    }
+  ]
+}

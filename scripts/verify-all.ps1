@@ -2,7 +2,8 @@
 param(
     [switch]$Full,
     [switch]$Install,
-    [switch]$Release
+    [switch]$Release,
+    [switch]$Candidate
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,10 +12,19 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 if ($Release -and -not $Full) {
     throw 'Release verification requires -Full.'
 }
+if ($Candidate -and -not $Full) {
+    throw 'Release candidate verification requires -Full.'
+}
+if ($Release -and $Candidate) {
+    throw 'Release and Candidate modes are mutually exclusive.'
+}
 
 $sourceArgs = @('-ExecutionPolicy', 'Bypass', '-File', '.\scripts\verify-source-baseline.ps1')
 if ($Release) {
     $sourceArgs += '-Release'
+}
+if ($Candidate) {
+    $sourceArgs += '-Candidate'
 }
 
 Push-Location $repoRoot
@@ -22,6 +32,18 @@ try {
     & powershell @sourceArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Source baseline verification failed with exit code $LASTEXITCODE."
+    }
+}
+finally {
+    Pop-Location
+}
+
+$migrationArgs = @('-ExecutionPolicy', 'Bypass', '-File', '.\scripts\verify-migration-catalog.ps1')
+Push-Location $repoRoot
+try {
+    & powershell @migrationArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Migration catalog verification failed with exit code $LASTEXITCODE."
     }
 }
 finally {
