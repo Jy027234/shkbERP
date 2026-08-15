@@ -25,6 +25,10 @@ jobs:
         shell: pwsh
         run: ./scripts/verify-source-baseline.ps1
 
+      - name: Verify migration catalog
+        shell: pwsh
+        run: ./scripts/verify-migration-catalog.ps1
+
   backend:
     name: Backend / Java 25
     runs-on: ubuntu-latest

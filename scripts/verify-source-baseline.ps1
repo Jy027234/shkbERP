@@ -1,12 +1,17 @@
 [CmdletBinding()]
 param(
-    [switch]$Release
+    [switch]$Release,
+    [switch]$Candidate
 )
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $failures = [System.Collections.Generic.List[string]]::new()
 $warnings = [System.Collections.Generic.List[string]]::new()
+
+if ($Release -and $Candidate) {
+    throw 'Release and Candidate modes are mutually exclusive.'
+}
 
 function Add-Failure([string]$Message) {
     $failures.Add($Message)
@@ -39,11 +44,18 @@ else {
 
     $dirty = @(& git -C $repoRoot status --porcelain)
     if ($dirty.Count -gt 0) {
-        if ($Release) {
-            Add-Failure 'Release mode requires a clean Git worktree.'
+        if ($Release -or $Candidate) {
+            Add-Failure 'Release candidate and release modes require a clean Git worktree.'
         }
         else {
             Add-Warning "The worktree contains $($dirty.Count) changed path(s); development checks may continue, release may not."
+        }
+    }
+
+    if ($Candidate) {
+        $branch = (& git -C $repoRoot branch --show-current 2>$null).Trim()
+        if ($branch -ne 'main') {
+            Add-Failure "Candidate mode requires the canonical main branch, found '$branch'."
         }
     }
 
@@ -64,7 +76,14 @@ foreach ($requiredPath in @(
     'docs/governance/BACKEND_RECONCILIATION.md',
     'docs/governance/SHKB_MODULE_MATRIX.md',
     'docs/governance/source-baseline.json',
+    'docs/governance/migration-catalog.json',
+    'docs/governance/MIGRATION_SAFETY.md',
+    'docs/governance/RELEASE_CANDIDATE.md',
+    'scripts/verify-migration-catalog.ps1',
+    'scripts/new-release-candidate.ps1',
     'erp-backend/scripts/verify-menu-baseline.ps1',
+    'erp-backend/scripts/verify-release-preflight.ps1',
+    'erp-backend/scripts/verify-release-restore.ps1',
     'erp-backend/xingyun-api/src/main/resources/db/migration/tenant/V1.21__shkb_menu_permission_baseline.sql'
 )) {
     if (-not (Test-Path -LiteralPath (Join-Path $repoRoot $requiredPath))) {
@@ -81,7 +100,7 @@ foreach ($nestedGit in @('erp-backend/.git', 'erp-frontend/.git')) {
 $baselinePath = Join-Path $repoRoot 'docs/governance/source-baseline.json'
 if (Test-Path -LiteralPath $baselinePath) {
     try {
-        $baseline = Get-Content -LiteralPath $baselinePath -Raw | ConvertFrom-Json
+        $baseline = Get-Content -LiteralPath $baselinePath -Raw -Encoding UTF8 | ConvertFrom-Json
         if ($baseline.canonical.repository -ne 'git@github.com:Jy027234/shkbERP.git') {
             Add-Failure 'The governance baseline names an unexpected canonical repository.'
         }
@@ -90,6 +109,9 @@ if (Test-Path -LiteralPath $baselinePath) {
         }
         if ($Release -and $baseline.reconciliation.status -ne 'ready') {
             Add-Failure "Reconciliation status is '$($baseline.reconciliation.status)', not 'ready'."
+        }
+        if ($Candidate -and $baseline.release.deploymentAllowed -ne $false) {
+            Add-Failure 'Candidate mode requires production deployment to remain locked until a restored production copy is accepted.'
         }
     }
     catch {
@@ -160,5 +182,5 @@ if ($failures.Count -gt 0) {
     exit 1
 }
 
-$mode = if ($Release) { 'release' } else { 'development' }
+$mode = if ($Release) { 'release' } elseif ($Candidate) { 'candidate' } else { 'development' }
 Write-Host "Source baseline verification passed in $mode mode." -ForegroundColor Green

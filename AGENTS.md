@@ -18,6 +18,9 @@
 - 源码中存在但尚未纳入上海凯奔真实业务流程的半成品，必须在模块矩阵中标记为“冻结/非发布范围”。未经用户明确启用和重新验收，不得为其补 schema、扩展功能、纳入核心回归或发布。
 - 开始开发和发布前运行 `scripts/verify-source-baseline.ps1`；正式发布增加 `-Release`。
 
+- 数据库迁移以 docs/governance/migration-catalog.json 为唯一执行分类；不得修改已登记 SQL。涉及迁移目录时，先运行 verify-migration-catalog.ps1。存量库计划只能来自 catalog 的 existingDatabasePlan。
+- 发布候选必须在 main 的干净工作树执行 new-release-candidate.ps1。候选会在本地临时克隆库恢复并验证，绝不代表云端生产已验收或允许发布。
+
 ## 开始任务前
 
 1. 阅读目标目录内的 `AGENTS.md` 与 `UPGRADE.md`。
