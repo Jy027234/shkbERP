@@ -36,6 +36,9 @@ public class ReceiveSheetDetailServiceImpl extends
     Assert.greaterThanZero(num);
 
     ReceiveSheetDetail detail = getBaseMapper().selectById(id);
+    if (detail == null) {
+      throw new DefaultClientException("采购收货单明细不存在！");
+    }
 
     Integer remainNum = NumberUtil.sub(detail.getOrderNum(), detail.getReturnNum()).intValue();
     if (NumberUtil.lt(remainNum, num)) {
@@ -63,6 +66,9 @@ public class ReceiveSheetDetailServiceImpl extends
     Assert.greaterThanZero(num);
 
     ReceiveSheetDetail orderDetail = getBaseMapper().selectById(id);
+    if (orderDetail == null) {
+      throw new DefaultClientException("采购收货单明细不存在！");
+    }
 
     if (NumberUtil.lt(orderDetail.getReturnNum(), num)) {
       Product product = productService.findById(orderDetail.getProductId());

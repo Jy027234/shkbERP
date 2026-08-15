@@ -36,6 +36,7 @@ import com.lframework.xingyun.sc.dto.purchase.returned.PurchaseReturnFullDto;
 import com.lframework.xingyun.sc.entity.PurchaseConfig;
 import com.lframework.xingyun.sc.entity.PurchaseReturn;
 import com.lframework.xingyun.sc.entity.PurchaseReturnDetail;
+import com.lframework.xingyun.sc.entity.ProductStockBatch;
 import com.lframework.xingyun.sc.entity.ReceiveSheet;
 import com.lframework.xingyun.sc.entity.ReceiveSheetDetail;
 import com.lframework.xingyun.sc.enums.ProductStockBizType;
@@ -49,6 +50,7 @@ import com.lframework.xingyun.sc.service.purchase.PurchaseReturnDetailService;
 import com.lframework.xingyun.sc.service.purchase.PurchaseReturnService;
 import com.lframework.xingyun.sc.service.purchase.ReceiveSheetDetailService;
 import com.lframework.xingyun.sc.service.purchase.ReceiveSheetService;
+import com.lframework.xingyun.sc.service.stock.ProductStockBatchService;
 import com.lframework.xingyun.sc.service.stock.ProductStockService;
 import com.lframework.xingyun.sc.vo.purchase.returned.ApprovePassPurchaseReturnVo;
 import com.lframework.xingyun.sc.vo.purchase.returned.ApproveRefusePurchaseReturnVo;
@@ -63,6 +65,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -101,6 +104,9 @@ public class PurchaseReturnServiceImpl extends
 
   @Autowired
   private ProductStockService productStockService;
+
+  @Autowired
+  private ProductStockBatchService productStockBatchService;
 
   @Override
   public PageResult<PurchaseReturn> query(Integer pageIndex, Integer pageSize,
@@ -288,6 +294,7 @@ public class PurchaseReturnServiceImpl extends
       subproductStockVo.setBizType(ProductStockBizType.PURCHASE_RETURN.getCode());
 
       productStockService.subStock(subproductStockVo);
+      this.subBatchStock(purchaseReturn, detail);
     }
 
     this.sendApprovePassEvent(purchaseReturn);
@@ -518,6 +525,15 @@ public class PurchaseReturnServiceImpl extends
         if (!StringUtil.isBlank(productVo.getReceiveSheetDetailId())) {
           ReceiveSheetDetail detail = receiveSheetDetailService.getById(
               productVo.getReceiveSheetDetailId());
+          if (detail == null) {
+            throw new InputErrorException("第" + orderNo + "行采购收货单明细不存在！");
+          }
+          if (!Objects.equals(detail.getSheetId(), vo.getReceiveSheetId())) {
+            throw new InputErrorException("第" + orderNo + "行采购收货单明细不属于所选采购收货单！");
+          }
+          if (!Objects.equals(detail.getProductId(), productVo.getProductId())) {
+            throw new InputErrorException("第" + orderNo + "行商品与采购收货单明细不一致！");
+          }
           productVo.setPurchasePrice(detail.getTaxPrice());
         } else {
           productVo.setPurchasePrice(BigDecimal.ZERO);
@@ -607,5 +623,43 @@ public class PurchaseReturnServiceImpl extends
     ApprovePassPurchaseReturnEvent event = new ApprovePassPurchaseReturnEvent(this, dto);
 
     ApplicationUtil.publishEvent(event);
+  }
+
+  private void subBatchStock(PurchaseReturn purchaseReturn, PurchaseReturnDetail returnDetail) {
+
+    Product product = productService.findById(returnDetail.getProductId());
+    if (product == null) {
+      throw new InputErrorException("采购退货商品不存在！");
+    }
+
+    String batchNumber = "DEFAULT";
+    if (Boolean.TRUE.equals(product.getIsBatch())) {
+      if (StringUtil.isBlank(returnDetail.getReceiveSheetDetailId())) {
+        throw new DefaultClientException(
+            "（" + product.getCode() + "）" + product.getName() + "启用了批次管理，退货时必须关联采购收货单明细！");
+      }
+      ReceiveSheetDetail receiveDetail = receiveSheetDetailService.getById(
+          returnDetail.getReceiveSheetDetailId());
+      if (receiveDetail == null) {
+        throw new DefaultClientException("采购收货单明细不存在，无法确定退货批次！");
+      }
+      batchNumber = StringUtil.isBlank(receiveDetail.getBatchNumber()) ? "DEFAULT"
+          : receiveDetail.getBatchNumber();
+    }
+
+    ProductStockBatch batch = productStockBatchService.getOne(
+        Wrappers.lambdaQuery(ProductStockBatch.class)
+            .eq(ProductStockBatch::getScId, purchaseReturn.getScId())
+            .eq(ProductStockBatch::getProductId, returnDetail.getProductId())
+            .eq(ProductStockBatch::getBatchNumber, batchNumber));
+    if (batch == null) {
+      throw new DefaultClientException(
+          "（" + product.getCode() + "）" + product.getName() + "对应批次库存不存在，不允许退货！");
+    }
+    if (productStockBatchService.subStock(batch.getId(), returnDetail.getProductId(),
+        purchaseReturn.getScId(), returnDetail.getReturnNum()) != 1) {
+      throw new DefaultClientException(
+          "（" + product.getCode() + "）" + product.getName() + "对应批次库存不足，不允许退货！");
+    }
   }
 }

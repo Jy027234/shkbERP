@@ -70,6 +70,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -656,6 +657,15 @@ public class ReceiveSheetServiceImpl extends BaseMpServiceImpl<ReceiveSheetMappe
         if (!StringUtil.isBlank(productVo.getPurchaseOrderDetailId())) {
           PurchaseOrderDetail orderDetail = purchaseOrderDetailService.getById(
               productVo.getPurchaseOrderDetailId());
+          if (orderDetail == null) {
+            throw new InputErrorException("第" + orderNo + "行采购订单明细不存在！");
+          }
+          if (!Objects.equals(orderDetail.getOrderId(), vo.getPurchaseOrderId())) {
+            throw new InputErrorException("第" + orderNo + "行采购订单明细不属于所选采购订单！");
+          }
+          if (!Objects.equals(orderDetail.getProductId(), productVo.getProductId())) {
+            throw new InputErrorException("第" + orderNo + "行商品与采购订单明细不一致！");
+          }
           productVo.setPurchasePrice(orderDetail.getTaxPrice());
         } else {
           productVo.setPurchasePrice(BigDecimal.ZERO);
