@@ -31,6 +31,7 @@
 - 修改工具、设备、计量/维保记录或其附件时，运行 `scripts/verify-equipment.ps1`；涉及写入时，仅在本地隔离环境运行 `scripts/verify-equipment-flow.ps1`，并对 Vite `/api` 再运行一次。
 - 修改盘点任务、盘点单或差异库存处理时，仅在本地隔离环境运行 `scripts/verify-stocktake-flow.ps1`，并对 Vite `/api` 再运行一次；批次/序列号盘点尚无明细级调整契约，不能移除现有安全阻断后只验证总库存。
 - 修改库存调整单、调整原因或调整审批时，仅在本地隔离环境运行 `scripts/verify-stock-adjust-flow.ps1`，并对 Vite `/api` 再运行一次；该脚本覆盖普通库存、输入/引用守卫、重复审批和追溯型航材安全阻断。
+- 修改仓库调拨单、调拨审批、收货或调拨库存动作时，仅在本地隔离环境运行 `scripts/verify-stock-transfer-flow.ps1`，并对 Vite `/api` 再运行一次；该脚本覆盖两阶段库存、负数/引用守卫、部分收货、重复并发收货和追溯型航材安全阻断。
 - 涉及物料出库审批、库存、批次、序列号或单据状态流转时，在本地隔离冒烟库运行 `powershell -ExecutionPolicy Bypass -File .\scripts\verify-material-concurrency.ps1 -Iterations 5`；该脚本会直接造数，禁止指向真实业务库。
 - Windows 上重新打包 `xingyun-api` 前先停止正在运行的 JVM，否则胖 jar 可能因文件锁没有更新。
 

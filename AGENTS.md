@@ -33,6 +33,7 @@
 - 发布候选：全量门禁增加 `-Full`；涉及运行时行为时，按后端升级记录中的 smoke README 做端到端冒烟。
 - 修改盘点任务、盘点单或差异库存处理时，仅在本地隔离库分别对后端直连和 Vite `/api` 运行 `erp-backend/scripts/verify-stocktake-flow.ps1`；脚本会写入并精确清理夹具，禁止指向真实业务库。
 - 修改库存调整单、调整原因或调整审批时，仅在本地隔离库分别对后端直连和 Vite `/api` 运行 `erp-backend/scripts/verify-stock-adjust-flow.ps1`；不得绕过批次/序列号安全阻断后只验证总库存。
+- 修改仓库调拨单、调拨审批、收货或调拨库存动作时，仅在本地隔离库分别对后端直连和 Vite `/api` 运行 `erp-backend/scripts/verify-stock-transfer-flow.ps1`；脚本会并发收货并直接造数，禁止指向真实业务库。
 - 正式发布门禁：`powershell -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Full -Release`。治理状态未解锁、工作树不干净或 HEAD 没有版本标签时必须失败。
 
 严禁对已有数据的数据库执行 `migration/tenant/V1.0__init.sql`，它包含 DROP/CREATE 全量初始化逻辑。生产凭据只能通过环境变量或密钥管理系统注入，不得提交真实 `.env` 文件。
