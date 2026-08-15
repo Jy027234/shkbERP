@@ -18,8 +18,10 @@ import com.lframework.starter.web.core.utils.PageHelperUtil;
 import com.lframework.starter.web.core.utils.PageResultUtil;
 import com.lframework.xingyun.basedata.entity.Product;
 import com.lframework.xingyun.basedata.entity.ProductPurchase;
+import com.lframework.xingyun.basedata.enums.ProductType;
 import com.lframework.xingyun.basedata.service.product.ProductPurchaseService;
 import com.lframework.xingyun.basedata.service.product.ProductService;
+import com.lframework.xingyun.basedata.service.storecenter.StoreCenterService;
 import com.lframework.xingyun.core.annotations.OrderTimeLineLog;
 import com.lframework.xingyun.core.enums.OrderTimeLineBizType;
 import com.lframework.xingyun.sc.components.code.GenerateCodeTypePool;
@@ -27,6 +29,7 @@ import com.lframework.xingyun.sc.dto.stock.adjust.stock.StockAdjustProductDto;
 import com.lframework.xingyun.sc.dto.stock.adjust.stock.StockAdjustSheetFullDto;
 import com.lframework.xingyun.sc.entity.StockAdjustSheet;
 import com.lframework.xingyun.sc.entity.StockAdjustSheetDetail;
+import com.lframework.xingyun.sc.entity.StockAdjustReason;
 import com.lframework.xingyun.sc.enums.ProductStockBizType;
 import com.lframework.xingyun.sc.enums.ScOpLogType;
 import com.lframework.xingyun.sc.enums.StockAdjustSheetBizType;
@@ -34,6 +37,7 @@ import com.lframework.xingyun.sc.enums.StockAdjustSheetStatus;
 import com.lframework.xingyun.sc.mappers.StockAdjustSheetMapper;
 import com.lframework.xingyun.sc.service.stock.ProductStockService;
 import com.lframework.xingyun.sc.service.stock.adjust.StockAdjustSheetDetailService;
+import com.lframework.xingyun.sc.service.stock.adjust.StockAdjustReasonService;
 import com.lframework.xingyun.sc.service.stock.adjust.StockAdjustSheetService;
 import com.lframework.xingyun.sc.vo.stock.AddProductStockVo;
 import com.lframework.xingyun.sc.vo.stock.SubProductStockVo;
@@ -47,10 +51,11 @@ import com.lframework.xingyun.sc.vo.stock.adjust.stock.UpdateStockAdjustSheetVo;
 import com.lframework.xingyun.core.annotations.OpLog;
 import com.lframework.xingyun.core.utils.OpLogUtil;
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,6 +79,12 @@ public class StockAdjustSheetServiceImpl extends
 
   @Autowired
   private ProductService productService;
+
+  @Autowired
+  private StoreCenterService storeCenterService;
+
+  @Autowired
+  private StockAdjustReasonService stockAdjustReasonService;
 
   @Override
   public PageResult<StockAdjustSheet> query(Integer pageIndex, Integer pageSize,
@@ -126,7 +137,7 @@ public class StockAdjustSheetServiceImpl extends
   @Override
   public void update(UpdateStockAdjustSheetVo vo) {
 
-    StockAdjustSheet data = getBaseMapper().selectById(vo.getId());
+    StockAdjustSheet data = getBaseMapper().selectByIdForUpdate(vo.getId());
     if (ObjectUtil.isNull(data)) {
       throw new DefaultClientException("库存调整单不存在！");
     }
@@ -176,7 +187,7 @@ public class StockAdjustSheetServiceImpl extends
   @Override
   public void deleteById(String id) {
 
-    StockAdjustSheet data = getBaseMapper().selectById(id);
+    StockAdjustSheet data = getBaseMapper().selectByIdForUpdate(id);
     if (ObjectUtil.isNull(data)) {
       throw new DefaultClientException("库存调整单不存在！");
     }
@@ -205,7 +216,7 @@ public class StockAdjustSheetServiceImpl extends
   @Override
   public void approvePass(ApprovePassStockAdjustSheetVo vo) {
 
-    StockAdjustSheet data = getBaseMapper().selectById(vo.getId());
+    StockAdjustSheet data = getBaseMapper().selectByIdForUpdate(vo.getId());
     if (ObjectUtil.isNull(data)) {
       throw new DefaultClientException("库存调整单不存在！");
     }
@@ -219,6 +230,14 @@ public class StockAdjustSheetServiceImpl extends
 
       throw new DefaultClientException("库存调整单无法审核通过！");
     }
+
+    Wrapper<StockAdjustSheetDetail> queryDetailWrapper = Wrappers.lambdaQuery(
+            StockAdjustSheetDetail.class)
+        .eq(StockAdjustSheetDetail::getSheetId, data.getId())
+        .orderByAsc(StockAdjustSheetDetail::getOrderNo);
+    List<StockAdjustSheetDetail> details = stockAdjustSheetDetailService.list(
+        queryDetailWrapper);
+    validateStoredSheet(data, details);
 
     LocalDateTime now = LocalDateTime.now();
     Wrapper<StockAdjustSheet> updateWrapper = Wrappers.lambdaUpdate(StockAdjustSheet.class)
@@ -234,17 +253,10 @@ public class StockAdjustSheetServiceImpl extends
       throw new DefaultClientException("库存调整单信息已过期，请刷新重试！");
     }
 
-    Wrapper<StockAdjustSheetDetail> queryDetailWrapper = Wrappers.lambdaQuery(
-            StockAdjustSheetDetail.class)
-        .eq(StockAdjustSheetDetail::getSheetId, data.getId())
-        .orderByAsc(StockAdjustSheetDetail::getOrderNo);
-    List<StockAdjustSheetDetail> details = stockAdjustSheetDetailService.list(
-        queryDetailWrapper);
-
     for (StockAdjustSheetDetail detail : details) {
       Product product = productService.findById(detail.getProductId());
-      ProductPurchase productPurchase = productPurchaseService.getById(product.getId());
       if (data.getBizType() == StockAdjustSheetBizType.IN) {
+        ProductPurchase productPurchase = productPurchaseService.getById(product.getId());
         // 入库
         AddProductStockVo addProductStockVo = new AddProductStockVo();
         addProductStockVo.setProductId(product.getId());
@@ -298,7 +310,7 @@ public class StockAdjustSheetServiceImpl extends
   @Override
   public void approveRefuse(ApproveRefuseStockAdjustSheetVo vo) {
 
-    StockAdjustSheet data = getBaseMapper().selectById(vo.getId());
+    StockAdjustSheet data = getBaseMapper().selectByIdForUpdate(vo.getId());
     if (ObjectUtil.isNull(data)) {
       throw new DefaultClientException("库存调整单不存在！");
     }
@@ -376,8 +388,9 @@ public class StockAdjustSheetServiceImpl extends
     data.setBizType(EnumUtil.getByCode(StockAdjustSheetBizType.class, vo.getBizType()));
     data.setReasonId(vo.getReasonId());
 
-    int productNum = 0;
-    BigDecimal diffAmount = BigDecimal.ZERO;
+    validateReferences(data);
+    validateProducts(data.getBizType(), vo.getProducts());
+
     int orderNo = 1;
     for (StockAdjustProductVo product : vo.getProducts()) {
       StockAdjustSheetDetail detail = new StockAdjustSheetDetail();
@@ -389,9 +402,75 @@ public class StockAdjustSheetServiceImpl extends
           StringUtil.isBlank(product.getDescription()) ? StringPool.EMPTY_STR
               : product.getDescription());
       detail.setOrderNo(orderNo++);
-      productNum++;
 
       stockAdjustSheetDetailService.save(detail);
+    }
+  }
+
+  private void validateReferences(StockAdjustSheet data) {
+
+    if (storeCenterService.findById(data.getScId()) == null) {
+      throw new DefaultClientException("仓库不存在！");
+    }
+    StockAdjustReason reason = stockAdjustReasonService.findById(data.getReasonId());
+    if (reason == null) {
+      throw new DefaultClientException("库存调整原因不存在！");
+    }
+    if (!Boolean.TRUE.equals(reason.getAvailable())) {
+      throw new DefaultClientException("库存调整原因已停用！");
+    }
+  }
+
+  private void validateProducts(StockAdjustSheetBizType bizType,
+      List<StockAdjustProductVo> products) {
+
+    Set<String> productIds = new HashSet<>();
+    int orderNo = 1;
+    for (StockAdjustProductVo productVo : products) {
+      if (!productIds.add(productVo.getProductId())) {
+        throw new DefaultClientException("第" + orderNo + "行航材重复录入！");
+      }
+      if (productVo.getStockNum() == null || productVo.getStockNum() <= 0) {
+        throw new DefaultClientException("第" + orderNo + "行航材的调整库存数量必须大于0！");
+      }
+      validateProduct(bizType, productVo.getProductId(), orderNo);
+      orderNo++;
+    }
+  }
+
+  private void validateStoredSheet(StockAdjustSheet data, List<StockAdjustSheetDetail> details) {
+
+    validateReferences(data);
+    if (details.isEmpty()) {
+      throw new DefaultClientException("库存调整单不存在航材明细，不允许审核！");
+    }
+    int orderNo = 1;
+    for (StockAdjustSheetDetail detail : details) {
+      if (detail.getStockNum() == null || detail.getStockNum() <= 0) {
+        throw new DefaultClientException("第" + orderNo + "行航材的调整库存数量必须大于0！");
+      }
+      validateProduct(data.getBizType(), detail.getProductId(), orderNo);
+      orderNo++;
+    }
+  }
+
+  private void validateProduct(StockAdjustSheetBizType bizType, String productId, int orderNo) {
+
+    Product product = productService.findById(productId);
+    if (product == null || product.getProductType() != ProductType.NORMAL) {
+      throw new DefaultClientException("第" + orderNo + "行航材不存在或类型不支持库存调整！");
+    }
+    if (Boolean.TRUE.equals(product.getIsBatch()) || Boolean.TRUE.equals(product.getIsSerial())) {
+      throw new DefaultClientException(
+          "航材（" + product.getCode() + "）" + product.getName()
+              + "启用了批次或序列号管理，当前库存调整单缺少批次/序列号明细，不允许调整库存！");
+    }
+    if (bizType == StockAdjustSheetBizType.IN) {
+      ProductPurchase purchase = productPurchaseService.getById(productId);
+      if (purchase == null || purchase.getPrice() == null) {
+        throw new DefaultClientException(
+            "航材（" + product.getCode() + "）" + product.getName() + "没有采购价格，无法调整入库！");
+      }
     }
   }
 }

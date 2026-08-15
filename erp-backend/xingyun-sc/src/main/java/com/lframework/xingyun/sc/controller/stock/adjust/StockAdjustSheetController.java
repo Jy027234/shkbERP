@@ -249,6 +249,8 @@ public class StockAdjustSheetController extends DefaultBaseController {
   @PostMapping("/approve/pass/direct")
   public InvokeResult<Void> directApprovePass(@RequestBody @Valid CreateStockAdjustSheetVo vo) {
 
+    vo.validate();
+
     stockAdjustSheetService.directApprovePass(vo);
 
     return InvokeResultBuilder.success();
