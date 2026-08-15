@@ -15,14 +15,6 @@ export interface UpdateContractStatusVo {
   remark?: string;
 }
 
-// 添加调试日志
-const debug = true;
-function log(...args: any[]) {
-  if (debug) {
-    console.log('[Contract API]', ...args);
-  }
-}
-
 const baseUrl = '/shkb/contract';
 const region = 'cloud-api';
 
@@ -31,7 +23,6 @@ const region = 'cloud-api';
  * @param id
  */
 export function get(id: string): Promise<GetContractBo> {
-  console.log('[Contract API] 获取合同详情, ID:', id);
   return defHttp.get<GetContractBo>(
     {
       url: baseUrl,
@@ -42,10 +33,7 @@ export function get(id: string): Promise<GetContractBo> {
     {
       region,
     },
-  ).then(res => {
-    console.log('[Contract API] 合同详情数据:', res);
-    return res;
-  });
+  );
 }
 
 /**
@@ -101,7 +89,6 @@ export function update(data: UpdateContractVo): Promise<void> {
  * @param data 包含合同ID的请求参数
  */
 export function createContractTask(data: CreateContractTaskVo): Promise<void> {
-  console.log('[Contract API] 生成合同任务, 参数:', data);
   return defHttp.post<void>(
     {
       url: `${baseUrl}/create-task`,
@@ -110,10 +97,7 @@ export function createContractTask(data: CreateContractTaskVo): Promise<void> {
     {
       region,
     },
-  ).then(res => {
-    console.log('[Contract API] 生成合同任务成功:', res);
-    return res;
-  });
+  );
 }
 
 /**
@@ -121,7 +105,6 @@ export function createContractTask(data: CreateContractTaskVo): Promise<void> {
  * @param data 包含合同ID、状态和备注的请求参数
  */
 export function updateContractStatus(data: UpdateContractStatusVo): Promise<void> {
-  log('修改合同状态, 参数:', data);
   return defHttp.put<void>(
     {
       url: `${baseUrl}/status`,
@@ -131,30 +114,7 @@ export function updateContractStatus(data: UpdateContractStatusVo): Promise<void
       region,
       errorMessageMode: 'message',
     },
-  ).then(res => {
-    log('修改合同状态成功:', res);
-    return res;
-  });
-}
-
-/**
- * 恢复合同（从关闭状态恢复到关闭前的状态）
- * @param id 合同ID
- */
-export function restoreContract(id: string): Promise<void> {
-  log('恢复合同, ID:', id);
-  return defHttp.post<void>(
-    {
-      url: `${baseUrl}/restore?id=${encodeURIComponent(id)}`,
-    },
-    {
-      region,
-      errorMessageMode: 'message',
-    },
-  ).then(res => {
-    log('恢复合同成功:', res);
-    return res;
-  });
+  );
 }
 
 /**

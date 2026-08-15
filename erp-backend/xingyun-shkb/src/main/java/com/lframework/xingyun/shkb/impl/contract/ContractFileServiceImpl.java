@@ -2,6 +2,7 @@ package com.lframework.xingyun.shkb.impl.contract;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.lframework.starter.common.exceptions.impl.DefaultClientException;
 import com.lframework.starter.common.utils.CollectionUtil;
 import com.lframework.starter.web.core.utils.IdUtil;
 import com.lframework.starter.web.core.impl.BaseMpServiceImpl;
@@ -9,6 +10,7 @@ import com.lframework.starter.common.utils.FileUtil;
 import com.lframework.starter.web.core.utils.UploadUtil;
 import com.lframework.xingyun.shkb.entity.ContractFile;
 import com.lframework.xingyun.shkb.mappers.ContractFileMapper;
+import com.lframework.xingyun.shkb.mappers.ContractMapper;
 import com.lframework.xingyun.shkb.service.contract.ContractFileService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,12 @@ import java.util.List;
 public class ContractFileServiceImpl extends BaseMpServiceImpl<ContractFileMapper, ContractFile>
     implements ContractFileService{
 
+    private final ContractMapper contractMapper;
+
+    public ContractFileServiceImpl(ContractMapper contractMapper) {
+        this.contractMapper = contractMapper;
+    }
+
     /**
      * 上传合同附件
      *
@@ -37,6 +45,10 @@ public class ContractFileServiceImpl extends BaseMpServiceImpl<ContractFileMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public List<String> uploadContractFiles(String contractId, List<MultipartFile> files) {
+        if (contractMapper.selectById(contractId) == null) {
+            throw new DefaultClientException("合同不存在！");
+        }
+
         List<String> fileIds = new ArrayList<>();
         
         if (CollectionUtil.isEmpty(files)) {
@@ -148,4 +160,3 @@ public class ContractFileServiceImpl extends BaseMpServiceImpl<ContractFileMappe
         return count;
     }
 }
-

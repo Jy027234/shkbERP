@@ -52,6 +52,8 @@
 
 随后完成治理里程碑 V1.28（里程碑编号，不是数据库迁移号）：新增 `tenant/V1.22__shkb_machine_task_core.sql`，补齐自动化设备、拧紧机任务和磁粉机任务三张此前只有 Java/前端代码、没有版本化 DDL 的业务表，并为平台任务 ID 建立唯一约束。拧紧机上报现在只允许待处理任务完成一次：相同上报内容的设备重试按幂等成功处理，不同内容不得覆盖已完成记录；磁粉机下发在数据库事务内锁定任务行，拒绝已下发任务的重复操作，并保留“远端成功、数据库提交失败”这一跨系统极小窗口作为后续设备协议幂等专题。新增 5 个状态规则单元测试、`scripts/verify-machine-task.ps1` 管理端只读探针和仅限本机隔离库的 `scripts/verify-machine-task-flow.ps1` 写流程探针。V1.22 已在随机临时 MySQL 8 库连续执行两次，稳定得到 3 张表与 3 个关键唯一约束；新 Java 25 镜像已在本机健康启动，管理端探针通过 8088 直连和 5173 `/api` 代理，隔离写流程通过相同上报重试、冲突上报拒绝和重复下发拒绝，测试数据清理后为 0。不得据此推断云端存量表不存在重复任务，正式迁移前仍须在生产恢复副本核对唯一约束。
 
+随后完成治理里程碑 V1.29（里程碑编号，不是数据库迁移号）：按真实业务范围将未纳入流程的“成品出入库”标记为冻结/非发布模块，不再为代码半成品自动补 schema。合同主流程新增 `tenant/V1.23__shkb_contract_task_flow.sql`，补齐任务创建必写但此前完全缺失的 `shkb_contract_task_repair_status_record`，并以 `contract_id` 唯一约束落实“一份合同一个任务”；若生产恢复副本存在重复任务，迁移会明确失败而不会自动删改业务数据。附件上传现在先校验所属合同，前端移除了没有后端接口、也没有“关闭前状态”数据支撑的恢复按钮，并将合同 API 类型与 Java 契约对齐。`scripts/verify-contract-flow.ps1` 仅允许本机隔离库，覆盖合同新增、修改、附件上传/列表/删除、无主附件拒绝、任务初始状态与重复生成 409，并精确清理数据库记录和本地测试文件。迁移连续执行两次无错误，Java 25 完整测试/打包、前端类型检查、27 个用例与 9117 模块生产构建通过；新镜像通过健康检查，写流程在 8088 直连和 5173 `/api` 代理均通过。合同恢复仍需业务明确恢复目标和审计要求后单独设计，不能推测为某个状态。
+
 ## 每次改动的固定流程
 
 1. 执行 `git status --short`，确认并保护现有改动。
@@ -60,6 +62,7 @@
 4. 再次运行验证脚本。涉及运行时行为时启动 smoke 环境并验证受影响接口。
    看板相关改动同时运行 `scripts/verify-dashboard.ps1`。
    合同相关改动同时运行 `scripts/verify-contract.ps1`。
+   合同新增、修改、附件或任务生成相关改动在本地隔离库增加 `scripts/verify-contract-flow.ps1`，并对 Vite `/api` 再运行一次。
    工具/设备相关改动同时运行 `scripts/verify-equipment.ps1`。
    工卡相关改动同时运行 `scripts/verify-work-card.ps1`；本地隔离库增加 `scripts/verify-work-card-flow.ps1`。
    物料相关改动同时运行 `scripts/verify-material-flow.ps1`；本地隔离库增加 `scripts/verify-material-flow-write.ps1`。涉及审批、库存、批次、序列号或状态流转时，再运行 `scripts/verify-material-concurrency.ps1 -Iterations 5`。

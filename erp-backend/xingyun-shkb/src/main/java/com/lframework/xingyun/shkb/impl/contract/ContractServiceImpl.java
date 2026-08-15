@@ -31,7 +31,6 @@ import com.lframework.xingyun.shkb.vo.contract.UpdateContractVo;
 import com.lframework.xingyun.shkb.vo.contract.UpdateContractStatusVo;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -46,13 +45,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class ContractServiceImpl extends BaseMpServiceImpl<ContractMapper, Contract>
     implements ContractService {
     
-    private final ContractRepairService contractRepairService;    
-    @Autowired
-    private ProductMapper productMapper;
+    private final ContractRepairService contractRepairService;
+    private final ProductMapper productMapper;
     
     public ContractServiceImpl(ContractRepairService contractRepairService,
         ProductMapper productMapper) {
         this.contractRepairService = contractRepairService;
+        this.productMapper = productMapper;
     }
 
     @Override
