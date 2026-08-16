@@ -84,10 +84,10 @@
     "requiresVersionTag": true,
     "requiresSingleCommitForFrontendBackendAndMigrations": true,
     "candidateEvidence": {
-      "tag": "v2026.08.16-rc.2",
-      "tagObject": "a9e0542f85f9ba3c012c616149ec7ad302b9431e",
-      "sourceCommit": "4eff706ac6afbc3680252b676183e90a71390680",
-      "manifestSha256": "5fbcf99386845dbe76e452aac333ae651afe45dd93cce37e2374c3c7959586eb",
+      "tag": "v2026.08.16-rc.3",
+      "tagObject": "8bff932f07cac65458140000ec06871e0faa7e60",
+      "sourceCommit": "9f9fbd68ccb528975741a90a9a2e8b99a6744789",
+      "manifestSha256": "e1d2e2b7af4764eee82a92b14fa284acd89c0c471a21f6daab9e0576414fd20a",
       "scope": "local-isolated-only",
       "productionAllowed": false
     },
@@ -109,10 +109,10 @@
     "productionBackupApiEvidence": {
       "checkedAt": "2026-08-16",
       "scope": "authorized-production-backup-copy-local-core-read-only-api-acceptance",
-      "candidateImage": "shkb-erp-api:v2026.08.16-rc.2",
-      "candidateImageId": "sha256:f12a483fb2f694805ddc4e4947dd4198145a2d311a25ad9f462de7ad3b207860",
-      "evidenceSha256": "f87889428e6a225c76a9b7590a64193002edf7fe881fb9e69ba151feda393b71",
-      "migrationCatalogSha256": "5c9ad8f3bf0e3105fa5bcee1ee0b0be4e7d950a62746202395c97ccb34428bd3",
+      "candidateImage": "shkb-erp-api:v2026.08.16-rc.3",
+      "candidateImageId": "sha256:36d288a914d751bbcb9d2acc581176ede5b1fc8b022f965420192c755f3a82b0",
+      "evidenceSha256": "222656d6d1ea445eefd378f7c53e9c50e58d1eafe8f8f15c7fcc712ec3a3cb3a",
+      "migrationCatalogSha256": "f3ad110ac862225f75f49d214b4432c263d0f4d74680e8e6e5000ca86b4dff25",
       "technicalPreflightChecks": 16,
       "migrationRuns": 24,
       "postMigrationChecks": 9,
@@ -152,9 +152,9 @@
         "secretOrFingerprintRetained": false
       },
       "approvedLocalAcceptance": {
-        "candidateImage": "shkb-erp-api:v2026.08.16-rc.2",
-        "candidateImageId": "sha256:f12a483fb2f694805ddc4e4947dd4198145a2d311a25ad9f462de7ad3b207860",
-        "evidenceSha256": "f87889428e6a225c76a9b7590a64193002edf7fe881fb9e69ba151feda393b71",
+        "candidateImage": "shkb-erp-api:v2026.08.16-rc.3",
+        "candidateImageId": "sha256:36d288a914d751bbcb9d2acc581176ede5b1fc8b022f965420192c755f3a82b0",
+        "evidenceSha256": "222656d6d1ea445eefd378f7c53e9c50e58d1eafe8f8f15c7fcc712ec3a3cb3a",
         "startupValidated": true,
         "historicalCiphertextsValidatedInMemory": true,
         "tenantPasswordReencryptedOnlyInGeneratedCopy": true,

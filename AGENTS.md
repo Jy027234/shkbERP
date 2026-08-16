@@ -11,6 +11,7 @@
 ## 业务源码与发布治理
 
 - 本仓库 `git@github.com:Jy027234/shkbERP.git` 是唯一发布入口。工作区旁的旧 `erp-backend`、`erp-frontend` 独立仓库只作为待对账输入，不得直接构建或部署。
+- 新 Codex 会话接手时，先阅读 `docs/governance/CODEX_HANDOFF.md`；它记录当前候选、验证边界和建议的下一业务专题，状态变化后应随实现一并更新。
 - 当前治理状态见 `docs/governance/source-baseline.json`。只要 `release.deploymentAllowed` 不是 `true`，就禁止向生产环境发布。
 - 云端现网是冻结的业务参照，不是可写的同步目标。除非用户明确批准一次具体发布，不得上传 jar、替换静态文件、执行迁移、重启服务或修改云端数据库。
 - 发布必须来自本仓库的干净工作树和明确 Git 标签；前端、后端、数据库迁移必须属于同一提交。禁止把其他目录启动的 Vite、jar 或 Docker 镜像拼成发布版本。
