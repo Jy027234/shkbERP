@@ -1,0 +1,228 @@
+﻿{
+    "passed":  true,
+    "checkedAt":  "2026-08-18T08:19:38.6171244Z",
+    "scope":  "local-isolated-only",
+    "sourceDatabase":  "shkb_platform",
+    "cloneDatabase":  "shkb_release_verify_20260818161832813_b9ea49",
+    "sourceDumpSha256":  "5d47db310141eb1883771013c53997b191232c610188e912a5969ed44c2586a1",
+    "restoredDumpSha256":  "5d47db310141eb1883771013c53997b191232c610188e912a5969ed44c2586a1",
+    "migrationCatalogSha256":  "82a23fc7a9b367d1d0db097387256bf558c2748a98be10883c1780bdb495e0a2",
+    "migrationRuns":  [
+                          {
+                              "round":  1,
+                              "path":  "platform/V1.7__jugg5_tenant_compatibility.sql",
+                              "sha256":  "3dca8df1cd33600b2c3c3f288143e7ea9612dd7a3995c39ee397a6f360972854"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.13__shkb_dashboard_core.sql",
+                              "sha256":  "d11eae968a84790eca0a14454324adfeb9bb729d5c1e4d9210e6d9e4e694dff1"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.14__shkb_contract_core.sql",
+                              "sha256":  "429d8d9ffcb26ce875ca8a2cf76c6b03081fe1dd79d2bf28014c01523305cfe0"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.15__shkb_equipment_records.sql",
+                              "sha256":  "d9e1612be391e0905926d94d2f28811217f92e0d3dfcd9427eed021cd5ff6ef1"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.16__shkb_work_card_core.sql",
+                              "sha256":  "3ccf65aed17ea3da70a0bcb5343a964121635375e10ad3c48ddbb50b3c26332c"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.17__shkb_material_flow.sql",
+                              "sha256":  "2c318b4dfcb8a7a48a7ff6a2c5c5267ad0ecdbff629a28f6c89da25db84c1a76"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.18__mq_outbox.sql",
+                              "sha256":  "9bff5540f8f65fcec5c20fd3f7c1282d08b30dc64de34ce7c4411f4baed72341"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.21__shkb_menu_permission_baseline.sql",
+                              "sha256":  "c82c79ce2b187641a2651eceb7dabacfe3563d1c200e4fca01bcc5fd8fdf3bfb"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.22__shkb_machine_task_core.sql",
+                              "sha256":  "3480a9c67594a048f520a261d2689dd1cb67897dc9a2d7527483030bc83e659f"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.23__shkb_contract_task_flow.sql",
+                              "sha256":  "cd32f9f1a91c4a58fa3570fc0ef75a75a72b0049de563adffe2fa045435c76a6"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.24__purchase_receive_traceability.sql",
+                              "sha256":  "def3e14d94213ca20c8437e0dd3312092d29f2ee12636753ca2907beb6689920"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.25__purchase_return_serial_traceability.sql",
+                              "sha256":  "d1f4fa51f5fa2f2d52a46e69f7e9b49439a1502ad4c174848f522da710f21b76"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.26__shkb_hr_core.sql",
+                              "sha256":  "887d8b5d39a5f13f891504e3aed49865167f9e07774f0b18475fbac3c9b13d80"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.27__shkb_hr_menu_permission_fix.sql",
+                              "sha256":  "540ff14e30d4aec4a5171628ee8f93981be81b3943b87c1ed5384bb9c52be74b"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.28__shkb_take_stock_batch_serial.sql",
+                              "sha256":  "ebbf68874433585d9cc4d8e93c7beb362b3fbc019f9eca3fc28465811a5e3908"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.29__shkb_stock_adjust_batch_serial.sql",
+                              "sha256":  "c7a885e260f1bdda7e765d930d9d87973e35c825ec58104945c9b3daa873e9b7"
+                          },
+                          {
+                              "round":  1,
+                              "path":  "tenant/V1.30__shkb_stock_transfer_batch_serial.sql",
+                              "sha256":  "a329a09f73ca99d084dcc5bc3825910c3393ceeef366d280f7051d15f2f55c86"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "platform/V1.7__jugg5_tenant_compatibility.sql",
+                              "sha256":  "3dca8df1cd33600b2c3c3f288143e7ea9612dd7a3995c39ee397a6f360972854"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.13__shkb_dashboard_core.sql",
+                              "sha256":  "d11eae968a84790eca0a14454324adfeb9bb729d5c1e4d9210e6d9e4e694dff1"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.14__shkb_contract_core.sql",
+                              "sha256":  "429d8d9ffcb26ce875ca8a2cf76c6b03081fe1dd79d2bf28014c01523305cfe0"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.15__shkb_equipment_records.sql",
+                              "sha256":  "d9e1612be391e0905926d94d2f28811217f92e0d3dfcd9427eed021cd5ff6ef1"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.16__shkb_work_card_core.sql",
+                              "sha256":  "3ccf65aed17ea3da70a0bcb5343a964121635375e10ad3c48ddbb50b3c26332c"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.17__shkb_material_flow.sql",
+                              "sha256":  "2c318b4dfcb8a7a48a7ff6a2c5c5267ad0ecdbff629a28f6c89da25db84c1a76"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.18__mq_outbox.sql",
+                              "sha256":  "9bff5540f8f65fcec5c20fd3f7c1282d08b30dc64de34ce7c4411f4baed72341"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.21__shkb_menu_permission_baseline.sql",
+                              "sha256":  "c82c79ce2b187641a2651eceb7dabacfe3563d1c200e4fca01bcc5fd8fdf3bfb"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.22__shkb_machine_task_core.sql",
+                              "sha256":  "3480a9c67594a048f520a261d2689dd1cb67897dc9a2d7527483030bc83e659f"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.23__shkb_contract_task_flow.sql",
+                              "sha256":  "cd32f9f1a91c4a58fa3570fc0ef75a75a72b0049de563adffe2fa045435c76a6"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.24__purchase_receive_traceability.sql",
+                              "sha256":  "def3e14d94213ca20c8437e0dd3312092d29f2ee12636753ca2907beb6689920"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.25__purchase_return_serial_traceability.sql",
+                              "sha256":  "d1f4fa51f5fa2f2d52a46e69f7e9b49439a1502ad4c174848f522da710f21b76"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.26__shkb_hr_core.sql",
+                              "sha256":  "887d8b5d39a5f13f891504e3aed49865167f9e07774f0b18475fbac3c9b13d80"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.27__shkb_hr_menu_permission_fix.sql",
+                              "sha256":  "540ff14e30d4aec4a5171628ee8f93981be81b3943b87c1ed5384bb9c52be74b"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.28__shkb_take_stock_batch_serial.sql",
+                              "sha256":  "ebbf68874433585d9cc4d8e93c7beb362b3fbc019f9eca3fc28465811a5e3908"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.29__shkb_stock_adjust_batch_serial.sql",
+                              "sha256":  "c7a885e260f1bdda7e765d930d9d87973e35c825ec58104945c9b3daa873e9b7"
+                          },
+                          {
+                              "round":  2,
+                              "path":  "tenant/V1.30__shkb_stock_transfer_batch_serial.sql",
+                              "sha256":  "a329a09f73ca99d084dcc5bc3825910c3393ceeef366d280f7051d15f2f55c86"
+                          }
+                      ],
+    "postMigrationChecks":  [
+                                {
+                                    "name":  "tenant.server_name",
+                                    "passed":  true
+                                },
+                                {
+                                    "name":  "tenant.is_platform",
+                                    "passed":  true
+                                },
+                                {
+                                    "name":  "sys_mq_outbox",
+                                    "passed":  true
+                                },
+                                {
+                                    "name":  "sys_mq_inbox",
+                                    "passed":  true
+                                },
+                                {
+                                    "name":  "shkb_machine_info",
+                                    "passed":  true
+                                },
+                                {
+                                    "name":  "shkb_contract_task_repair_status_record",
+                                    "passed":  true
+                                },
+                                {
+                                    "name":  "tbl_receive_sheet_detail.batch_number",
+                                    "passed":  true
+                                },
+                                {
+                                    "name":  "tbl_receive_sheet_detail.serial_number_list",
+                                    "passed":  true
+                                },
+                                {
+                                    "name":  "tbl_purchase_return_detail.serial_number_list",
+                                    "passed":  true
+                                }
+                            ],
+    "preflightEvidence":  [
+                              "D:\\个人文件\\上海凯奔\\凯奔软件\\partsRS\\KBERP源码0803\\shkbERP\\docs\\governance\\evidence\\shkb_release_verify_20260818161832813_b9ea49-before.json",
+                              "D:\\个人文件\\上海凯奔\\凯奔软件\\partsRS\\KBERP源码0803\\shkbERP\\docs\\governance\\evidence\\shkb_release_verify_20260818161832813_b9ea49-after.json"
+                          ],
+    "failure":  null,
+    "cleanupFailures":  [
+
+                        ]
+}

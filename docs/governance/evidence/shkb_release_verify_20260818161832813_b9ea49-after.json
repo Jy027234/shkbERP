@@ -1,0 +1,120 @@
+﻿{
+    "passed":  true,
+    "checkedAt":  "2026-08-18T08:19:32.1640813Z",
+    "scope":  "local-isolated-only",
+    "stage":  "AfterMigration",
+    "container":  "xingyun-smoke-mysql",
+    "database":  "shkb_release_verify_20260818161832813_b9ea49",
+    "migrationPlan":  [
+                          "platform/V1.7__jugg5_tenant_compatibility.sql",
+                          "tenant/V1.13__shkb_dashboard_core.sql",
+                          "tenant/V1.14__shkb_contract_core.sql",
+                          "tenant/V1.15__shkb_equipment_records.sql",
+                          "tenant/V1.16__shkb_work_card_core.sql",
+                          "tenant/V1.17__shkb_material_flow.sql",
+                          "tenant/V1.18__mq_outbox.sql",
+                          "tenant/V1.21__shkb_menu_permission_baseline.sql",
+                          "tenant/V1.22__shkb_machine_task_core.sql",
+                          "tenant/V1.23__shkb_contract_task_flow.sql",
+                          "tenant/V1.24__purchase_receive_traceability.sql",
+                          "tenant/V1.25__purchase_return_serial_traceability.sql",
+                          "tenant/V1.26__shkb_hr_core.sql",
+                          "tenant/V1.27__shkb_hr_menu_permission_fix.sql",
+                          "tenant/V1.28__shkb_take_stock_batch_serial.sql",
+                          "tenant/V1.29__shkb_stock_adjust_batch_serial.sql",
+                          "tenant/V1.30__shkb_stock_transfer_batch_serial.sql"
+                      ],
+    "checks":  [
+                   {
+                       "name":  "database:shkb_release_verify_20260818161832813_b9ea49",
+                       "passed":  true,
+                       "detail":  "Target local database exists."
+                   },
+                   {
+                       "name":  "columns:base_data_product",
+                       "passed":  true,
+                       "detail":  "V1.13 prerequisites are present."
+                   },
+                   {
+                       "name":  "columns:tbl_product_stock_log",
+                       "passed":  true,
+                       "detail":  "V1.17 prerequisites are present."
+                   },
+                   {
+                       "name":  "columns:tbl_receive_sheet_detail",
+                       "passed":  true,
+                       "detail":  "V1.24 prerequisites are present."
+                   },
+                   {
+                       "name":  "columns:tbl_purchase_return_detail",
+                       "passed":  true,
+                       "detail":  "V1.25 prerequisites are present."
+                   },
+                   {
+                       "name":  "columns:tenant",
+                       "passed":  true,
+                       "detail":  "platform/V1.7 and V1.21 prerequisites are present."
+                   },
+                   {
+                       "name":  "columns:tenant",
+                       "passed":  true,
+                       "detail":  "platform/V1.7 prerequisites are present."
+                   },
+                   {
+                       "name":  "columns:sys_module_tenant",
+                       "passed":  true,
+                       "detail":  "V1.21 prerequisites are present."
+                   },
+                   {
+                       "name":  "columns:sys_menu",
+                       "passed":  true,
+                       "detail":  "V1.21 prerequisites are present."
+                   },
+                   {
+                       "name":  "columns:sys_role",
+                       "passed":  true,
+                       "detail":  "V1.21 prerequisites are present."
+                   },
+                   {
+                       "name":  "columns:sys_role_menu",
+                       "passed":  true,
+                       "detail":  "V1.21 prerequisites are present."
+                   },
+                   {
+                       "name":  "columns:sys_user",
+                       "passed":  true,
+                       "detail":  "local API acceptance prerequisites are present."
+                   },
+                   {
+                       "name":  "tenant:1000",
+                       "passed":  true,
+                       "detail":  "V1.21 target tenant is present."
+                   },
+                   {
+                       "name":  "tenant-name:1000",
+                       "passed":  true,
+                       "detail":  "V1.21 will change the target tenant name on this copy; business confirmation is required."
+                   },
+                   {
+                       "name":  "duplicates:shkb_machine_task_tightening.task_id",
+                       "passed":  true,
+                       "detail":  "V1.22 can add or retain the unique key."
+                   },
+                   {
+                       "name":  "duplicates:shkb_machine_task_magnetic_powder.task_id",
+                       "passed":  true,
+                       "detail":  "V1.22 can add or retain the unique key."
+                   },
+                   {
+                       "name":  "duplicates:shkb_contract_task.contract_id",
+                       "passed":  true,
+                       "detail":  "V1.23 can add or retain the unique key."
+                   }
+               ],
+    "manualConfirmations":  [
+                                "V1.21 tenant-name state will be updated and will remove 0 tenant-module relation(s) for tenant 1000 and modules 7, 12, 15; business owner confirmation is required."
+                            ],
+    "failures":  [
+
+                 ]
+}

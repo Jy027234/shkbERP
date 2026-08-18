@@ -20,12 +20,13 @@
 | `verify-auth-permission.ps1`（8088 + 5173） | ✅ 管理员/受限/403/401/锁定停用 |
 | `verify-hr-flow.ps1`（8088 + 5173） | ✅ 七项 HR 读写/事务/权限/附件 |
 | `verify-release-preflight.ps1 -Stage AfterMigration` | ✅ 通过；提示 V1.21 将更新租户名并移除 0 个（冒烟库已移除）模块关系，**需业务确认** |
+| `verify-release-restore.ps1`（本地恢复副本演练） | ✅ 通过：源库 `shkb_platform` → 随机克隆库哈希一致，候选迁移连跑两轮，迁移后 9 项表/列检查通过，克隆库已清理（evidence: `evidence/release-restore-20260818.json`） |
 | 前端 E2E（auth-menu + hr-menus + core-chains） | ✅ 5 + 1 用例（HR 七菜单导航、核心链路 12 页） |
 | `git diff --check` / 提交 `b469b67` | ✅ 干净 |
 
 ## 3. 业务决策项（请逐项明确批准/否决）
 
-- [ ] **D1 批准 V1.21 生产执行**：更新租户名称、移除租户 1000 的模块关系（7,12,15）、写入菜单/角色/角色菜单基线。注意：执行前必须在生产恢复副本上先验证（`verify-release-restore.ps1` 流程），生产库须先备份。
+- [ ] **D1 批准 V1.21 生产执行**：更新租户名称、移除租户 1000 的模块关系（7,12,15）、写入菜单/角色/角色菜单基线。说明：本地恢复副本演练（`verify-release-restore.ps1`）已通过（哈希一致、迁移两轮、9 项后置检查）；生产执行仍须先备份生产库并按部署流程单独应用增量 SQL。
 - [ ] **D2 批准 V1.27 生产执行**：HR 权限码三处修正（幂等 UPDATE，仅 `sys_menu.permission`）。
 - [ ] **D3 HR 正式启用配置复核**：`/hr` 与七个子菜单全部启用；可访问角色 010（人事质量，含员工档案）与 011（质量管理，不含员工档案）；管理员 001 依赖 `admin` 权限豁免、不显式绑定菜单；正式权限码采用 `hr:employee`/`hr:certificate`/`hr:training`/`hr:authorization` 前缀。**（该项已于 2026-08-18 确认，作为 D1/D2 的依据）**
 - [ ] **D4 执行窗口与回滚责任人**：指定变更窗口与责任人；回滚步骤见 `docs/governance/ROLLBACK_RECOVERY_PLAN.md`。
