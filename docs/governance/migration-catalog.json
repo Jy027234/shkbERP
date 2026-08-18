@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "checksumAlgorithm": "sha256-lf-bytes-v1",
-  "updatedAt": "2026-08-16",
+  "updatedAt": "2026-08-18",
   "migrationRoot": "erp-backend/xingyun-api/src/main/resources/db/migration",
   "policy": {
     "newInstallOnly": "只能用于空库初始化；绝不能对已有业务数据的库执行。",
@@ -22,7 +22,12 @@
     "tenant/V1.22__shkb_machine_task_core.sql",
     "tenant/V1.23__shkb_contract_task_flow.sql",
     "tenant/V1.24__purchase_receive_traceability.sql",
-    "tenant/V1.25__purchase_return_serial_traceability.sql"
+    "tenant/V1.25__purchase_return_serial_traceability.sql",
+    "tenant/V1.26__shkb_hr_core.sql",
+    "tenant/V1.27__shkb_hr_menu_permission_fix.sql",
+    "tenant/V1.28__shkb_take_stock_batch_serial.sql",
+    "tenant/V1.29__shkb_stock_adjust_batch_serial.sql",
+    "tenant/V1.30__shkb_stock_transfer_batch_serial.sql"
   ],
   "entries": [
     {
@@ -344,6 +349,56 @@
       "riskTokens": [],
       "controlledDataMutation": false,
       "note": "采购退货序列号追溯字段。"
+    },
+    {
+      "path": "tenant/V1.26__shkb_hr_core.sql",
+      "scope": "tenant",
+      "version": "1.26",
+      "classification": "existing-database-delta",
+      "sha256": "887d8b5d39a5f13f891504e3aed49865167f9e07774f0b18475fbac3c9b13d80",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "SHKB 人事、培训与人员授权核心结构；仅 CREATE TABLE IF NOT EXISTS，补齐部署代码已引用的人员授权附件表。"
+    },
+    {
+      "path": "tenant/V1.27__shkb_hr_menu_permission_fix.sql",
+      "scope": "tenant",
+      "version": "1.27",
+      "classification": "existing-database-delta",
+      "sha256": "540ff14e30d4aec4a5171628ee8f93981be81b3943b87c1ed5384bb9c52be74b",
+      "riskTokens": ["update-data"],
+      "controlledDataMutation": true,
+      "note": "HR 菜单权限码与前后端代码对齐（业务确认后）：授权项目遗留码 AuthorizationProject→hr:authorization:query、员工修改按钮去掉多余空格、培训记录整套 hr:employee:*→hr:training:*；仅 UPDATE sys_menu.permission，带当前值守卫可重复执行。"
+    },
+    {
+      "path": "tenant/V1.28__shkb_take_stock_batch_serial.sql",
+      "scope": "tenant",
+      "version": "1.28",
+      "classification": "existing-database-delta",
+      "sha256": "ebbf68874433585d9cc4d8e93c7beb362b3fbc019f9eca3fc28465811a5e3908",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "盘点批次/序列号明细契约（业务确认后）：盘点单批次明细（逐批次录入、实盘数量允许调整）与序列号明细（一条序列号一条明细、实盘状态）；仅 CREATE TABLE IF NOT EXISTS，无数据变更。"
+    },
+    {
+      "path": "tenant/V1.29__shkb_stock_adjust_batch_serial.sql",
+      "scope": "tenant",
+      "version": "1.29",
+      "classification": "existing-database-delta",
+      "sha256": "c7a885e260f1bdda7e765d930d9d87973e35c825ec58104945c9b3daa873e9b7",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "库存调整批次/序列号明细契约（业务确认后）：入库、出库均允许批次/序列号明细，明细合计等于调整数量，序列号不允许状态直跳；仅 CREATE TABLE IF NOT EXISTS，无数据变更。"
+    },
+    {
+      "path": "tenant/V1.30__shkb_stock_transfer_batch_serial.sql",
+      "scope": "tenant",
+      "version": "1.30",
+      "classification": "existing-database-delta",
+      "sha256": "a329a09f73ca99d084dcc5bc3825910c3393ceeef366d280f7051d15f2f55c86",
+      "riskTokens": [],
+      "controlledDataMutation": false,
+      "note": "仓库调拨批次/序列号明细契约（业务确认后）：逐批次/逐序列号指定库存，审核扣转出仓、收货加转入仓，在途库存按未收数量与在途序列号单独记录，收货与调拨明细不一致时退回；仅 CREATE TABLE IF NOT EXISTS，无数据变更。"
     }
   ]
 }

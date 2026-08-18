@@ -45,6 +45,16 @@ export interface ScTransferProductBo {
   unit: string;
 
   /**
+   * 是否批次管理
+   */
+  isBatch?: boolean;
+
+  /**
+   * 是否序列号管理
+   */
+  isSerial?: boolean;
+
+  /**
    * 当前库存数量
    */
   curStockNum: number;

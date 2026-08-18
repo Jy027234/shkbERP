@@ -136,6 +136,16 @@
         <template #description_default="{ row }">
           <a-input v-model:value="row.description" />
         </template>
+
+        <!-- 追溯明细 列自定义内容 -->
+        <template #trace_default="{ row, rowIndex }">
+          <a-button
+            v-if="row.isBatch || row.isSerial"
+            type="link"
+            @click="openTraceDialog(row, rowIndex)"
+            >{{ row.isBatch ? '批次明细' : '序列号明细' }}</a-button
+          >
+        </template>
       </vxe-grid>
 
       <order-time-line :id="id" />
@@ -145,6 +155,86 @@
         :plan-id="formData.planId"
         @confirm="batchAddProduct"
       />
+
+      <!-- 批次/序列号追溯明细录入 -->
+      <a-modal
+        v-model:open="traceDialog.visible"
+        :title="traceDialog.mode === 'batch' ? '批次盘点明细（逐批次录入）' : '序列号盘点明细（一条序列号一条明细）'"
+        width="860px"
+        :footer="null"
+        :mask-closable="false"
+      >
+        <div v-if="traceDialog.mode === 'batch'">
+          <a-table
+            :data-source="traceDialog.batchRows"
+            :columns="batchColumns"
+            row-key="key"
+            size="small"
+            :pagination="false"
+          >
+            <template #bodyCell="{ column, record, index }">
+              <template v-if="column.key === 'batchNumber'">
+                <a-input v-model:value="record.batchNumber" placeholder="批次号" />
+              </template>
+              <template v-else-if="column.key === 'takeNum'">
+                <a-input v-model:value="record.takeNum" class="number-input" placeholder="实盘数量" />
+              </template>
+              <template v-else-if="column.key === 'description'">
+                <a-input v-model:value="record.description" placeholder="备注" />
+              </template>
+              <template v-else-if="column.key === 'action'">
+                <a-button type="link" danger @click="traceDialog.batchRows.splice(index, 1)"
+                  >删除</a-button
+                >
+              </template>
+            </template>
+          </a-table>
+        </div>
+        <div v-else>
+          <a-table
+            :data-source="traceDialog.serialRows"
+            :columns="serialColumns"
+            row-key="key"
+            size="small"
+            :pagination="false"
+          >
+            <template #bodyCell="{ column, record, index }">
+              <template v-if="column.key === 'serialNumber'">
+                <a-input v-model:value="record.serialNumber" placeholder="序列号" />
+              </template>
+              <template v-else-if="column.key === 'batchNumber'">
+                <a-input v-model:value="record.batchNumber" placeholder="批次号" />
+              </template>
+              <template v-else-if="column.key === 'takeStatus'">
+                <a-select v-model:value="record.takeStatus" style="width: 100%">
+                  <a-select-option :value="1">实盘在库</a-select-option>
+                  <a-select-option :value="0">实盘缺失</a-select-option>
+                </a-select>
+              </template>
+              <template v-else-if="column.key === 'description'">
+                <a-input v-model:value="record.description" placeholder="备注" />
+              </template>
+              <template v-else-if="column.key === 'action'">
+                <a-button type="link" danger @click="traceDialog.serialRows.splice(index, 1)"
+                  >删除</a-button
+                >
+              </template>
+            </template>
+          </a-table>
+        </div>
+        <div style="text-align: center; margin-top: 12px">
+          <a-space>
+            <a-button
+              type="primary"
+              ghost
+              :icon="h(PlusOutlined)"
+              @click="addTraceRow"
+              >新增一行</a-button
+            >
+            <a-button type="primary" @click="saveTraceDialog">确定</a-button>
+          </a-space>
+        </div>
+      </a-modal>
 
       <div style="text-align: center; background-color: #ffffff; padding: 8px 0">
         <a-space>
@@ -237,8 +327,35 @@
             slots: { default: 'description_default' },
             width: 200,
           },
+          {
+            title: '追溯明细',
+            slots: { default: 'trace_default' },
+            width: 110,
+            fixed: 'right',
+          },
         ],
         tableData: [],
+        // 批次明细弹窗
+        traceDialog: {
+          visible: false,
+          mode: 'batch',
+          rowIndex: -1,
+          batchRows: [],
+          serialRows: [],
+        },
+        batchColumns: [
+          { title: '批次号', key: 'batchNumber' },
+          { title: '实盘数量', key: 'takeNum', width: 120 },
+          { title: '备注', key: 'description', width: 220 },
+          { title: '操作', key: 'action', width: 70 },
+        ],
+        serialColumns: [
+          { title: '序列号', key: 'serialNumber' },
+          { title: '批次号', key: 'batchNumber', width: 160 },
+          { title: '实盘状态', key: 'takeStatus', width: 120 },
+          { title: '备注', key: 'description', width: 200 },
+          { title: '操作', key: 'action', width: 70 },
+        ],
       };
     },
     computed: {},
@@ -311,6 +428,8 @@
               productId: item.productId,
               takeNum: item.takeNum,
               description: item.description,
+              batchDetails: item.batchDetails || [],
+              serialDetails: item.serialDetails || [],
             };
           }),
         };
@@ -349,7 +468,101 @@
           takeNum: '',
           description: '',
           products: [],
+          isBatch: false,
+          isSerial: false,
+          batchDetails: [],
+          serialDetails: [],
         };
+      },
+      openTraceDialog(row, rowIndex) {
+        this.traceDialog.visible = true;
+        this.traceDialog.rowIndex = rowIndex;
+        this.traceDialog.mode = row.isBatch ? 'batch' : 'serial';
+        this.traceDialog.batchRows = (row.batchDetails || []).map((item) => {
+          return Object.assign({ key: this.$utils.uuid() }, item);
+        });
+        this.traceDialog.serialRows = (row.serialDetails || []).map((item) => {
+          return Object.assign({ key: this.$utils.uuid() }, item);
+        });
+      },
+      addTraceRow() {
+        if (this.traceDialog.mode === 'batch') {
+          this.traceDialog.batchRows.push({
+            key: this.$utils.uuid(),
+            batchNumber: '',
+            takeNum: '',
+            description: '',
+          });
+        } else {
+          this.traceDialog.serialRows.push({
+            key: this.$utils.uuid(),
+            serialNumber: '',
+            batchNumber: '',
+            takeStatus: 1,
+            description: '',
+          });
+        }
+      },
+      saveTraceDialog() {
+        const row = this.tableData[this.traceDialog.rowIndex];
+        if (!row) {
+          return;
+        }
+        if (this.traceDialog.mode === 'batch') {
+          let sum = 0;
+          for (const item of this.traceDialog.batchRows) {
+            if (this.$utils.isEmpty(item.batchNumber)) {
+              this.$msg.createError('批次号不允许为空！');
+              return;
+            }
+            if (!this.$utils.isIntegerGeZero(item.takeNum)) {
+              this.$msg.createError('批次[' + item.batchNumber + ']实盘数量不允许小于0！');
+              return;
+            }
+            sum += Number(item.takeNum);
+          }
+          if (sum !== Number(row.takeNum)) {
+            this.$msg.createError('批次实盘数量合计必须等于盘点数量！');
+            return;
+          }
+          row.batchDetails = this.traceDialog.batchRows.map((item) => {
+            return {
+              batchNumber: item.batchNumber,
+              takeNum: Number(item.takeNum),
+              description: item.description || '',
+            };
+          });
+        } else {
+          let present = 0;
+          const serials = [];
+          for (const item of this.traceDialog.serialRows) {
+            if (this.$utils.isEmpty(item.serialNumber)) {
+              this.$msg.createError('序列号不允许为空！');
+              return;
+            }
+            if (serials.indexOf(item.serialNumber) >= 0) {
+              this.$msg.createError('序列号[' + item.serialNumber + ']重复提交！');
+              return;
+            }
+            serials.push(item.serialNumber);
+            if (Number(item.takeStatus) === 1) {
+              present++;
+            }
+          }
+          if (present !== Number(row.takeNum)) {
+            this.$msg.createError('实盘在库序列号数量必须等于盘点数量！');
+            return;
+          }
+          row.serialDetails = this.traceDialog.serialRows.map((item) => {
+            return {
+              serialNumber: item.serialNumber,
+              batchNumber: item.batchNumber || '',
+              takeStatus: Number(item.takeStatus),
+              description: item.description || '',
+            };
+          });
+        }
+        this.traceDialog.visible = false;
       },
       // 新增航材
       addProduct() {

@@ -21,6 +21,13 @@ public interface ProductStockBatchService extends IService<ProductStockBatch> {
     int subStock(String id, String productId, String scId, Integer stockNum);
 
     /**
+     * 仅在批次、商品、仓库匹配时原子增加（用于盘盈等批次入库）。
+     *
+     * @return 更新行数
+     */
+    int addStock(String id, String productId, String scId, Integer stockNum);
+
+    /**
      * 查询批次库存
      *
      * @param pageIndex 页码

@@ -13,6 +13,8 @@
             <result property="implementationInterval" column="implementation_interval" jdbcType="INTEGER"/>
             <result property="intervalUnit" column="interval_unit" jdbcType="VARCHAR"/>
             <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="initialTrainingTime" column="initial_training_time" jdbcType="DATE"/>
+            <result property="retrainingTime" column="retraining_time" jdbcType="DATE"/>
             <result property="status" column="status" jdbcType="TINYINT"/>
             <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
             <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
@@ -24,7 +26,7 @@
     <sql id="Base_Column_List">
         id,tenant_id,course_name,
         course_type,training_hours,implementation_interval,
-        interval_unit,description,status,
+        interval_unit,description,initial_training_time,retraining_time,status,
         create_by,create_time,update_by,
         update_time,deleted
     </sql>

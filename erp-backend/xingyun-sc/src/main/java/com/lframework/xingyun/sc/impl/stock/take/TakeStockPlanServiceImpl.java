@@ -36,21 +36,33 @@ import com.lframework.xingyun.sc.components.code.GenerateCodeTypePool;
 import com.lframework.xingyun.sc.dto.stock.take.plan.QueryTakeStockPlanProductDto;
 import com.lframework.xingyun.sc.dto.stock.take.plan.TakeStockPlanFullDto;
 import com.lframework.xingyun.sc.entity.ProductStock;
+import com.lframework.xingyun.sc.entity.ProductStockBatch;
+import com.lframework.xingyun.sc.entity.ProductStockSerial;
 import com.lframework.xingyun.sc.entity.TakeStockConfig;
 import com.lframework.xingyun.sc.entity.TakeStockPlan;
 import com.lframework.xingyun.sc.entity.TakeStockPlanDetail;
+import com.lframework.xingyun.sc.entity.TakeStockSheet;
+import com.lframework.xingyun.sc.entity.TakeStockSheetDetailBatch;
+import com.lframework.xingyun.sc.entity.TakeStockSheetDetailSerial;
 import com.lframework.xingyun.sc.enums.ProductStockBizType;
 import com.lframework.xingyun.sc.enums.ScOpLogType;
 import com.lframework.xingyun.sc.enums.TakeStockPlanStatus;
 import com.lframework.xingyun.sc.enums.TakeStockPlanType;
+import com.lframework.xingyun.sc.enums.TakeStockSheetStatus;
 import com.lframework.xingyun.sc.mappers.TakeStockPlanDetailMapper;
 import com.lframework.xingyun.sc.mappers.TakeStockPlanMapper;
+import com.lframework.xingyun.sc.service.stock.ProductStockBatchService;
+import com.lframework.xingyun.sc.service.stock.ProductStockSerialService;
 import com.lframework.xingyun.sc.service.stock.ProductStockService;
 import com.lframework.xingyun.sc.service.stock.take.TakeStockConfigService;
 import com.lframework.xingyun.sc.service.stock.take.TakeStockPlanDetailService;
 import com.lframework.xingyun.sc.service.stock.take.TakeStockPlanService;
+import com.lframework.xingyun.sc.service.stock.take.TakeStockSheetDetailBatchService;
+import com.lframework.xingyun.sc.service.stock.take.TakeStockSheetDetailSerialService;
 import com.lframework.xingyun.sc.service.stock.take.TakeStockSheetService;
+import com.lframework.xingyun.sc.vo.stock.AddProductStockBatchVo;
 import com.lframework.xingyun.sc.vo.stock.AddProductStockVo;
+import com.lframework.xingyun.sc.vo.stock.SubProductStockBatchVo;
 import com.lframework.xingyun.sc.vo.stock.SubProductStockVo;
 import com.lframework.xingyun.sc.vo.stock.take.plan.CancelTakeStockPlanVo;
 import com.lframework.xingyun.sc.vo.stock.take.plan.CreateTakeStockPlanVo;
@@ -60,6 +72,8 @@ import com.lframework.xingyun.sc.vo.stock.take.plan.QueryTakeStockPlanVo;
 import com.lframework.xingyun.sc.vo.stock.take.plan.TakeStockPlanSelectorVo;
 import com.lframework.xingyun.sc.vo.stock.take.plan.UpdateTakeStockPlanVo;
 import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -94,6 +108,18 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
 
   @Autowired
   private ProductStockService productStockService;
+
+  @Autowired
+  private ProductStockBatchService productStockBatchService;
+
+  @Autowired
+  private ProductStockSerialService productStockSerialService;
+
+  @Autowired
+  private TakeStockSheetDetailBatchService takeStockSheetDetailBatchService;
+
+  @Autowired
+  private TakeStockSheetDetailSerialService takeStockSheetDetailSerialService;
 
   @Autowired
   private TakeStockConfigService takeStockConfigService;
@@ -355,12 +381,77 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
       throw new DefaultClientException("盘点商品信息与任务明细不一致，请刷新后重试！");
     }
 
+    // 加载已审核盘点单的批次/序列号明细（差异处理按追溯明细执行）
+    Wrapper<TakeStockSheet> sheetQueryWrapper = Wrappers.lambdaQuery(TakeStockSheet.class)
+        .eq(TakeStockSheet::getPlanId, data.getId())
+        .eq(TakeStockSheet::getStatus, TakeStockSheetStatus.APPROVE_PASS);
+    List<TakeStockSheet> approvedSheets = takeStockSheetService.list(sheetQueryWrapper);
+    List<String> approvedSheetIds = approvedSheets.stream().map(TakeStockSheet::getId)
+        .collect(Collectors.toList());
+
+    Map<String, List<TakeStockSheetDetailBatch>> batchDetailMap = new HashMap<>();
+    Map<String, List<TakeStockSheetDetailSerial>> serialDetailMap = new HashMap<>();
+    if (!CollectionUtil.isEmpty(approvedSheetIds)) {
+      List<TakeStockSheetDetailBatch> batchRows = takeStockSheetDetailBatchService.list(
+          Wrappers.lambdaQuery(TakeStockSheetDetailBatch.class)
+              .in(TakeStockSheetDetailBatch::getSheetId, approvedSheetIds)
+              .orderByAsc(TakeStockSheetDetailBatch::getCreateTime));
+      for (TakeStockSheetDetailBatch row : batchRows) {
+        batchDetailMap.computeIfAbsent(row.getProductId(), k -> new ArrayList<>()).add(row);
+      }
+      List<TakeStockSheetDetailSerial> serialRows = takeStockSheetDetailSerialService.list(
+          Wrappers.lambdaQuery(TakeStockSheetDetailSerial.class)
+              .in(TakeStockSheetDetailSerial::getSheetId, approvedSheetIds)
+              .orderByAsc(TakeStockSheetDetailSerial::getCreateTime));
+      for (TakeStockSheetDetailSerial row : serialRows) {
+        serialDetailMap.computeIfAbsent(row.getProductId(), k -> new ArrayList<>()).add(row);
+      }
+    }
+
     for (TakeStockPlanDetail detail : details) {
       ProductVo productVo = submittedProducts.get(detail.getProductId());
       if (productVo == null) {
         throw new DefaultClientException("盘点商品信息与任务明细不一致，请刷新后重试！");
       }
-      if (config.getAllowChangeNum()) {
+
+      Product product = productService.findById(detail.getProductId());
+      if (product == null) {
+        throw new DefaultClientException("盘点商品不存在！");
+      }
+
+      if (Boolean.TRUE.equals(product.getIsBatch())) {
+        List<TakeStockSheetDetailBatch> batchRows = batchDetailMap.get(detail.getProductId());
+        if (CollectionUtil.isEmpty(batchRows)) {
+          throw new DefaultClientException(
+              "航材（" + product.getCode() + "）" + product.getName()
+                  + "启用了批次管理，当前盘点单缺少批次差异明细，不允许自动调整库存！");
+        }
+        int batchTakeSum = batchRows.stream()
+            .mapToInt(TakeStockSheetDetailBatch::getTakeNum).sum();
+        if (config.getAllowChangeNum() && productVo.getTakeNum() != null
+            && productVo.getTakeNum() != batchTakeSum) {
+          throw new DefaultClientException(
+              "航材（" + product.getCode() + "）" + product.getName()
+                  + "盘点数量与批次实盘数量合计不一致，请刷新后重试！");
+        }
+        detail.setTakeNum(batchTakeSum);
+      } else if (Boolean.TRUE.equals(product.getIsSerial())) {
+        List<TakeStockSheetDetailSerial> serialRows = serialDetailMap.get(detail.getProductId());
+        if (CollectionUtil.isEmpty(serialRows)) {
+          throw new DefaultClientException(
+              "航材（" + product.getCode() + "）" + product.getName()
+                  + "启用了序列号管理，当前盘点单缺少序列号差异明细，不允许自动调整库存！");
+        }
+        int presentCount = (int) serialRows.stream()
+            .filter(s -> s.getTakeStatus() != null && s.getTakeStatus() == 1).count();
+        if (config.getAllowChangeNum() && productVo.getTakeNum() != null
+            && productVo.getTakeNum() != presentCount) {
+          throw new DefaultClientException(
+              "航材（" + product.getCode() + "）" + product.getName()
+                  + "盘点数量与实盘在库序列号数量不一致，请刷新后重试！");
+        }
+        detail.setTakeNum(presentCount);
+      } else if (config.getAllowChangeNum()) {
         // 如果允许修改盘点数量
         if (productVo.getTakeNum() == null) {
           throw new DefaultClientException("盘点数量不能为空！");
@@ -374,18 +465,6 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
       }
       if (detail.getTakeNum() == null || detail.getTakeNum() < 0) {
         throw new DefaultClientException("盘点数量不能小于0！");
-      }
-
-      Product product = productService.findById(detail.getProductId());
-      if (product == null) {
-        throw new DefaultClientException("盘点商品不存在！");
-      }
-      if (!NumberUtil.equal(detail.getStockNum(), detail.getTakeNum())
-          && (Boolean.TRUE.equals(product.getIsBatch())
-          || Boolean.TRUE.equals(product.getIsSerial()))) {
-        throw new DefaultClientException(
-            "航材（" + product.getCode() + "）" + product.getName()
-                + "启用了批次或序列号管理，当前盘点单缺少批次/序列号差异明细，不允许自动调整库存！");
       }
       detail.setDescription(
           StringUtil.isBlank(productVo.getDescription()) ? StringPool.EMPTY_STR
@@ -411,47 +490,234 @@ public class TakeStockPlanServiceImpl extends BaseMpServiceImpl<TakeStockPlanMap
     }
 
     // 进行出入库操作
-    int orderNo = 0;
     for (TakeStockPlanDetail detail : details) {
-      orderNo++;
-      if (!NumberUtil.equal(detail.getStockNum(), detail.getTakeNum())) {
-        if (NumberUtil.lt(detail.getStockNum(), detail.getTakeNum())) {
-          Product product = productService.findById(detail.getProductId());
-          ProductPurchase purchase = productPurchaseService.getById(product.getId());
-          if (purchase == null || purchase.getPrice() == null) {
-            throw new DefaultClientException(
-                "航材（" + product.getCode() + "）" + product.getName() + "没有采购价格，无法执行盘盈入库！");
-          }
-          // 如果库存数量小于盘点数量，则报溢
-          AddProductStockVo addProductStockVo = new AddProductStockVo();
-          addProductStockVo.setProductId(detail.getProductId());
-          addProductStockVo.setScId(data.getScId());
-          addProductStockVo.setStockNum(detail.getTakeNum() - detail.getStockNum());
-          addProductStockVo.setDefaultTaxPrice(purchase.getPrice());
-          addProductStockVo.setBizId(data.getId());
-          addProductStockVo.setBizDetailId(detail.getId());
-          addProductStockVo.setBizCode(data.getCode());
-          addProductStockVo.setBizType(ProductStockBizType.TAKE_STOCK_IN.getCode());
-
-          productStockService.addStock(addProductStockVo);
-        } else {
-          // 如果库存数量大于盘点数量，则报损
-          SubProductStockVo subProductStockVo = new SubProductStockVo();
-          subProductStockVo.setProductId(detail.getProductId());
-          subProductStockVo.setScId(data.getScId());
-          subProductStockVo.setStockNum(detail.getStockNum() - detail.getTakeNum());
-          subProductStockVo.setBizId(data.getId());
-          subProductStockVo.setBizDetailId(detail.getId());
-          subProductStockVo.setBizCode(data.getCode());
-          subProductStockVo.setBizType(ProductStockBizType.TAKE_STOCK_OUT.getCode());
-
-          productStockService.subStock(subProductStockVo);
-        }
+      Product product = productService.findById(detail.getProductId());
+      if (Boolean.TRUE.equals(product.getIsBatch())) {
+        applyBatchStockChange(data, detail, product,
+            batchDetailMap.get(detail.getProductId()));
+      } else if (Boolean.TRUE.equals(product.getIsSerial())) {
+        applySerialStockChange(data, detail, product,
+            serialDetailMap.get(detail.getProductId()));
+      } else if (!NumberUtil.equal(detail.getStockNum(), detail.getTakeNum())) {
+        applyProductTotalChange(data, detail, product,
+            detail.getTakeNum() - detail.getStockNum());
       }
     }
 
     OpLogUtil.setVariable("id", vo.getId());
     OpLogUtil.setExtra(vo);
+  }
+
+  /**
+   * 普通航材总库存调整（盘盈入库/盘亏出库）。
+   *
+   * @param diff 净差异，正数为盘盈、负数为盘亏
+   */
+  private void applyProductTotalChange(TakeStockPlan data, TakeStockPlanDetail detail,
+      Product product, int diff) {
+
+    if (diff == 0) {
+      return;
+    }
+    if (diff > 0) {
+      ProductPurchase purchase = productPurchaseService.getById(product.getId());
+      if (purchase == null || purchase.getPrice() == null) {
+        throw new DefaultClientException(
+            "航材（" + product.getCode() + "）" + product.getName() + "没有采购价格，无法执行盘盈入库！");
+      }
+      // 如果库存数量小于盘点数量，则报溢
+      AddProductStockVo addProductStockVo = new AddProductStockVo();
+      addProductStockVo.setProductId(detail.getProductId());
+      addProductStockVo.setScId(data.getScId());
+      addProductStockVo.setStockNum(diff);
+      addProductStockVo.setDefaultTaxPrice(purchase.getPrice());
+      addProductStockVo.setBizId(data.getId());
+      addProductStockVo.setBizDetailId(detail.getId());
+      addProductStockVo.setBizCode(data.getCode());
+      addProductStockVo.setBizType(ProductStockBizType.TAKE_STOCK_IN.getCode());
+
+      productStockService.addStock(addProductStockVo);
+    } else {
+      // 如果库存数量大于盘点数量，则报损
+      SubProductStockVo subProductStockVo = new SubProductStockVo();
+      subProductStockVo.setProductId(detail.getProductId());
+      subProductStockVo.setScId(data.getScId());
+      subProductStockVo.setStockNum(-diff);
+      subProductStockVo.setBizId(data.getId());
+      subProductStockVo.setBizDetailId(detail.getId());
+      subProductStockVo.setBizCode(data.getCode());
+      subProductStockVo.setBizType(ProductStockBizType.TAKE_STOCK_OUT.getCode());
+
+      productStockService.subStock(subProductStockVo);
+    }
+  }
+
+  /**
+   * 批次管理航材差异处理：按批次明细逐批次盘盈/盘亏，总库存按净差异统一调整，
+   * 保证批次数量合计与总库存账一致。
+   */
+  private void applyBatchStockChange(TakeStockPlan data, TakeStockPlanDetail detail,
+      Product product, List<TakeStockSheetDetailBatch> batchRows) {
+
+    int totalDiff = 0;
+    for (TakeStockSheetDetailBatch batchRow : batchRows) {
+      ProductStockBatch stockBatch = productStockBatchService.getOne(
+          Wrappers.lambdaQuery(ProductStockBatch.class)
+              .eq(ProductStockBatch::getScId, data.getScId())
+              .eq(ProductStockBatch::getProductId, detail.getProductId())
+              .eq(ProductStockBatch::getBatchNumber, batchRow.getBatchNumber()));
+      int liveQty = stockBatch == null ? 0 : stockBatch.getQuantity();
+      int diff = batchRow.getTakeNum() - liveQty;
+      totalDiff += diff;
+      if (diff == 0) {
+        continue;
+      }
+      if (diff > 0) {
+        String batchId;
+        if (stockBatch == null) {
+          ProductStockBatch newBatch = new ProductStockBatch();
+          newBatch.setId(IdUtil.getId());
+          newBatch.setScId(data.getScId());
+          newBatch.setProductId(detail.getProductId());
+          newBatch.setQuantity(0);
+          newBatch.setBatchNumber(batchRow.getBatchNumber());
+          newBatch.setCreateTime(LocalDateTime.now());
+          productStockBatchService.save(newBatch);
+          batchId = newBatch.getId();
+        } else {
+          batchId = stockBatch.getId();
+        }
+        AddProductStockBatchVo addBatchVo = new AddProductStockBatchVo();
+        addBatchVo.setProductId(detail.getProductId());
+        addBatchVo.setScId(data.getScId());
+        addBatchVo.setStockBatchId(batchId);
+        addBatchVo.setStockNum(diff);
+        addBatchVo.setBizId(data.getId());
+        addBatchVo.setBizDetailId(detail.getId());
+        addBatchVo.setBizCode(data.getCode());
+        addBatchVo.setBizType(ProductStockBizType.TAKE_STOCK_IN.getCode());
+
+        productStockService.addStockBatch(addBatchVo);
+      } else {
+        SubProductStockBatchVo subBatchVo = new SubProductStockBatchVo();
+        subBatchVo.setProductId(detail.getProductId());
+        subBatchVo.setScId(data.getScId());
+        subBatchVo.setStockBatchId(stockBatch.getId());
+        subBatchVo.setStockNum(-diff);
+        subBatchVo.setBizId(data.getId());
+        subBatchVo.setBizDetailId(detail.getId());
+        subBatchVo.setBizCode(data.getCode());
+        subBatchVo.setBizType(ProductStockBizType.TAKE_STOCK_OUT.getCode());
+
+        productStockService.subStockBatch(subBatchVo);
+      }
+    }
+
+    applyProductTotalChange(data, detail, product, totalDiff);
+  }
+
+  /**
+   * 序列号管理航材差异处理：一条序列号一条明细，逐条判定盘盈/盘亏，
+   * 已出库/已锁定等状态序列号也允许盘点；总库存按净差异统一调整。
+   */
+  private void applySerialStockChange(TakeStockPlan data, TakeStockPlanDetail detail,
+      Product product, List<TakeStockSheetDetailSerial> serialRows) {
+
+    int totalDiff = 0;
+    for (TakeStockSheetDetailSerial serialRow : serialRows) {
+      ProductStockSerial stockSerial = productStockSerialService.getOne(
+          Wrappers.lambdaQuery(ProductStockSerial.class)
+              .eq(ProductStockSerial::getSerialNumber, serialRow.getSerialNumber()));
+      boolean present = serialRow.getTakeStatus() != null && serialRow.getTakeStatus() == 1;
+      if (stockSerial == null) {
+        if (!present) {
+          throw new DefaultClientException(
+              "航材（" + product.getCode() + "）" + product.getName()
+                  + "序列号[" + serialRow.getSerialNumber() + "]系统不存在但实盘缺失，数据矛盾，无法处理差异！");
+        }
+        if (StringUtil.isBlank(serialRow.getBatchNumber())) {
+          throw new DefaultClientException(
+              "航材（" + product.getCode() + "）" + product.getName()
+                  + "盘盈序列号[" + serialRow.getSerialNumber() + "]必须指定所属批次号！");
+        }
+        ProductStockBatch stockBatch = productStockBatchService.getOne(
+            Wrappers.lambdaQuery(ProductStockBatch.class)
+                .eq(ProductStockBatch::getScId, data.getScId())
+                .eq(ProductStockBatch::getProductId, detail.getProductId())
+                .eq(ProductStockBatch::getBatchNumber, serialRow.getBatchNumber()));
+        String batchId;
+        if (stockBatch == null) {
+          ProductStockBatch newBatch = new ProductStockBatch();
+          newBatch.setId(IdUtil.getId());
+          newBatch.setScId(data.getScId());
+          newBatch.setProductId(detail.getProductId());
+          newBatch.setQuantity(0);
+          newBatch.setBatchNumber(serialRow.getBatchNumber());
+          newBatch.setCreateTime(LocalDateTime.now());
+          productStockBatchService.save(newBatch);
+          batchId = newBatch.getId();
+        } else {
+          batchId = stockBatch.getId();
+        }
+        ProductStockSerial newSerial = new ProductStockSerial();
+        newSerial.setId(IdUtil.getId());
+        newSerial.setProductId(detail.getProductId());
+        newSerial.setSerialNumber(serialRow.getSerialNumber());
+        newSerial.setStockStatus(1);
+        newSerial.setBatchId(batchId);
+        newSerial.setCreateTime(LocalDateTime.now());
+        productStockSerialService.save(newSerial);
+        if (productStockBatchService.addStock(batchId, detail.getProductId(), data.getScId(),
+            1) != 1) {
+          throw new DefaultClientException("批次库存已变化，盘盈序列号处理失败！");
+        }
+        totalDiff++;
+        continue;
+      }
+      if (!detail.getProductId().equals(stockSerial.getProductId())) {
+        throw new DefaultClientException(
+            "序列号[" + serialRow.getSerialNumber() + "]不属于当前盘点航材！");
+      }
+      if (present) {
+        if (stockSerial.getStockStatus() == 1) {
+          continue; // 系统在库且实盘在库，一致无变化
+        }
+        // 盘盈：系统已出库但实盘在库，恢复为在库
+        ProductStockBatch stockBatch = productStockBatchService.getById(stockSerial.getBatchId());
+        if (stockBatch == null || !data.getScId().equals(stockBatch.getScId())) {
+          throw new DefaultClientException(
+              "序列号[" + serialRow.getSerialNumber() + "]所属批次不在盘点仓库，无法盘盈！");
+        }
+        if (productStockSerialService.updateStatus(stockSerial.getId(), 0, 1) != 1) {
+          throw new DefaultClientException("序列号状态已变化，盘盈处理失败！");
+        }
+        if (productStockBatchService.addStock(stockSerial.getBatchId(), detail.getProductId(),
+            data.getScId(), 1) != 1) {
+          throw new DefaultClientException("批次库存已变化，盘盈序列号处理失败！");
+        }
+        totalDiff++;
+      } else {
+        if (stockSerial.getStockStatus() == 0) {
+          continue; // 系统已出库且实盘缺失，一致无变化
+        }
+        // 盘亏：系统在库但实盘缺失，置为出库
+        ProductStockBatch stockBatch = productStockBatchService.getById(stockSerial.getBatchId());
+        if (stockBatch == null || !data.getScId().equals(stockBatch.getScId())) {
+          throw new DefaultClientException(
+              "序列号[" + serialRow.getSerialNumber() + "]所属批次不在盘点仓库，无法盘亏！");
+        }
+        if (productStockSerialService.updateStatus(stockSerial.getId(), 1, 0) != 1) {
+          throw new DefaultClientException("序列号状态已变化，盘亏处理失败！");
+        }
+        if (productStockBatchService.subStock(stockSerial.getBatchId(), detail.getProductId(),
+            data.getScId(), 1) != 1) {
+          throw new DefaultClientException("批次库存不足或已变化，盘亏处理失败！");
+        }
+        totalDiff--;
+      }
+    }
+
+    applyProductTotalChange(data, detail, product, totalDiff);
   }
 
   @OpLog(type = ScOpLogType.TAKE_STOCK, name = "作废盘点任务，ID：{}", params = {"#id"})

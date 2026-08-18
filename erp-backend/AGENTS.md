@@ -15,6 +15,7 @@
 - 不编辑 `target/`、`logs/`、`upload/` 或升级记录中的生成日志/产物。
 - 数据库结构变更只能新增有序增量 SQL；不得改写已部署迁移。严禁在已有数据库执行 `migration/tenant/V1.0__init.sql`。
 - 产品后续按单租户部署。保留现有租户上下文与登录租户字段以兼容 jugg 和存量数据，但不主动扩展跨租户能力或测试矩阵；权限和数据范围语义仍必须保持。涉及认证、打印、导出、消息或定时任务时，编译通过不等于完成，必须补相应运行时验证。
+- 业务范围以根目录 `docs/governance/PRODUCTION_FUNCTION_BASELINE.md` 为准：人事管理是已确认的现网模块；销售相关通用代码和“成品出入库”属于冻结/非发布范围，未经用户明确启用不得补后端、schema 或测试。
 - Swagger 2 注解和 jugg inner 双栈目前是兼容层，除非任务专门治理该风险，不要顺手删除。
 
 ## 发布恢复与迁移治理
@@ -33,12 +34,13 @@
 - 修改异常处理、认证、权限或响应包装时，运行 `scripts/verify-error-contract.ps1`，并增加 `-BaseUrl http://127.0.0.1:5173/api` 验证前端代理；错误体契约为 `code`、`msg`、`traceId`。
 - 修改登录、角色、菜单权限、Token 生命周期或账号状态时，在本地隔离库运行 `scripts/verify-auth-permission.ps1`，并对 Vite `/api` 再运行一次；脚本会创建受限用户和角色并在 `finally` 中精确清理，禁止指向真实业务库。
 - 修改菜单、租户模块或业务角色基线时，运行 `scripts/verify-menu-baseline.ps1`，并对 Vite `/api` 再运行一次；默认租户为上海凯奔航空技术有限公司。
-- 修改自动化设备、拧紧机或磁粉机任务时，运行 `scripts/verify-machine-task.ps1`；涉及设备上报、重复下发或状态流转时，仅在本地隔离环境运行 `scripts/verify-machine-task-flow.ps1`。
+- 修改自动化设备、线束检测机（遗留路由名为 `tightening`）或磁粉机任务时，运行 `scripts/verify-machine-task.ps1`；涉及设备上报、重复下发或状态流转时，仅在本地隔离环境运行 `scripts/verify-machine-task-flow.ps1`。
 - 修改合同新增、修改、附件或任务生成时，运行 `scripts/verify-contract.ps1`；涉及写入和状态流转时，仅在本地隔离环境运行 `scripts/verify-contract-flow.ps1`，并对 Vite `/api` 再运行一次。
 - 修改工具、设备、计量/维保记录或其附件时，运行 `scripts/verify-equipment.ps1`；涉及写入时，仅在本地隔离环境运行 `scripts/verify-equipment-flow.ps1`，并对 Vite `/api` 再运行一次。
 - 修改盘点任务、盘点单或差异库存处理时，仅在本地隔离环境运行 `scripts/verify-stocktake-flow.ps1`，并对 Vite `/api` 再运行一次；批次/序列号盘点尚无明细级调整契约，不能移除现有安全阻断后只验证总库存。
 - 修改库存调整单、调整原因或调整审批时，仅在本地隔离环境运行 `scripts/verify-stock-adjust-flow.ps1`，并对 Vite `/api` 再运行一次；该脚本覆盖普通库存、输入/引用守卫、重复审批和追溯型航材安全阻断。
 - 修改仓库调拨单、调拨审批、收货或调拨库存动作时，仅在本地隔离环境运行 `scripts/verify-stock-transfer-flow.ps1`，并对 Vite `/api` 再运行一次；该脚本覆盖两阶段库存、负数/引用守卫、部分收货、重复并发收货和追溯型航材安全阻断。
+- 修改员工、证书、培训记录、培训课程、培训实施、授权项目或人员授权时，仅在本地隔离环境运行 `scripts/verify-hr-flow.ps1`，并对 Vite `/api` 再运行一次；该脚本覆盖七项 HR 读写、401/403/409 契约、培训完成事务、导出和附件安全边界，并精确清理夹具。
 - 涉及物料出库审批、库存、批次、序列号或单据状态流转时，在本地隔离冒烟库运行 `powershell -ExecutionPolicy Bypass -File .\scripts\verify-material-concurrency.ps1 -Iterations 5`；该脚本会直接造数，禁止指向真实业务库。
 - Windows 上重新打包 `xingyun-api` 前先停止正在运行的 JVM，否则胖 jar 可能因文件锁没有更新。
 

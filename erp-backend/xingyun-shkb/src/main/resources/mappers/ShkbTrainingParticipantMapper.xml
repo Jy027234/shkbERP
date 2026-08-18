@@ -1,28 +1,37 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.lframework.xingyun.shkb.mappers.ShkbTrainingParticipantMapper">
 
-    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.ShkbTrainingParticipant">
-            <id property="id" column="id" jdbcType="VARCHAR"/>
-            <result property="tenantId" column="tenant_id" jdbcType="VARCHAR"/>
-            <result property="implementationId" column="implementation_id" jdbcType="VARCHAR"/>
-            <result property="employeeId" column="employee_id" jdbcType="VARCHAR"/>
-            <result property="trainingResult" column="training_result" jdbcType="VARCHAR"/>
-            <result property="certificateNo" column="certificate_no" jdbcType="VARCHAR"/>
-            <result property="status" column="status" jdbcType="TINYINT"/>
-            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
-            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
-            <result property="updateBy" column="update_by" jdbcType="VARCHAR"/>
-            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
-            <result property="deleted" column="deleted" jdbcType="TINYINT"/>
-    </resultMap>
+  <select id="query" parameterType="java.lang.String" resultType="com.lframework.xingyun.shkb.bo.participant.QueryTrainingParticipantBo">
+    SELECT
+      tp.id,
+      tp.implementation_id AS implementationId,
+      tp.employee_id AS employeeId,
+      e.code AS employeeCode,
+      e.name AS employeeName,
+      d.name AS deptName,
+      tp.training_result AS trainingResult,
+      tp.certificate_no AS certificateNo,
+      tp.status
+    FROM
+      shkb_training_participant tp
+    LEFT JOIN
+      shkb_employee e ON tp.employee_id = e.id
+    LEFT JOIN
+      sys_dept d ON e.dept_id = d.id
+    WHERE
+      tp.implementation_id = #{implementationId}
+      AND tp.deleted = 0
+  </select>
 
-    <sql id="Base_Column_List">
-        id,tenant_id,implementation_id,
-        employee_id,training_result,certificate_no,
-        status,create_by,create_time,
-        update_by,update_time,deleted
-    </sql>
+  <!-- 物理删除学员 -->
+  <delete id="physicalDeleteById" parameterType="java.lang.String">
+    DELETE FROM shkb_training_participant WHERE id = #{id}
+  </delete>
+
+  <!-- 物理删除指定实施计划的所有学员 -->
+  <delete id="physicalDeleteByImplementationId" parameterType="java.lang.String">
+    DELETE FROM shkb_training_participant WHERE implementation_id = #{implementationId}
+  </delete>
+
 </mapper>

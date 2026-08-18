@@ -33,4 +33,62 @@
         create_by,create_by_id,create_time,
         update_by,update_by_id,update_time
     </sql>
+
+    <resultMap id="QueryResultMap" type="com.lframework.xingyun.shkb.bo.certificate.QueryShkbEmployeeCertificateBo">
+        <id property="id" column="id"/>
+        <result property="employeeId" column="employee_id"/>
+        <result property="employeeName" column="employee_name"/>
+        <result property="certificateType" column="certificate_type"/>
+        <result property="certificateName" column="certificate_name"/>
+        <result property="certificateNo" column="certificate_no"/>
+        <result property="issueOrg" column="issue_org"/>
+        <result property="issueDate" column="issueDate"/>
+        <result property="validStartDate" column="validStartDate"/>
+        <result property="validEndDate" column="validEndDate"/>
+        <result property="status" column="status"/>
+        <result property="statusText" column="statusText"/>
+        <result property="fileUrl" column="file_url"/>
+        <result property="description" column="description"/>
+    </resultMap>
+
+    <select id="query" resultMap="QueryResultMap">
+        SELECT
+            t.id,
+            t.employee_id,
+            e.name AS employee_name,
+            t.certificate_type,
+            t.certificate_name,
+            t.certificate_no,
+            t.issue_org,
+            DATE_FORMAT(t.issue_date, '%Y-%m-%d') AS issueDate,
+            DATE_FORMAT(t.valid_start_date, '%Y-%m-%d') AS validStartDate,
+            DATE_FORMAT(t.valid_end_date, '%Y-%m-%d') AS validEndDate,
+            t.status,
+            CASE
+                WHEN t.status = 0 THEN '过期'
+                WHEN t.status = 1 THEN '有效'
+                ELSE ''
+            END AS statusText,
+            t.file_url,
+            t.description
+        FROM shkb_employee_certificate t
+        LEFT JOIN shkb_employee e ON t.employee_id = e.id
+        <where>
+            <if test="vo.keyword != null and vo.keyword != ''">
+                AND (t.certificate_name LIKE CONCAT('%', #{vo.keyword}, '%')
+                    OR t.certificate_no LIKE CONCAT('%', #{vo.keyword}, '%')
+                    OR e.name LIKE CONCAT('%', #{vo.keyword}, '%'))
+            </if>
+            <if test="vo.certificateType != null and vo.certificateType != ''">
+                AND t.certificate_type = #{vo.certificateType}
+            </if>
+            <if test="vo.certificateName != null and vo.certificateName != ''">
+                AND t.certificate_name LIKE CONCAT('%', #{vo.certificateName}, '%')
+            </if>
+            <if test="vo.status != null">
+                AND t.status = #{vo.status}
+            </if>
+        </where>
+        ORDER BY t.create_time DESC
+    </select>
 </mapper>

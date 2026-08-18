@@ -19,9 +19,13 @@ import com.lframework.xingyun.basedata.service.storecenter.StoreCenterService;
 import com.lframework.xingyun.sc.dto.stock.adjust.stock.StockAdjustSheetFullDto;
 import com.lframework.xingyun.sc.entity.ProductStock;
 import com.lframework.xingyun.sc.entity.StockAdjustReason;
+import com.lframework.xingyun.sc.entity.StockAdjustSheetDetailBatch;
+import com.lframework.xingyun.sc.entity.StockAdjustSheetDetailSerial;
 import com.lframework.xingyun.sc.enums.StockAdjustSheetStatus;
 import com.lframework.xingyun.sc.service.stock.ProductStockService;
 import com.lframework.xingyun.sc.service.stock.adjust.StockAdjustReasonService;
+import com.lframework.xingyun.sc.service.stock.adjust.StockAdjustSheetDetailBatchService;
+import com.lframework.xingyun.sc.service.stock.adjust.StockAdjustSheetDetailSerialService;
 import com.lframework.xingyun.template.inner.service.system.SysUserService;
 import io.swagger.annotations.ApiModelProperty;
 import java.time.LocalDateTime;
@@ -229,6 +233,30 @@ public class StockAdjustSheetFullBo extends BaseBo<StockAdjustSheetFullDto> {
     private String unit;
 
     /**
+     * 是否批次管理
+     */
+    @ApiModelProperty("是否批次管理")
+    private Boolean isBatch;
+
+    /**
+     * 是否序列号管理
+     */
+    @ApiModelProperty("是否序列号管理")
+    private Boolean isSerial;
+
+    /**
+     * 批次明细
+     */
+    @ApiModelProperty("批次明细")
+    private List<StockAdjustSheetDetailBatch> batchDetails;
+
+    /**
+     * 序列号明细
+     */
+    @ApiModelProperty("序列号明细")
+    private List<StockAdjustSheetDetailSerial> serialDetails;
+
+    /**
      * 调整库存数量
      */
     @ApiModelProperty("调整库存数量")
@@ -299,6 +327,24 @@ public class StockAdjustSheetFullBo extends BaseBo<StockAdjustSheetFullDto> {
       this.externalCode = product.getExternalCode();
       this.spec = product.getSpec();
       this.unit = product.getUnit();
+      this.isBatch = product.getIsBatch();
+      this.isSerial = product.getIsSerial();
+
+      StockAdjustSheetDetailBatchService batchService = ApplicationUtil.getBean(
+          StockAdjustSheetDetailBatchService.class);
+      this.batchDetails = batchService.list(
+          com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery(
+                  StockAdjustSheetDetailBatch.class)
+              .eq(StockAdjustSheetDetailBatch::getSheetDetailId, dto.getId())
+              .orderByAsc(StockAdjustSheetDetailBatch::getCreateTime));
+
+      StockAdjustSheetDetailSerialService serialService = ApplicationUtil.getBean(
+          StockAdjustSheetDetailSerialService.class);
+      this.serialDetails = serialService.list(
+          com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery(
+                  StockAdjustSheetDetailSerial.class)
+              .eq(StockAdjustSheetDetailSerial::getSheetDetailId, dto.getId())
+              .orderByAsc(StockAdjustSheetDetailSerial::getCreateTime));
 
       if (EnumUtil.getByCode(StockAdjustSheetStatus.class, this.status)
           != StockAdjustSheetStatus.APPROVE_PASS) {

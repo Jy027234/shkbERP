@@ -1,7 +1,7 @@
 import { env } from 'node:process';
 import { expect, test } from '@playwright/test';
 
-const tenantName = env.E2E_TENANT || '测试租户';
+const tenantName = env.E2E_TENANT || '上海凯奔航空技术有限公司';
 const username = env.E2E_USERNAME || 'admin';
 const password = env.E2E_PASSWORD || 'admin';
 

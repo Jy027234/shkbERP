@@ -38,6 +38,11 @@ public class ProductStockBatchServiceImpl extends BaseMpServiceImpl<ProductStock
     }
 
     @Override
+    public int addStock(String id, String productId, String scId, Integer stockNum) {
+        return getBaseMapper().addStock(id, productId, scId, stockNum);
+    }
+
+    @Override
     public PageResult<ProductStockBatch> query(Integer pageIndex, Integer pageSize, QueryProductStockBatchVo vo) {
         Assert.greaterThanZero(pageIndex);
         Assert.greaterThanZero(pageSize);

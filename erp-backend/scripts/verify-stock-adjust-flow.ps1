@@ -154,6 +154,7 @@ $prefix = "v134sa$runKey"
 $scId = "$prefix-sc"
 $productId = "$prefix-p1"
 $batchProductId = "$prefix-p2"
+$serialProductId = "$prefix-p3"
 $descriptionPrefix = "V1.34 stock adjust $runKey"
 $cleanupSql = @"
 DELETE FROM sys_mq_inbox WHERE event_id IN (
@@ -164,14 +165,18 @@ DELETE FROM tbl_order_time_line WHERE order_id IN (
   SELECT id FROM tbl_stock_adjust_sheet WHERE description LIKE '$descriptionPrefix%');
 DELETE FROM tbl_product_stock_log WHERE biz_id IN (
   SELECT id FROM tbl_stock_adjust_sheet WHERE description LIKE '$descriptionPrefix%');
+DELETE FROM tbl_stock_adjust_sheet_detail_batch WHERE sheet_id IN (
+  SELECT id FROM tbl_stock_adjust_sheet WHERE description LIKE '$descriptionPrefix%');
+DELETE FROM tbl_stock_adjust_sheet_detail_serial WHERE sheet_id IN (
+  SELECT id FROM tbl_stock_adjust_sheet WHERE description LIKE '$descriptionPrefix%');
 DELETE FROM tbl_stock_adjust_sheet_detail WHERE sheet_id IN (
   SELECT id FROM tbl_stock_adjust_sheet WHERE description LIKE '$descriptionPrefix%');
 DELETE FROM tbl_stock_adjust_sheet WHERE description LIKE '$descriptionPrefix%';
-DELETE FROM tbl_product_stock_serial WHERE product_id IN ('$productId','$batchProductId');
-DELETE FROM tbl_product_stock_batch WHERE product_id IN ('$productId','$batchProductId') AND sc_id='$scId';
-DELETE FROM tbl_product_stock WHERE product_id IN ('$productId','$batchProductId') AND sc_id='$scId';
-DELETE FROM base_data_product_purchase WHERE id IN ('$productId','$batchProductId');
-DELETE FROM base_data_product WHERE id IN ('$productId','$batchProductId');
+DELETE FROM tbl_product_stock_serial WHERE product_id IN ('$productId','$batchProductId','$serialProductId');
+DELETE FROM tbl_product_stock_batch WHERE product_id IN ('$productId','$batchProductId','$serialProductId') AND sc_id='$scId';
+DELETE FROM tbl_product_stock WHERE product_id IN ('$productId','$batchProductId','$serialProductId') AND sc_id='$scId';
+DELETE FROM base_data_product_purchase WHERE id IN ('$productId','$batchProductId','$serialProductId');
+DELETE FROM base_data_product WHERE id IN ('$productId','$batchProductId','$serialProductId');
 DELETE FROM base_data_store_center WHERE id='$scId';
 "@
 
@@ -185,14 +190,22 @@ INSERT INTO base_data_store_center
 INSERT INTO base_data_product
 (id,code,name,sku_code,category_id,brand_id,product_type,tax_rate,sale_tax_rate,spec,unit,available,is_batch,is_serial,create_by,create_by_id,create_time,update_by,update_by_id,update_time) VALUES
 ('$productId','V134-$runKey-P1','V1.34 product 1','V134-$runKey-SKU1','1','1',1,13,13,'FLOW','EA',1,0,0,'smoke','smoke',NOW(),'smoke','smoke',NOW()),
-('$batchProductId','V134-$runKey-P2','V1.34 batch product','V134-$runKey-SKU2','1','1',1,13,13,'FLOW','EA',1,1,0,'smoke','smoke',NOW(),'smoke','smoke',NOW());
-INSERT INTO base_data_product_purchase (id,price) VALUES ('$productId',10),('$batchProductId',10);
+('$batchProductId','V134-$runKey-P2','V1.34 batch product','V134-$runKey-SKU2','1','1',1,13,13,'FLOW','EA',1,1,0,'smoke','smoke',NOW(),'smoke','smoke',NOW()),
+('$serialProductId','V134-$runKey-P3','V1.34 serial product','V134-$runKey-SKU3','1','1',1,13,13,'FLOW','EA',1,0,1,'smoke','smoke',NOW(),'smoke','smoke',NOW());
+INSERT INTO base_data_product_purchase (id,price) VALUES ('$productId',10),('$batchProductId',10),('$serialProductId',10);
 INSERT INTO tbl_product_stock (id,sc_id,product_id,stock_num,tax_price,tax_amount) VALUES
 ('$prefix-stock1','$scId','$productId',5,10,50),
-('$prefix-stock2','$scId','$batchProductId',4,10,40);
+('$prefix-stock2','$scId','$batchProductId',4,10,40),
+('$prefix-stock3','$scId','$serialProductId',3,10,30);
 INSERT INTO tbl_product_stock_batch
 (id,sc_id,product_id,quantity,batch_number,shelf_location,production_date,expiry_date,supplier_id,create_time) VALUES
-('$prefix-batch','$scId','$batchProductId',4,'V134-BATCH','A-01','2026-08-01','2027-08-01',NULL,NOW());
+('$prefix-batch','$scId','$batchProductId',4,'V134-BATCH','A-01','2026-08-01','2027-08-01',NULL,NOW()),
+('$prefix-sbatch','$scId','$serialProductId',3,'V134-SBATCH','S-01','2026-08-01','2027-08-01',NULL,NOW());
+INSERT INTO tbl_product_stock_serial
+(id,product_id,serial_number,stock_status,batch_id,production_date,expiry_date,shelf_location,supplier_id,create_time) VALUES
+('$prefix-ser1','$serialProductId','V134-S1',1,'$prefix-sbatch','2026-08-01','2027-08-01','S-01',NULL,NOW()),
+('$prefix-ser2','$serialProductId','V134-S2',1,'$prefix-sbatch','2026-08-01','2027-08-01','S-01',NULL,NOW()),
+('$prefix-ser3','$serialProductId','V134-S3',1,'$prefix-sbatch','2026-08-01','2027-08-01','S-01',NULL,NOW());
 "@
 
     $login = Invoke-ErpJson -Uri "$baseUri/auth/login" -Method Post -FormBody @{
@@ -319,7 +332,230 @@ SELECT COUNT(*) FROM tbl_product_stock_log WHERE biz_id='$outSheetId';
         throw "Concurrent stock-adjust approval was not idempotent: $($outResult -join ',')"
     }
 
-    Write-Host "Stock-adjust verification passed: input/reference guards, traceability block, normal stock 5->7->4 and concurrent duplicate approval verified."
+    # ---- 批次管理航材调整：入库/出库都允许批次明细；缺明细/重复/合计不符拒绝 ----
+    $batchNoDetails = @{
+        scId = $scId; bizType = 0; reasonId = '1'
+        description = "$descriptionPrefix batch in no details"
+        products = @(@{ productId = $batchProductId; stockNum = 2 })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/adjust" -Headers $headers `
+        -JsonBody ($batchNoDetails | ConvertTo-Json -Depth 6)
+
+    $batchDup = @{
+        scId = $scId; bizType = 0; reasonId = '1'
+        description = "$descriptionPrefix batch dup"
+        products = @(@{
+            productId = $batchProductId; stockNum = 2
+            batchDetails = @(
+                @{ batchNumber = 'V134-BATCH'; stockNum = 1 },
+                @{ batchNumber = 'V134-BATCH'; stockNum = 1 }
+            )
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/adjust" -Headers $headers `
+        -JsonBody ($batchDup | ConvertTo-Json -Depth 8)
+
+    $batchSum = @{
+        scId = $scId; bizType = 0; reasonId = '1'
+        description = "$descriptionPrefix batch sum mismatch"
+        products = @(@{
+            productId = $batchProductId; stockNum = 3
+            batchDetails = @(
+                @{ batchNumber = 'V134-BATCH'; stockNum = 1 },
+                @{ batchNumber = 'V134-BATCH2'; stockNum = 1 }
+            )
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/adjust" -Headers $headers `
+        -JsonBody ($batchSum | ConvertTo-Json -Depth 8)
+
+    $batchIn = @{
+        scId = $scId; bizType = 0; reasonId = '1'
+        description = "$descriptionPrefix batch in"
+        products = @(@{
+            productId = $batchProductId; stockNum = 3
+            batchDetails = @(
+                @{ batchNumber = 'V134-BATCH'; stockNum = 2 },
+                @{ batchNumber = 'V134-BATCH2'; stockNum = 1 }
+            )
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/adjust/approve/pass/direct" -Method Post -Headers $headers `
+        -JsonBody ($batchIn | ConvertTo-Json -Depth 8) | Out-Null
+    $batchInResult = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT stock_num FROM tbl_product_stock WHERE sc_id='$scId' AND product_id='$batchProductId';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$scId' AND product_id='$batchProductId' AND batch_number='V134-BATCH';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$scId' AND product_id='$batchProductId' AND batch_number='V134-BATCH2';
+"@)
+    if ($batchInResult.Count -ne 3 -or [int]$batchInResult[0] -ne 7 -or
+        [int]$batchInResult[1] -ne 6 -or [int]$batchInResult[2] -ne 1) {
+        throw "Batch stock-adjust IN failed: $($batchInResult -join ',')"
+    }
+
+    $batchOut = @{
+        scId = $scId; bizType = 2; reasonId = '1'
+        description = "$descriptionPrefix batch out"
+        products = @(@{
+            productId = $batchProductId; stockNum = 2
+            batchDetails = @(
+                @{ batchNumber = 'V134-BATCH'; stockNum = 2 }
+            )
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/adjust" -Method Post -Headers $headers `
+        -JsonBody ($batchOut | ConvertTo-Json -Depth 8) | Out-Null
+    $batchOutSheetId = [string](@(Invoke-SmokeSql -ReturnOutput -Sql "SELECT id FROM tbl_stock_adjust_sheet WHERE description='$descriptionPrefix batch out';")[0])
+    Invoke-ErpJson -Uri "$baseUri/stock/adjust/approve/pass" -Method Patch -Headers $headers `
+        -JsonBody (@{ id = $batchOutSheetId; description = "$descriptionPrefix batch out approved" } | ConvertTo-Json -Compress) | Out-Null
+    $batchOutResult = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT stock_num FROM tbl_product_stock WHERE sc_id='$scId' AND product_id='$batchProductId';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$scId' AND product_id='$batchProductId' AND batch_number='V134-BATCH';
+"@)
+    if ($batchOutResult.Count -ne 2 -or [int]$batchOutResult[0] -ne 5 -or [int]$batchOutResult[1] -ne 4) {
+        throw "Batch stock-adjust OUT failed: $($batchOutResult -join ',')"
+    }
+
+    $batchOutMissing = @{
+        scId = $scId; bizType = 2; reasonId = '1'
+        description = "$descriptionPrefix batch out missing"
+        products = @(@{
+            productId = $batchProductId; stockNum = 1
+            batchDetails = @(
+                @{ batchNumber = 'V134-GHOST'; stockNum = 1 }
+            )
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/adjust" -Method Post -Headers $headers `
+        -JsonBody ($batchOutMissing | ConvertTo-Json -Depth 8) | Out-Null
+    $batchOutMissingSheetId = [string](@(Invoke-SmokeSql -ReturnOutput -Sql "SELECT id FROM tbl_stock_adjust_sheet WHERE description='$descriptionPrefix batch out missing';")[0])
+    Assert-ErpRejected -Uri "$baseUri/stock/adjust/approve/pass" -Method Patch -Headers $headers `
+        -JsonBody (@{ id = $batchOutMissingSheetId; description = "$descriptionPrefix batch out missing approved" } | ConvertTo-Json -Compress)
+    $batchMissingGuard = @(Invoke-SmokeSql -ReturnOutput -Sql "SELECT stock_num FROM tbl_product_stock WHERE sc_id='$scId' AND product_id='$batchProductId';")
+    if ($batchMissingGuard.Count -ne 1 -or [int]$batchMissingGuard[0] -ne 5) {
+        throw "Rejected missing-batch OUT changed stock: $($batchMissingGuard -join ',')"
+    }
+
+    # ---- 序列号管理航材调整：一条序列号一条明细；不允许状态直跳/重复 ----
+    $serialNoDetails = @{
+        scId = $scId; bizType = 0; reasonId = '1'
+        description = "$descriptionPrefix serial no details"
+        products = @(@{ productId = $serialProductId; stockNum = 1 })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/adjust" -Headers $headers `
+        -JsonBody ($serialNoDetails | ConvertTo-Json -Depth 6)
+
+    $serialDup = @{
+        scId = $scId; bizType = 0; reasonId = '1'
+        description = "$descriptionPrefix serial dup"
+        products = @(@{
+            productId = $serialProductId; stockNum = 2
+            serialDetails = @(
+                @{ serialNumber = 'V134-S4'; batchNumber = 'V134-SBATCH' },
+                @{ serialNumber = 'V134-S4'; batchNumber = 'V134-SBATCH' }
+            )
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/adjust" -Headers $headers `
+        -JsonBody ($serialDup | ConvertTo-Json -Depth 8)
+
+    $serialCount = @{
+        scId = $scId; bizType = 0; reasonId = '1'
+        description = "$descriptionPrefix serial count mismatch"
+        products = @(@{
+            productId = $serialProductId; stockNum = 2
+            serialDetails = @(
+                @{ serialNumber = 'V134-S4'; batchNumber = 'V134-SBATCH' }
+            )
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/adjust" -Headers $headers `
+        -JsonBody ($serialCount | ConvertTo-Json -Depth 8)
+
+    $serialInDup = @{
+        scId = $scId; bizType = 0; reasonId = '1'
+        description = "$descriptionPrefix serial in dup"
+        products = @(@{
+            productId = $serialProductId; stockNum = 1
+            serialDetails = @(
+                @{ serialNumber = 'V134-S1'; batchNumber = 'V134-SBATCH' }
+            )
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/adjust/approve/pass/direct" -Method Post -Headers $headers `
+        -JsonBody ($serialInDup | ConvertTo-Json -Depth 8)
+    $serialInDupGuard = @(Invoke-SmokeSql -ReturnOutput -Sql "SELECT stock_num FROM tbl_product_stock WHERE sc_id='$scId' AND product_id='$serialProductId';")
+    if ($serialInDupGuard.Count -ne 1 -or [int]$serialInDupGuard[0] -ne 3) {
+        throw "Rejected duplicate serial IN changed stock: $($serialInDupGuard -join ',')"
+    }
+
+    $serialIn = @{
+        scId = $scId; bizType = 0; reasonId = '1'
+        description = "$descriptionPrefix serial in"
+        products = @(@{
+            productId = $serialProductId; stockNum = 1
+            serialDetails = @(
+                @{ serialNumber = 'V134-S4'; batchNumber = 'V134-SBATCH' }
+            )
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/adjust/approve/pass/direct" -Method Post -Headers $headers `
+        -JsonBody ($serialIn | ConvertTo-Json -Depth 8) | Out-Null
+    $serialInResult = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT stock_num FROM tbl_product_stock WHERE sc_id='$scId' AND product_id='$serialProductId';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$scId' AND product_id='$serialProductId' AND batch_number='V134-SBATCH';
+SELECT stock_status FROM tbl_product_stock_serial WHERE product_id='$serialProductId' AND serial_number='V134-S4';
+"@)
+    if ($serialInResult.Count -ne 3 -or [int]$serialInResult[0] -ne 4 -or
+        [int]$serialInResult[1] -ne 4 -or [int]$serialInResult[2] -ne 1) {
+        throw "Serial stock-adjust IN failed: $($serialInResult -join ',')"
+    }
+
+    $serialOut = @{
+        scId = $scId; bizType = 2; reasonId = '1'
+        description = "$descriptionPrefix serial out"
+        products = @(@{
+            productId = $serialProductId; stockNum = 1
+            serialDetails = @(
+                @{ serialNumber = 'V134-S2'; batchNumber = 'V134-SBATCH' }
+            )
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/adjust" -Method Post -Headers $headers `
+        -JsonBody ($serialOut | ConvertTo-Json -Depth 8) | Out-Null
+    $serialOutSheetId = [string](@(Invoke-SmokeSql -ReturnOutput -Sql "SELECT id FROM tbl_stock_adjust_sheet WHERE description='$descriptionPrefix serial out';")[0])
+    Invoke-ErpJson -Uri "$baseUri/stock/adjust/approve/pass" -Method Patch -Headers $headers `
+        -JsonBody (@{ id = $serialOutSheetId; description = "$descriptionPrefix serial out approved" } | ConvertTo-Json -Compress) | Out-Null
+    $serialOutResult = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT stock_num FROM tbl_product_stock WHERE sc_id='$scId' AND product_id='$serialProductId';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$scId' AND product_id='$serialProductId' AND batch_number='V134-SBATCH';
+SELECT stock_status FROM tbl_product_stock_serial WHERE product_id='$serialProductId' AND serial_number='V134-S2';
+"@)
+    if ($serialOutResult.Count -ne 3 -or [int]$serialOutResult[0] -ne 3 -or
+        [int]$serialOutResult[1] -ne 3 -or [int]$serialOutResult[2] -ne 0) {
+        throw "Serial stock-adjust OUT failed: $($serialOutResult -join ',')"
+    }
+
+    $serialOutDup = @{
+        scId = $scId; bizType = 2; reasonId = '1'
+        description = "$descriptionPrefix serial out dup"
+        products = @(@{
+            productId = $serialProductId; stockNum = 1
+            serialDetails = @(
+                @{ serialNumber = 'V134-S2'; batchNumber = 'V134-SBATCH' }
+            )
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/adjust" -Method Post -Headers $headers `
+        -JsonBody ($serialOutDup | ConvertTo-Json -Depth 8) | Out-Null
+    $serialOutDupSheetId = [string](@(Invoke-SmokeSql -ReturnOutput -Sql "SELECT id FROM tbl_stock_adjust_sheet WHERE description='$descriptionPrefix serial out dup';")[0])
+    Assert-ErpRejected -Uri "$baseUri/stock/adjust/approve/pass" -Method Patch -Headers $headers `
+        -JsonBody (@{ id = $serialOutDupSheetId; description = "$descriptionPrefix serial out dup approved" } | ConvertTo-Json -Compress)
+    $serialOutDupGuard = @(Invoke-SmokeSql -ReturnOutput -Sql "SELECT stock_num FROM tbl_product_stock WHERE sc_id='$scId' AND product_id='$serialProductId';")
+    if ($serialOutDupGuard.Count -ne 1 -or [int]$serialOutDupGuard[0] -ne 3) {
+        throw "Rejected duplicate serial OUT changed stock: $($serialOutDupGuard -join ',')"
+    }
+
+    Write-Host "Stock-adjust verification passed: input/reference guards, normal 5->7->4 with concurrent duplicate approval, batch IN/OUT with per-batch adjustments, serial IN/OUT with state-transition guards, and missing/duplicate detail rejections verified."
 } finally {
     if ($token) {
         try {

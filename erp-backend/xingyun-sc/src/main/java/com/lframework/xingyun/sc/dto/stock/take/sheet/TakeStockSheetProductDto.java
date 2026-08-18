@@ -63,4 +63,14 @@ public class TakeStockSheetProductDto implements BaseDto, Serializable {
    * 单位
    */
   private String unit;
+
+  /**
+   * 是否批次管理
+   */
+  private Boolean isBatch;
+
+  /**
+   * 是否序列号管理
+   */
+  private Boolean isSerial;
 }

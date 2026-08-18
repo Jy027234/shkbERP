@@ -65,6 +65,16 @@ public class ScTransferProductDto implements BaseDto, Serializable {
   private String unit;
 
   /**
+   * 是否批次管理
+   */
+  private Boolean isBatch;
+
+  /**
+   * 是否序列号管理
+   */
+  private Boolean isSerial;
+
+  /**
    * 当前库存数量
    */
   private Integer curStockNum;

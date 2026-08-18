@@ -2,19 +2,17 @@ package com.lframework.xingyun.shkb.mappers;
 
 import com.lframework.starter.web.core.mapper.BaseMapper;
 import com.lframework.xingyun.shkb.entity.ShkbTrainingImplementation;
+import com.lframework.xingyun.shkb.vo.training.QueryShkbTrainingImplementationVo;
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
-/**
-* @author kison
-* @description 针对表【shkb_training_implementation(培训实施计划表)】的数据库操作Mapper
-* @createDate 2026-03-16 10:47:57
-* @Entity com.lframework.xingyun.shkb.entity.ShkbTrainingImplementation
-*/
 @Mapper
-public interface ShkbTrainingImplementationMapper extends BaseMapper<ShkbTrainingImplementation> {
+public interface ShkbTrainingImplementationMapper
+extends BaseMapper<ShkbTrainingImplementation> {
+    public List<ShkbTrainingImplementation> queryWithCourse(@Param(value="vo") QueryShkbTrainingImplementationVo var1);
 
+    public ShkbTrainingImplementation findByIdWithCourse(String var1);
 }
-
-
 
 

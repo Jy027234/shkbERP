@@ -45,6 +45,16 @@ export interface TakeStockSheetProductBo {
   unit: string;
 
   /**
+   * 是否批次管理
+   */
+  isBatch?: boolean;
+
+  /**
+   * 是否序列号管理
+   */
+  isSerial?: boolean;
+
+  /**
    * 库存数量
    */
   stockNum: number;

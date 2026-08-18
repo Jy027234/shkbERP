@@ -1,14 +1,30 @@
 package com.lframework.xingyun.shkb.service;
 
+import com.lframework.starter.web.core.components.resp.PageResult;
 import com.lframework.starter.web.core.service.BaseMpService;
 import com.lframework.xingyun.shkb.entity.ShkbAuthorizationProject;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.lframework.xingyun.shkb.vo.authorization.CreateShkbAuthorizationProjectVo;
+import com.lframework.xingyun.shkb.vo.authorization.QueryShkbAuthorizationProjectVo;
+import com.lframework.xingyun.shkb.vo.authorization.UpdateShkbAuthorizationProjectVo;
+import java.util.List;
 
-/**
-* @author kison
-* @description 针对表【shkb_authorization_project(授权项目表)】的数据库操作Service
-* @createDate 2026-03-16 10:47:57
-*/
-public interface ShkbAuthorizationProjectService extends BaseMpService<ShkbAuthorizationProject> {
+public interface ShkbAuthorizationProjectService
+extends BaseMpService<ShkbAuthorizationProject> {
+    public ShkbAuthorizationProject findById(String var1);
 
+    public PageResult<ShkbAuthorizationProject> query(Integer var1, Integer var2, QueryShkbAuthorizationProjectVo var3);
+
+    public List<ShkbAuthorizationProject> queryByStatus(Integer var1);
+
+    public void create(CreateShkbAuthorizationProjectVo var1);
+
+    public void update(UpdateShkbAuthorizationProjectVo var1);
+
+    public void updateStatus(String var1, Integer var2);
+
+    public void deleteById(String var1);
+
+    public void deleteByIds(List<String> var1);
+
+    public List<ShkbAuthorizationProject> findByIds(List<String> var1);
 }

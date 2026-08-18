@@ -31,6 +31,14 @@
           AND sc_id = #{scId}
           AND quantity &gt;= #{stockNum}
     </update>
+
+    <update id="addStock">
+        UPDATE tbl_product_stock_batch
+        SET quantity = quantity + #{stockNum}
+        WHERE id = #{id}
+          AND product_id = #{productId}
+          AND sc_id = #{scId}
+    </update>
     
     <!-- 查询批次库存 -->
     <select id="query" resultMap="BaseResultMap">

@@ -95,6 +95,12 @@ public class AddLogWithAddStockVo implements BaseVo, Serializable {
   private LocalDateTime createTime;
 
   /**
+   * 批次库存ID
+   */
+  @ApiModelProperty("批次库存ID")
+  private String stockBatchId;
+
+  /**
    * 业务单据ID
    */
   @ApiModelProperty("业务单据ID")

@@ -114,8 +114,11 @@ $otherScId = "$prefix-sc2"
 $productId = "$prefix-p1"
 $removedProductId = "$prefix-p2"
 $batchProductId = "$prefix-p3"
+$serialProductId = "$prefix-p4"
 $normalPlanId = "$prefix-plan1"
 $batchPlanId = "$prefix-plan2"
+$serialPlanId = "$prefix-plan3"
+$serialPlan2Id = "$prefix-plan4"
 $descriptionPrefix = "V1.26 stocktake flow $runKey"
 $cleanupSql = @"
 DELETE FROM sys_mq_inbox WHERE event_id IN (
@@ -124,19 +127,23 @@ DELETE FROM sys_mq_outbox WHERE payload LIKE '%$prefix%';
 DELETE FROM op_logs WHERE extra LIKE '%$descriptionPrefix%';
 DELETE FROM tbl_order_time_line WHERE order_id IN (
   SELECT id FROM tbl_take_stock_sheet WHERE description LIKE '$descriptionPrefix%');
-DELETE FROM tbl_product_stock_log WHERE product_id IN ('$productId','$removedProductId','$batchProductId');
+DELETE FROM tbl_product_stock_log WHERE product_id IN ('$productId','$removedProductId','$batchProductId','$serialProductId');
+DELETE FROM tbl_take_stock_sheet_detail_batch WHERE sheet_id IN (
+  SELECT id FROM tbl_take_stock_sheet WHERE plan_id IN ('$normalPlanId','$batchPlanId','$serialPlanId','$serialPlan2Id'));
+DELETE FROM tbl_take_stock_sheet_detail_serial WHERE sheet_id IN (
+  SELECT id FROM tbl_take_stock_sheet WHERE plan_id IN ('$normalPlanId','$batchPlanId','$serialPlanId','$serialPlan2Id'));
 DELETE FROM tbl_take_stock_sheet_detail WHERE sheet_id IN (
-  SELECT id FROM tbl_take_stock_sheet WHERE plan_id IN ('$normalPlanId','$batchPlanId'));
-DELETE FROM tbl_take_stock_sheet WHERE plan_id IN ('$normalPlanId','$batchPlanId');
-DELETE FROM tbl_take_stock_plan_detail WHERE plan_id IN ('$normalPlanId','$batchPlanId');
-DELETE FROM tbl_take_stock_plan WHERE id IN ('$normalPlanId','$batchPlanId');
-DELETE FROM tbl_product_stock_serial WHERE product_id IN ('$productId','$removedProductId','$batchProductId');
-DELETE FROM tbl_product_stock_batch WHERE product_id IN ('$productId','$removedProductId','$batchProductId')
+  SELECT id FROM tbl_take_stock_sheet WHERE plan_id IN ('$normalPlanId','$batchPlanId','$serialPlanId','$serialPlan2Id'));
+DELETE FROM tbl_take_stock_sheet WHERE plan_id IN ('$normalPlanId','$batchPlanId','$serialPlanId','$serialPlan2Id');
+DELETE FROM tbl_take_stock_plan_detail WHERE plan_id IN ('$normalPlanId','$batchPlanId','$serialPlanId','$serialPlan2Id');
+DELETE FROM tbl_take_stock_plan WHERE id IN ('$normalPlanId','$batchPlanId','$serialPlanId','$serialPlan2Id');
+DELETE FROM tbl_product_stock_serial WHERE product_id IN ('$productId','$removedProductId','$batchProductId','$serialProductId');
+DELETE FROM tbl_product_stock_batch WHERE product_id IN ('$productId','$removedProductId','$batchProductId','$serialProductId')
   AND sc_id IN ('$scId','$otherScId');
-DELETE FROM tbl_product_stock WHERE product_id IN ('$productId','$removedProductId','$batchProductId')
+DELETE FROM tbl_product_stock WHERE product_id IN ('$productId','$removedProductId','$batchProductId','$serialProductId')
   AND sc_id IN ('$scId','$otherScId');
-DELETE FROM base_data_product_purchase WHERE id IN ('$productId','$removedProductId','$batchProductId');
-DELETE FROM base_data_product WHERE id IN ('$productId','$removedProductId','$batchProductId');
+DELETE FROM base_data_product_purchase WHERE id IN ('$productId','$removedProductId','$batchProductId','$serialProductId');
+DELETE FROM base_data_product WHERE id IN ('$productId','$removedProductId','$batchProductId','$serialProductId');
 DELETE FROM base_data_store_center WHERE id IN ('$scId','$otherScId');
 "@
 
@@ -152,21 +159,31 @@ INSERT INTO base_data_product
 (id,code,name,sku_code,category_id,brand_id,product_type,tax_rate,sale_tax_rate,spec,unit,available,is_batch,is_serial,create_by,create_by_id,create_time,update_by,update_by_id,update_time) VALUES
 ('$productId','V126-$runKey-P1','V126 product 1','V126-$runKey-SKU1','1','1',1,13,13,'FLOW','EA',1,0,0,'smoke','smoke',NOW(),'smoke','smoke',NOW()),
 ('$removedProductId','V126-$runKey-P2','V126 product 2','V126-$runKey-SKU2','1','1',1,13,13,'FLOW','EA',1,0,0,'smoke','smoke',NOW(),'smoke','smoke',NOW()),
-('$batchProductId','V126-$runKey-P3','V126 product 3','V126-$runKey-SKU3','1','1',1,13,13,'FLOW','EA',1,1,0,'smoke','smoke',NOW(),'smoke','smoke',NOW());
+('$batchProductId','V126-$runKey-P3','V126 product 3','V126-$runKey-SKU3','1','1',1,13,13,'FLOW','EA',1,1,0,'smoke','smoke',NOW(),'smoke','smoke',NOW()),
+('$serialProductId','V126-$runKey-P4','V126 product 4','V126-$runKey-SKU4','1','1',1,13,13,'FLOW','EA',1,0,1,'smoke','smoke',NOW(),'smoke','smoke',NOW());
 INSERT INTO base_data_product_purchase (id,price) VALUES
-('$productId',10),('$removedProductId',10),('$batchProductId',10);
+('$productId',10),('$removedProductId',10),('$batchProductId',10),('$serialProductId',10);
 INSERT INTO tbl_product_stock
 (id,sc_id,product_id,stock_num,tax_price,tax_amount) VALUES
 ('$prefix-stock1','$scId','$productId',5,10,50),
 ('$prefix-stock2','$scId','$removedProductId',2,10,20),
-('$prefix-stock3','$scId','$batchProductId',4,10,40);
+('$prefix-stock3','$scId','$batchProductId',4,10,40),
+('$prefix-stock4','$scId','$serialProductId',3,10,30);
 INSERT INTO tbl_product_stock_batch
 (id,sc_id,product_id,quantity,batch_number,shelf_location,production_date,expiry_date,supplier_id,create_time) VALUES
-('$prefix-batch','$scId','$batchProductId',4,'V126-BATCH','A-01','2026-08-01','2027-08-01',NULL,NOW());
+('$prefix-batch','$scId','$batchProductId',4,'V126-BATCH','A-01','2026-08-01','2027-08-01',NULL,NOW()),
+('$prefix-sbatch','$scId','$serialProductId',3,'V126-SBATCH','S-01','2026-08-01','2027-08-01',NULL,NOW());
+INSERT INTO tbl_product_stock_serial
+(id,product_id,serial_number,stock_status,batch_id,production_date,expiry_date,shelf_location,supplier_id,create_time) VALUES
+('$prefix-ser1','$serialProductId','V126-S1',1,'$prefix-sbatch','2026-08-01','2027-08-01','S-01',NULL,NOW()),
+('$prefix-ser2','$serialProductId','V126-S2',1,'$prefix-sbatch','2026-08-01','2027-08-01','S-01',NULL,NOW()),
+('$prefix-ser3','$serialProductId','V126-S3',1,'$prefix-sbatch','2026-08-01','2027-08-01','S-01',NULL,NOW());
 INSERT INTO tbl_take_stock_plan
 (id,code,sc_id,take_type,biz_id,take_status,description,create_by,create_by_id,create_time,update_by,update_by_id,update_time) VALUES
 ('$normalPlanId','V126-$runKey-PLAN1','$scId',1,NULL,0,'$descriptionPrefix normal','smoke','smoke',NOW(),'smoke','smoke',NOW()),
-('$batchPlanId','V126-$runKey-PLAN2','$scId',1,NULL,0,'$descriptionPrefix batch','smoke','smoke',NOW(),'smoke','smoke',NOW());
+('$batchPlanId','V126-$runKey-PLAN2','$scId',1,NULL,0,'$descriptionPrefix batch','smoke','smoke',NOW(),'smoke','smoke',NOW()),
+('$serialPlanId','V126-$runKey-PLAN3','$scId',1,NULL,0,'$descriptionPrefix serial','smoke','smoke',NOW(),'smoke','smoke',NOW()),
+('$serialPlan2Id','V126-$runKey-PLAN4','$scId',1,NULL,0,'$descriptionPrefix serial ghost','smoke','smoke',NOW(),'smoke','smoke',NOW());
 "@
 
     $login = Invoke-ErpJson -Uri "$baseUri/auth/login" -Method Post -FormBody @{
@@ -257,34 +274,189 @@ SELECT stock_num FROM tbl_product_stock WHERE sc_id='$scId' AND product_id='$pro
         throw "Normal stocktake difference was not applied atomically: $($normalResult -join ',')"
     }
 
-    $batchSheet = @{
+    # ---- 批次管理航材：必须逐批次录入；重复/合计不符拒绝；盘亏+盘盈批次同步生效 ----
+    $batchSheetNoDetails = @{
         planId = $batchPlanId
-        description = "$descriptionPrefix batch sheet"
+        description = "$descriptionPrefix batch no details"
         products = @(@{ productId = $batchProductId; takeNum = 2 })
     }
-    Invoke-ErpJson -Uri "$baseUri/stock/take/sheet" -Method Post -Headers $headers -JsonBody ($batchSheet | ConvertTo-Json -Depth 6) | Out-Null
+    Assert-ErpRejected -Uri "$baseUri/stock/take/sheet" -Headers $headers -JsonBody ($batchSheetNoDetails | ConvertTo-Json -Depth 6)
+
+    $batchSheetDup = @{
+        planId = $batchPlanId
+        description = "$descriptionPrefix batch dup"
+        products = @(@{
+            productId = $batchProductId; takeNum = 4
+            batchDetails = @(
+                @{ batchNumber = 'V126-BATCH'; takeNum = 2 },
+                @{ batchNumber = 'V126-BATCH'; takeNum = 2 }
+            )
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/take/sheet" -Headers $headers -JsonBody ($batchSheetDup | ConvertTo-Json -Depth 8)
+
+    $batchSheetSum = @{
+        planId = $batchPlanId
+        description = "$descriptionPrefix batch sum mismatch"
+        products = @(@{
+            productId = $batchProductId; takeNum = 5
+            batchDetails = @(
+                @{ batchNumber = 'V126-BATCH'; takeNum = 2 },
+                @{ batchNumber = 'V126-BATCH2'; takeNum = 2 }
+            )
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/take/sheet" -Headers $headers -JsonBody ($batchSheetSum | ConvertTo-Json -Depth 8)
+
+    $batchSheet = @{
+        planId = $batchPlanId
+        description = "$descriptionPrefix batch sheet traced"
+        products = @(@{
+            productId = $batchProductId; takeNum = 5
+            batchDetails = @(
+                @{ batchNumber = 'V126-BATCH'; takeNum = 3 },
+                @{ batchNumber = 'V126-BATCH2'; takeNum = 2 }
+            )
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/take/sheet" -Method Post -Headers $headers -JsonBody ($batchSheet | ConvertTo-Json -Depth 8) | Out-Null
     $batchSheetId = [string](@(Invoke-SmokeSql -ReturnOutput -Sql "SELECT id FROM tbl_take_stock_sheet WHERE plan_id='$batchPlanId';")[0])
+    $batchDetailRows = @(Invoke-SmokeSql -ReturnOutput -Sql "SELECT COUNT(*) FROM tbl_take_stock_sheet_detail_batch WHERE sheet_id='$batchSheetId';")
+    if ($batchDetailRows.Count -ne 1 -or [int]$batchDetailRows[0] -ne 2) {
+        throw 'Batch take details were not persisted.'
+    }
     Invoke-ErpJson -Uri "$baseUri/stock/take/sheet/approve/pass" -Method Patch -Headers $headers -FormBody @{ id = $batchSheetId } | Out-Null
     Invoke-ErpJson -Uri "$baseUri/stock/take/plan/diff" -Method Patch -Headers $headers -FormBody @{ id = $batchPlanId } | Out-Null
 
     $batchHandle = @{
         id = $batchPlanId
-        description = "$descriptionPrefix batch rejected"
+        description = "$descriptionPrefix batch handled"
         allowChangeNum = $true
         autoChangeStock = $true
-        products = @(@{ productId = $batchProductId; takeNum = 2 })
+        products = @(@{ productId = $batchProductId; takeNum = 5 })
     }
-    Assert-ErpRejected -Uri "$baseUri/stock/take/plan/handle" -Method Patch -Headers $headers -JsonBody ($batchHandle | ConvertTo-Json -Depth 6)
+    Invoke-ErpJson -Uri "$baseUri/stock/take/plan/handle" -Method Patch -Headers $headers -JsonBody ($batchHandle | ConvertTo-Json -Depth 6) | Out-Null
     $batchResult = @(Invoke-SmokeSql -ReturnOutput -Sql @"
 SELECT take_status FROM tbl_take_stock_plan WHERE id='$batchPlanId';
 SELECT stock_num FROM tbl_product_stock WHERE sc_id='$scId' AND product_id='$batchProductId';
-SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$scId' AND product_id='$batchProductId';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$scId' AND product_id='$batchProductId' AND batch_number='V126-BATCH';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$scId' AND product_id='$batchProductId' AND batch_number='V126-BATCH2';
 "@)
-    if ($batchResult.Count -ne 3 -or [int]$batchResult[0] -ne 6 -or [int]$batchResult[1] -ne 4 -or [int]$batchResult[2] -ne 4) {
-        throw "Batch-managed stocktake corrupted inventory before rejection: $($batchResult -join ',')"
+    if ($batchResult.Count -ne 4 -or [int]$batchResult[0] -ne 9 -or [int]$batchResult[1] -ne 5 -or [int]$batchResult[2] -ne 3 -or [int]$batchResult[3] -ne 2) {
+        throw "Batch-managed stocktake trace adjustment failed: $($batchResult -join ',')"
     }
 
-    Write-Host "Stocktake-flow verification passed: normal plan=$normalPlanId, batch plan=$batchPlanId; immutable warehouse, input guards, stale-detail cleanup, atomic normal adjustment and traceability guard verified."
+    # ---- 序列号管理航材：一条序列号一条明细；一致/盘亏/盘盈逐条处理 ----
+    $serialSheetNoDetails = @{
+        planId = $serialPlanId
+        description = "$descriptionPrefix serial no details"
+        products = @(@{ productId = $serialProductId; takeNum = 3 })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/take/sheet" -Headers $headers -JsonBody ($serialSheetNoDetails | ConvertTo-Json -Depth 6)
+
+    $serialSheetDup = @{
+        planId = $serialPlanId
+        description = "$descriptionPrefix serial dup"
+        products = @(@{
+            productId = $serialProductId; takeNum = 2
+            serialDetails = @(
+                @{ serialNumber = 'V126-S1'; takeStatus = 1 },
+                @{ serialNumber = 'V126-S1'; takeStatus = 1 }
+            )
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/take/sheet" -Headers $headers -JsonBody ($serialSheetDup | ConvertTo-Json -Depth 8)
+
+    $serialSheetCount = @{
+        planId = $serialPlanId
+        description = "$descriptionPrefix serial count mismatch"
+        products = @(@{
+            productId = $serialProductId; takeNum = 3
+            serialDetails = @(
+                @{ serialNumber = 'V126-S1'; takeStatus = 1 },
+                @{ serialNumber = 'V126-S2'; takeStatus = 0 }
+            )
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/take/sheet" -Headers $headers -JsonBody ($serialSheetCount | ConvertTo-Json -Depth 8)
+
+    $serialSheet = @{
+        planId = $serialPlanId
+        description = "$descriptionPrefix serial sheet traced"
+        products = @(@{
+            productId = $serialProductId; takeNum = 2
+            serialDetails = @(
+                @{ serialNumber = 'V126-S1'; takeStatus = 1; batchNumber = 'V126-SBATCH' },
+                @{ serialNumber = 'V126-S2'; takeStatus = 0; batchNumber = 'V126-SBATCH' },
+                @{ serialNumber = 'V126-S4'; takeStatus = 1; batchNumber = 'V126-SBATCH' }
+            )
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/take/sheet" -Method Post -Headers $headers -JsonBody ($serialSheet | ConvertTo-Json -Depth 8) | Out-Null
+    $serialSheetId = [string](@(Invoke-SmokeSql -ReturnOutput -Sql "SELECT id FROM tbl_take_stock_sheet WHERE plan_id='$serialPlanId';")[0])
+    $serialDetailRows = @(Invoke-SmokeSql -ReturnOutput -Sql "SELECT COUNT(*) FROM tbl_take_stock_sheet_detail_serial WHERE sheet_id='$serialSheetId';")
+    if ($serialDetailRows.Count -ne 1 -or [int]$serialDetailRows[0] -ne 3) {
+        throw 'Serial take details were not persisted (one row per serial required).'
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/take/sheet/approve/pass" -Method Patch -Headers $headers -FormBody @{ id = $serialSheetId } | Out-Null
+    Invoke-ErpJson -Uri "$baseUri/stock/take/plan/diff" -Method Patch -Headers $headers -FormBody @{ id = $serialPlanId } | Out-Null
+
+    $serialHandle = @{
+        id = $serialPlanId
+        description = "$descriptionPrefix serial handled"
+        allowChangeNum = $true
+        autoChangeStock = $true
+        products = @(@{ productId = $serialProductId; takeNum = 2 })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/take/plan/handle" -Method Patch -Headers $headers -JsonBody ($serialHandle | ConvertTo-Json -Depth 6) | Out-Null
+    $serialResult = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT take_status FROM tbl_take_stock_plan WHERE id='$serialPlanId';
+SELECT stock_num FROM tbl_product_stock WHERE sc_id='$scId' AND product_id='$serialProductId';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$scId' AND product_id='$serialProductId' AND batch_number='V126-SBATCH';
+SELECT stock_status FROM tbl_product_stock_serial WHERE product_id='$serialProductId' AND serial_number='V126-S1';
+SELECT stock_status FROM tbl_product_stock_serial WHERE product_id='$serialProductId' AND serial_number='V126-S2';
+SELECT stock_status FROM tbl_product_stock_serial WHERE product_id='$serialProductId' AND serial_number='V126-S3';
+SELECT stock_status FROM tbl_product_stock_serial WHERE product_id='$serialProductId' AND serial_number='V126-S4';
+"@)
+    if ($serialResult.Count -ne 7 -or [int]$serialResult[0] -ne 9 -or [int]$serialResult[1] -ne 3 -or
+        [int]$serialResult[2] -ne 3 -or [int]$serialResult[3] -ne 1 -or [int]$serialResult[4] -ne 0 -or
+        [int]$serialResult[5] -ne 1 -or [int]$serialResult[6] -ne 1) {
+        throw "Serial-managed stocktake trace adjustment failed: $($serialResult -join ',')"
+    }
+
+    # ---- 序列号盘亏与系统状态矛盾（系统无此序列号但实盘缺失）必须在差异处理拒绝 ----
+    $ghostSheet = @{
+        planId = $serialPlan2Id
+        description = "$descriptionPrefix serial ghost"
+        products = @(@{
+            productId = $serialProductId; takeNum = 0
+            serialDetails = @(
+                @{ serialNumber = 'V126-GHOST'; takeStatus = 0; batchNumber = 'V126-SBATCH' }
+            )
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/take/sheet" -Method Post -Headers $headers -JsonBody ($ghostSheet | ConvertTo-Json -Depth 8) | Out-Null
+    $ghostSheetId = [string](@(Invoke-SmokeSql -ReturnOutput -Sql "SELECT id FROM tbl_take_stock_sheet WHERE plan_id='$serialPlan2Id';")[0])
+    Invoke-ErpJson -Uri "$baseUri/stock/take/sheet/approve/pass" -Method Patch -Headers $headers -FormBody @{ id = $ghostSheetId } | Out-Null
+    Invoke-ErpJson -Uri "$baseUri/stock/take/plan/diff" -Method Patch -Headers $headers -FormBody @{ id = $serialPlan2Id } | Out-Null
+
+    $ghostHandle = @{
+        id = $serialPlan2Id
+        description = "$descriptionPrefix serial ghost handled"
+        allowChangeNum = $true
+        autoChangeStock = $true
+        products = @(@{ productId = $serialProductId; takeNum = 0 })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/take/plan/handle" -Method Patch -Headers $headers -JsonBody ($ghostHandle | ConvertTo-Json -Depth 6)
+    $ghostResult = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT take_status FROM tbl_take_stock_plan WHERE id='$serialPlan2Id';
+SELECT stock_num FROM tbl_product_stock WHERE sc_id='$scId' AND product_id='$serialProductId';
+"@)
+    if ($ghostResult.Count -ne 2 -or [int]$ghostResult[0] -ne 6 -or [int]$ghostResult[1] -ne 3) {
+        throw "Contradictory serial stocktake corrupted inventory: $($ghostResult -join ',')"
+    }
+
+    Write-Host "Stocktake-flow verification passed: normal, batch (per-batch 盘亏/盘盈) and serial (per-serial 一致/盘亏/盘盈) flows plus duplicate/sum/ghost rejections verified; inventory remained consistent."
 } finally {
     if ($token) {
         try {

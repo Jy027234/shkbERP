@@ -90,4 +90,14 @@ public class ProductStockSerialServiceImpl extends BaseMpServiceImpl<ProductStoc
 
         getBaseMapper().update(updateWrapper);
     }
+
+    @Override
+    public int updateStatus(String id, Integer fromStatus, Integer toStatus) {
+        return getBaseMapper().updateStatus(id, fromStatus, toStatus);
+    }
+
+    @Override
+    public int receiveTransfer(String id, String batchId) {
+        return getBaseMapper().receiveTransfer(id, batchId);
+    }
 }

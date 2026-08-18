@@ -108,6 +108,27 @@
         :columns="tableColumn"
       />
 
+      <!-- 批次/序列号追溯明细 -->
+      <j-border v-if="batchDetailRows.length > 0 || serialDetailRows.length > 0" title="追溯明细">
+        <a-table
+          v-if="batchDetailRows.length > 0"
+          :data-source="batchDetailRows"
+          :columns="batchColumns"
+          row-key="key"
+          size="small"
+          :pagination="false"
+          style="margin-bottom: 8px"
+        />
+        <a-table
+          v-if="serialDetailRows.length > 0"
+          :data-source="serialDetailRows"
+          :columns="serialColumns"
+          row-key="key"
+          size="small"
+          :pagination="false"
+        />
+      </j-border>
+
       <order-time-line :id="id" />
 
       <take-stock-plan-detail :id="formData.planId" ref="viewTakeStockPlanDialog" />
@@ -158,7 +179,58 @@
           { field: 'description', title: '备注', width: 200 },
         ],
         tableData: [],
+        batchColumns: [
+          { title: '航材编号', dataIndex: 'productCode', width: 120 },
+          { title: '批次号', dataIndex: 'batchNumber' },
+          { title: '系统数量', dataIndex: 'stockNum', width: 100, align: 'right' },
+          { title: '实盘数量', dataIndex: 'takeNum', width: 100, align: 'right' },
+          { title: '备注', dataIndex: 'description', width: 200 },
+        ],
+        serialColumns: [
+          { title: '航材编号', dataIndex: 'productCode', width: 120 },
+          { title: '序列号', dataIndex: 'serialNumber' },
+          { title: '批次号', dataIndex: 'batchNumber', width: 140 },
+          { title: '实盘状态', dataIndex: 'takeStatusText', width: 100 },
+          { title: '备注', dataIndex: 'description', width: 200 },
+        ],
       };
+    },
+    computed: {
+      batchDetailRows() {
+        const rows = [];
+        this.tableData.forEach((detail) => {
+          (detail.batchDetails || []).forEach((item, index) => {
+            rows.push(
+              Object.assign(
+                {
+                  key: detail.productId + '-b' + index,
+                  productCode: detail.productCode,
+                },
+                item,
+              ),
+            );
+          });
+        });
+        return rows;
+      },
+      serialDetailRows() {
+        const rows = [];
+        this.tableData.forEach((detail) => {
+          (detail.serialDetails || []).forEach((item, index) => {
+            rows.push(
+              Object.assign(
+                {
+                  key: detail.productId + '-s' + index,
+                  productCode: detail.productCode,
+                  takeStatusText: Number(item.takeStatus) === 1 ? '实盘在库' : '实盘缺失',
+                },
+                item,
+              ),
+            );
+          });
+        });
+        return rows;
+      },
     },
     created() {
       this.initFormData();

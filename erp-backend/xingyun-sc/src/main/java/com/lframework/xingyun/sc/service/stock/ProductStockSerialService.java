@@ -46,4 +46,18 @@ public interface ProductStockSerialService extends IService<ProductStockSerial> 
      * @param vo
      */
     void updateSerialNumber(UpdateProductStockSerialNumberVo vo);
+
+    /**
+     * 仅在当前状态匹配时原子更新序列号状态（用于盘盈/盘亏状态流转）。
+     *
+     * @return 更新行数
+     */
+    int updateStatus(String id, Integer fromStatus, Integer toStatus);
+
+    /**
+     * 调拨收货：仅当序列号处于出库（在途）状态时原子置为在库并切换到转入仓批次。
+     *
+     * @return 更新行数
+     */
+    int receiveTransfer(String id, String batchId);
 }

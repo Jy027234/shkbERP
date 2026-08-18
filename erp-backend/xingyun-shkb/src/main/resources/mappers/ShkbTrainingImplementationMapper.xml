@@ -1,35 +1,128 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.lframework.xingyun.shkb.mappers.ShkbTrainingImplementationMapper">
 
-    <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.ShkbTrainingImplementation">
-            <id property="id" column="id" jdbcType="VARCHAR"/>
-            <result property="tenantId" column="tenant_id" jdbcType="VARCHAR"/>
-            <result property="courseId" column="course_id" jdbcType="VARCHAR"/>
-            <result property="planStartDate" column="plan_start_date" jdbcType="DATE"/>
-            <result property="planEndDate" column="plan_end_date" jdbcType="DATE"/>
-            <result property="actualStartDate" column="actual_start_date" jdbcType="TIMESTAMP"/>
-            <result property="actualEndDate" column="actual_end_date" jdbcType="TIMESTAMP"/>
-            <result property="status" column="status" jdbcType="TINYINT"/>
-            <result property="trainingLocation" column="training_location" jdbcType="VARCHAR"/>
-            <result property="instructor" column="instructor" jdbcType="VARCHAR"/>
-            <result property="participantCount" column="participant_count" jdbcType="INTEGER"/>
-            <result property="description" column="description" jdbcType="VARCHAR"/>
-            <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
-            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
-            <result property="updateBy" column="update_by" jdbcType="VARCHAR"/>
-            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
-            <result property="deleted" column="deleted" jdbcType="TINYINT"/>
-    </resultMap>
+  <resultMap id="BaseResultMap" type="com.lframework.xingyun.shkb.entity.ShkbTrainingImplementation">
+    <id column="id" property="id" />
+    <result column="tenant_id" property="tenantId" />
+    <result column="course_id" property="courseId" />
+    <result column="plan_start_date" property="planStartDate" />
+    <result column="plan_end_date" property="planEndDate" />
+    <result column="actual_start_date" property="actualStartDate" />
+    <result column="actual_end_date" property="actualEndDate" />
+    <result column="status" property="status" />
+    <result column="training_location" property="trainingLocation" />
+    <result column="instructor" property="instructor" />
+    <result column="participant_count" property="participantCount" />
+    <result column="description" property="description" />
+    <result column="url" property="url" />
+    <result column="file_name" property="fileName" />
+    <result column="content_type" property="contentType" />
+    <result column="file_size" property="fileSize" />
+    <result column="file_suffix" property="fileSuffix" />
+    <result column="create_by_id" property="createById" />
+    <result column="create_by" property="createBy" />
+    <result column="create_time" property="createTime" />
+    <result column="update_by_id" property="updateById" />
+    <result column="update_by" property="updateBy" />
+    <result column="update_time" property="updateTime" />
+    <result column="deleted" property="deleted" />
+  </resultMap>
 
-    <sql id="Base_Column_List">
-        id,tenant_id,course_id,
-        plan_start_date,plan_end_date,actual_start_date,
-        actual_end_date,status,training_location,
-        instructor,participant_count,description,
-        create_by,create_time,update_by,
-        update_time,deleted
-    </sql>
+  <resultMap id="WithCourseResultMap" type="com.lframework.xingyun.shkb.entity.ShkbTrainingImplementation" extends="BaseResultMap">
+    <result column="course_name" property="courseName" />
+    <result column="course_type" property="courseType" />
+    <result column="training_hours" property="courseTrainingHours" />
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    id, tenant_id, course_id, plan_start_date, plan_end_date, actual_start_date, actual_end_date, status, training_location, instructor, participant_count, description, url, file_name, content_type, file_size, file_suffix, create_by_id, create_by, create_time, update_by_id, update_by, update_time, deleted
+  </sql>
+
+  <select id="queryWithCourse" resultMap="WithCourseResultMap">
+    SELECT
+      ti.id,
+      ti.tenant_id,
+      ti.course_id,
+      ti.plan_start_date,
+      ti.plan_end_date,
+      ti.actual_start_date,
+      ti.actual_end_date,
+      ti.status,
+      ti.training_location,
+      ti.instructor,
+      (SELECT COUNT(*) FROM shkb_training_participant tp WHERE tp.implementation_id = ti.id AND tp.deleted = 0) AS participant_count,
+      ti.description,
+      ti.url,
+      ti.file_name,
+      ti.content_type,
+      ti.file_size,
+      ti.file_suffix,
+      ti.create_by_id,
+      ti.create_by,
+      ti.create_time,
+      ti.update_by_id,
+      ti.update_by,
+      ti.update_time,
+      ti.deleted,
+      tc.course_name,
+      tc.course_type,
+      tc.training_hours
+    FROM
+      shkb_training_implementation ti
+    LEFT JOIN
+      shkb_training_course tc ON ti.course_id = tc.id
+    WHERE
+      ti.deleted = 0
+    <if test="vo.courseId != null">
+      AND ti.course_id = #{vo.courseId}
+    </if>
+    <if test="vo.status != null">
+      AND ti.status = #{vo.status}
+    </if>
+    <if test="vo.courseName != null and vo.courseName != ''">
+      AND tc.course_name LIKE CONCAT('%', #{vo.courseName}, '%')
+    </if>
+    ORDER BY
+      ti.create_time DESC
+  </select>
+
+  <select id="findByIdWithCourse" resultMap="WithCourseResultMap">
+    SELECT
+      ti.id,
+      ti.tenant_id,
+      ti.course_id,
+      ti.plan_start_date,
+      ti.plan_end_date,
+      ti.actual_start_date,
+      ti.actual_end_date,
+      ti.status,
+      ti.training_location,
+      ti.instructor,
+      (SELECT COUNT(*) FROM shkb_training_participant tp WHERE tp.implementation_id = ti.id AND tp.deleted = 0) AS participant_count,
+      ti.description,
+      ti.url,
+      ti.file_name,
+      ti.content_type,
+      ti.file_size,
+      ti.file_suffix,
+      ti.create_by_id,
+      ti.create_by,
+      ti.create_time,
+      ti.update_by_id,
+      ti.update_by,
+      ti.update_time,
+      ti.deleted,
+      tc.course_name,
+      tc.course_type,
+      tc.training_hours
+    FROM
+      shkb_training_implementation ti
+    LEFT JOIN
+      shkb_training_course tc ON ti.course_id = tc.id
+    WHERE
+      ti.id = #{id}
+      AND ti.deleted = 0
+  </select>
+
 </mapper>

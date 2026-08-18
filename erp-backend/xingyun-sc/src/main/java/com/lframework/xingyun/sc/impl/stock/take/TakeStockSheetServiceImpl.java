@@ -27,17 +27,23 @@ import com.lframework.xingyun.core.utils.OpLogUtil;
 import com.lframework.xingyun.sc.components.code.GenerateCodeTypePool;
 import com.lframework.xingyun.sc.dto.stock.take.sheet.TakeStockSheetFullDto;
 import com.lframework.xingyun.sc.dto.stock.take.sheet.TakeStockSheetProductDto;
+import com.lframework.xingyun.sc.entity.ProductStockBatch;
 import com.lframework.xingyun.sc.entity.TakeStockPlan;
 import com.lframework.xingyun.sc.entity.TakeStockSheet;
 import com.lframework.xingyun.sc.entity.TakeStockSheetDetail;
+import com.lframework.xingyun.sc.entity.TakeStockSheetDetailBatch;
+import com.lframework.xingyun.sc.entity.TakeStockSheetDetailSerial;
 import com.lframework.xingyun.sc.enums.ScOpLogType;
 import com.lframework.xingyun.sc.enums.TakeStockPlanStatus;
 import com.lframework.xingyun.sc.enums.TakeStockPlanType;
 import com.lframework.xingyun.sc.enums.TakeStockSheetStatus;
 import com.lframework.xingyun.sc.events.stock.take.DeleteTakeStockPlanEvent;
 import com.lframework.xingyun.sc.mappers.TakeStockSheetMapper;
+import com.lframework.xingyun.sc.service.stock.ProductStockBatchService;
 import com.lframework.xingyun.sc.service.stock.take.TakeStockPlanDetailService;
 import com.lframework.xingyun.sc.service.stock.take.TakeStockPlanService;
+import com.lframework.xingyun.sc.service.stock.take.TakeStockSheetDetailBatchService;
+import com.lframework.xingyun.sc.service.stock.take.TakeStockSheetDetailSerialService;
 import com.lframework.xingyun.sc.service.stock.take.TakeStockSheetDetailService;
 import com.lframework.xingyun.sc.service.stock.take.TakeStockSheetService;
 import com.lframework.xingyun.sc.vo.stock.take.sheet.ApprovePassTakeStockSheetVo;
@@ -45,12 +51,16 @@ import com.lframework.xingyun.sc.vo.stock.take.sheet.ApproveRefuseTakeStockSheet
 import com.lframework.xingyun.sc.vo.stock.take.sheet.CreateTakeStockSheetVo;
 import com.lframework.xingyun.sc.vo.stock.take.sheet.QueryTakeStockSheetProductVo;
 import com.lframework.xingyun.sc.vo.stock.take.sheet.QueryTakeStockSheetVo;
+import com.lframework.xingyun.sc.vo.stock.take.sheet.TakeStockBatchDetailVo;
+import com.lframework.xingyun.sc.vo.stock.take.sheet.TakeStockSerialDetailVo;
 import com.lframework.xingyun.sc.vo.stock.take.sheet.TakeStockSheetProductVo;
 import com.lframework.xingyun.sc.vo.stock.take.sheet.UpdateTakeStockSheetVo;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,6 +75,15 @@ public class TakeStockSheetServiceImpl extends
 
   @Autowired
   private TakeStockSheetDetailService takeStockSheetDetailService;
+
+  @Autowired
+  private TakeStockSheetDetailBatchService takeStockSheetDetailBatchService;
+
+  @Autowired
+  private TakeStockSheetDetailSerialService takeStockSheetDetailSerialService;
+
+  @Autowired
+  private ProductStockBatchService productStockBatchService;
 
   @Autowired
   private GenerateCodeService generateCodeService;
@@ -150,6 +169,9 @@ public class TakeStockSheetServiceImpl extends
       detail.setOrderNo(orderNo++);
 
       takeStockSheetDetailService.save(detail);
+
+      Product takeProduct = productService.findById(product.getProductId());
+      saveTraceDetails(data.getId(), detail.getId(), data.getScId(), takeProduct, product);
     }
 
     // 盘点任务如果是单品盘点
@@ -206,6 +228,16 @@ public class TakeStockSheetServiceImpl extends
         .eq(TakeStockSheetDetail::getSheetId, data.getId());
     takeStockSheetDetailService.remove(deleteDetailWrapper);
 
+    // 删除批次/序列号明细
+    Wrapper<TakeStockSheetDetailBatch> deleteBatchWrapper = Wrappers.lambdaQuery(
+            TakeStockSheetDetailBatch.class)
+        .eq(TakeStockSheetDetailBatch::getSheetId, data.getId());
+    takeStockSheetDetailBatchService.remove(deleteBatchWrapper);
+    Wrapper<TakeStockSheetDetailSerial> deleteSerialWrapper = Wrappers.lambdaQuery(
+            TakeStockSheetDetailSerial.class)
+        .eq(TakeStockSheetDetailSerial::getSheetId, data.getId());
+    takeStockSheetDetailSerialService.remove(deleteSerialWrapper);
+
     int orderNo = 1;
     for (TakeStockSheetProductVo product : vo.getProducts()) {
       TakeStockSheetDetail detail = new TakeStockSheetDetail();
@@ -219,6 +251,9 @@ public class TakeStockSheetServiceImpl extends
       detail.setOrderNo(orderNo++);
 
       takeStockSheetDetailService.save(detail);
+
+      Product takeProduct = productService.findById(product.getProductId());
+      saveTraceDetails(data.getId(), detail.getId(), data.getScId(), takeProduct, product);
     }
 
     // 盘点任务如果是单品盘点
@@ -482,7 +517,120 @@ public class TakeStockSheetServiceImpl extends
           productVo.getProductId()) == null) {
         throw new DefaultClientException("第" + orderNo + "行航材不属于关联盘点任务！");
       }
+
+      if (Boolean.TRUE.equals(product.getIsBatch())) {
+        if (!CollectionUtil.isEmpty(productVo.getSerialDetails())) {
+          throw new DefaultClientException("第" + orderNo + "行航材为批次管理，不允许录入序列号明细！");
+        }
+        if (CollectionUtil.isEmpty(productVo.getBatchDetails())) {
+          throw new DefaultClientException(
+              "第" + orderNo + "行航材启用了批次管理，必须逐批次录入盘点明细！");
+        }
+        Set<String> batchNumbers = new HashSet<>();
+        int batchSum = 0;
+        for (TakeStockBatchDetailVo batchVo : productVo.getBatchDetails()) {
+          if (!batchNumbers.add(batchVo.getBatchNumber())) {
+            throw new DefaultClientException(
+                "第" + orderNo + "行航材批次[" + batchVo.getBatchNumber() + "]重复提交！");
+          }
+          if (batchVo.getTakeNum() == null || batchVo.getTakeNum() < 0) {
+            throw new DefaultClientException(
+                "第" + orderNo + "行航材批次[" + batchVo.getBatchNumber() + "]实盘数量不能小于0！");
+          }
+          batchSum += batchVo.getTakeNum();
+        }
+        if (batchSum != productVo.getTakeNum()) {
+          throw new DefaultClientException(
+              "第" + orderNo + "行航材批次实盘数量合计必须等于盘点数量！");
+        }
+      } else if (Boolean.TRUE.equals(product.getIsSerial())) {
+        if (!CollectionUtil.isEmpty(productVo.getBatchDetails())) {
+          throw new DefaultClientException("第" + orderNo + "行航材为序列号管理，不允许录入批次明细！");
+        }
+        if (CollectionUtil.isEmpty(productVo.getSerialDetails())) {
+          throw new DefaultClientException(
+              "第" + orderNo + "行航材启用了序列号管理，必须逐序列号录入盘点明细！");
+        }
+        Set<String> serialNumbers = new HashSet<>();
+        int presentCount = 0;
+        for (TakeStockSerialDetailVo serialVo : productVo.getSerialDetails()) {
+          if (!serialNumbers.add(serialVo.getSerialNumber())) {
+            throw new DefaultClientException(
+                "第" + orderNo + "行航材序列号[" + serialVo.getSerialNumber() + "]重复提交！");
+          }
+          if (serialVo.getTakeStatus() == null
+              || (serialVo.getTakeStatus() != 1 && serialVo.getTakeStatus() != 0)) {
+            throw new DefaultClientException(
+                "第" + orderNo + "行航材序列号[" + serialVo.getSerialNumber() + "]实盘状态不正确！");
+          }
+          if (serialVo.getTakeStatus() == 1) {
+            presentCount++;
+          }
+        }
+        if (presentCount != productVo.getTakeNum()) {
+          throw new DefaultClientException(
+              "第" + orderNo + "行航材实盘在库序列号数量必须等于盘点数量！");
+        }
+      } else if (!CollectionUtil.isEmpty(productVo.getBatchDetails())
+          || !CollectionUtil.isEmpty(productVo.getSerialDetails())) {
+        throw new DefaultClientException(
+            "第" + orderNo + "行航材未启用批次/序列号管理，不允许录入批次或序列号明细！");
+      }
       orderNo++;
+    }
+  }
+
+  private void saveTraceDetails(String sheetId, String detailId, String scId, Product product,
+      TakeStockSheetProductVo productVo) {
+
+    if (Boolean.TRUE.equals(product.getIsBatch())) {
+      if (CollectionUtil.isEmpty(productVo.getBatchDetails())) {
+        return;
+      }
+      List<ProductStockBatch> stockBatches = productStockBatchService.list(
+          Wrappers.lambdaQuery(ProductStockBatch.class)
+              .eq(ProductStockBatch::getScId, scId)
+              .eq(ProductStockBatch::getProductId, product.getId()));
+      Map<String, Integer> batchStockMap = new HashMap<>();
+      for (ProductStockBatch stockBatch : stockBatches) {
+        batchStockMap.put(stockBatch.getBatchNumber(), stockBatch.getQuantity());
+      }
+      for (TakeStockBatchDetailVo batchVo : productVo.getBatchDetails()) {
+        TakeStockSheetDetailBatch batch = new TakeStockSheetDetailBatch();
+        batch.setId(IdUtil.getId());
+        batch.setSheetId(sheetId);
+        batch.setSheetDetailId(detailId);
+        batch.setProductId(product.getId());
+        batch.setBatchNumber(batchVo.getBatchNumber());
+        batch.setStockNum(batchStockMap.getOrDefault(batchVo.getBatchNumber(), 0));
+        batch.setTakeNum(batchVo.getTakeNum());
+        batch.setDescription(
+            StringUtil.isBlank(batchVo.getDescription()) ? StringPool.EMPTY_STR
+                : batchVo.getDescription());
+        batch.setCreateTime(LocalDateTime.now());
+
+        takeStockSheetDetailBatchService.save(batch);
+      }
+    } else if (Boolean.TRUE.equals(product.getIsSerial())) {
+      if (CollectionUtil.isEmpty(productVo.getSerialDetails())) {
+        return;
+      }
+      for (TakeStockSerialDetailVo serialVo : productVo.getSerialDetails()) {
+        TakeStockSheetDetailSerial serial = new TakeStockSheetDetailSerial();
+        serial.setId(IdUtil.getId());
+        serial.setSheetId(sheetId);
+        serial.setSheetDetailId(detailId);
+        serial.setProductId(product.getId());
+        serial.setSerialNumber(serialVo.getSerialNumber());
+        serial.setBatchNumber(serialVo.getBatchNumber());
+        serial.setTakeStatus(serialVo.getTakeStatus());
+        serial.setDescription(
+            StringUtil.isBlank(serialVo.getDescription()) ? StringPool.EMPTY_STR
+                : serialVo.getDescription());
+        serial.setCreateTime(LocalDateTime.now());
+
+        takeStockSheetDetailSerialService.save(serial);
+      }
     }
   }
 
@@ -495,6 +643,12 @@ public class TakeStockSheetServiceImpl extends
 
     @Autowired
     private TakeStockSheetDetailService takeStockSheetDetailService;
+
+    @Autowired
+    private TakeStockSheetDetailBatchService takeStockSheetDetailBatchService;
+
+    @Autowired
+    private TakeStockSheetDetailSerialService takeStockSheetDetailSerialService;
 
     @OpLog(type = ScOpLogType.TAKE_STOCK, name = "删除库存盘点表，ID：{}", params = "#ids", loopFormat = true)
     @Transactional(rollbackFor = Exception.class)
@@ -513,6 +667,14 @@ public class TakeStockSheetServiceImpl extends
                 TakeStockSheetDetail.class)
             .in(TakeStockSheetDetail::getSheetId, ids);
         takeStockSheetDetailService.remove(deleteDetailWrapper);
+        Wrapper<TakeStockSheetDetailBatch> deleteBatchWrapper = Wrappers.lambdaQuery(
+                TakeStockSheetDetailBatch.class)
+            .in(TakeStockSheetDetailBatch::getSheetId, ids);
+        takeStockSheetDetailBatchService.remove(deleteBatchWrapper);
+        Wrapper<TakeStockSheetDetailSerial> deleteSerialWrapper = Wrappers.lambdaQuery(
+                TakeStockSheetDetailSerial.class)
+            .in(TakeStockSheetDetailSerial::getSheetId, ids);
+        takeStockSheetDetailSerialService.remove(deleteSerialWrapper);
       }
 
       takeStockSheetService.remove(deleteWrapper);

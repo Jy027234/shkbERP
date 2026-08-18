@@ -74,6 +74,9 @@ public class ProductStockLogServiceImpl extends
     if (!StringUtil.isBlank(vo.getBizCode())) {
       record.setBizCode(vo.getBizCode());
     }
+    if (!StringUtil.isBlank(vo.getStockBatchId())) {
+      record.setStockBatchId(vo.getStockBatchId());
+    }
     record.setBizType(EnumUtil.getByCode(ProductStockBizType.class, vo.getBizType()));
 
     getBaseMapper().insert(record);

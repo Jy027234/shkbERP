@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-permission="['hr:employee:query']">
+    <div v-permission="['hr:training:query']">
       <page-wrapper content-full-height fixed-height>
         <!-- 统计卡片 -->
         <a-row :gutter="16" class="statistics-row">
@@ -80,20 +80,20 @@
               <a-button type="primary" :icon="h(SearchOutlined)" @click="search">查询</a-button>
               <a-button :icon="h(SyncOutlined)" @click="reset">重置</a-button>
               <a-button
-                v-permission="['hr:employee:create']"
+                v-permission="['hr:training:create']"
                 type="primary"
                 :icon="h(PlusOutlined)"
                 @click="handleAdd"
                 >新增培训记录</a-button
               >
               <a-button
-                v-permission="['hr:employee:query']"
+                v-permission="['hr:training:query']"
                 :icon="h(DownloadOutlined)"
                 @click="handleExport"
                 >导出Excel</a-button
               >
               <a-button
-                v-permission="['hr:employee:delete']"
+                v-permission="['hr:training:delete']"
                 danger
                 :disabled="!selectedRowKeys.length"
                 :icon="h(DeleteOutlined)"
@@ -363,7 +363,7 @@
             },
           },
           {
-            permission: ['hr:employee:update'],
+            permission: ['hr:training:update'],
             label: '编辑',
             onClick: () => {
               this.id = row.id;
@@ -371,7 +371,7 @@
             },
           },
           {
-            permission: ['hr:employee:delete'],
+            permission: ['hr:training:delete'],
             label: '删除',
             type: 'danger',
             onClick: () => {

@@ -160,6 +160,7 @@ $sourceScId = "$prefix-src"
 $targetScId = "$prefix-dst"
 $productId = "$prefix-p1"
 $batchProductId = "$prefix-p2"
+$serialProductId = "$prefix-p3"
 $descriptionPrefix = "V1.35 stock transfer $runKey"
 $cleanupSql = @"
 DELETE FROM sys_mq_inbox WHERE event_id IN (
@@ -172,16 +173,20 @@ DELETE FROM tbl_product_stock_log WHERE BINARY biz_id IN (
   SELECT BINARY id FROM tbl_sc_transfer_order WHERE description LIKE '$descriptionPrefix%');
 DELETE FROM tbl_sc_transfer_order_detail_receive WHERE BINARY order_id IN (
   SELECT BINARY id FROM tbl_sc_transfer_order WHERE description LIKE '$descriptionPrefix%');
+DELETE FROM tbl_sc_transfer_order_detail_batch WHERE BINARY order_id IN (
+  SELECT BINARY id FROM tbl_sc_transfer_order WHERE description LIKE '$descriptionPrefix%');
+DELETE FROM tbl_sc_transfer_order_detail_serial WHERE BINARY order_id IN (
+  SELECT BINARY id FROM tbl_sc_transfer_order WHERE description LIKE '$descriptionPrefix%');
 DELETE FROM tbl_sc_transfer_order_detail WHERE BINARY order_id IN (
   SELECT BINARY id FROM tbl_sc_transfer_order WHERE description LIKE '$descriptionPrefix%');
 DELETE FROM tbl_sc_transfer_order WHERE description LIKE '$descriptionPrefix%';
-DELETE FROM tbl_product_stock_serial WHERE product_id IN ('$productId','$batchProductId');
-DELETE FROM tbl_product_stock_batch WHERE product_id IN ('$productId','$batchProductId')
+DELETE FROM tbl_product_stock_serial WHERE product_id IN ('$productId','$batchProductId','$serialProductId');
+DELETE FROM tbl_product_stock_batch WHERE product_id IN ('$productId','$batchProductId','$serialProductId')
   AND sc_id IN ('$sourceScId','$targetScId');
-DELETE FROM tbl_product_stock WHERE product_id IN ('$productId','$batchProductId')
+DELETE FROM tbl_product_stock WHERE product_id IN ('$productId','$batchProductId','$serialProductId')
   AND sc_id IN ('$sourceScId','$targetScId');
-DELETE FROM base_data_product_purchase WHERE id IN ('$productId','$batchProductId');
-DELETE FROM base_data_product WHERE id IN ('$productId','$batchProductId');
+DELETE FROM base_data_product_purchase WHERE id IN ('$productId','$batchProductId','$serialProductId');
+DELETE FROM base_data_product WHERE id IN ('$productId','$batchProductId','$serialProductId');
 DELETE FROM base_data_store_center WHERE id IN ('$sourceScId','$targetScId');
 "@
 
@@ -196,16 +201,26 @@ INSERT INTO base_data_store_center
 INSERT INTO base_data_product
 (id,code,name,sku_code,category_id,brand_id,product_type,tax_rate,sale_tax_rate,spec,unit,available,is_batch,is_serial,create_by,create_by_id,create_time,update_by,update_by_id,update_time) VALUES
 ('$productId','V135-$runKey-P1','V1.35 normal product','V135-$runKey-SKU1','1','1',1,13,13,'FLOW','EA',1,0,0,'smoke','smoke',NOW(),'smoke','smoke',NOW()),
-('$batchProductId','V135-$runKey-P2','V1.35 batch product','V135-$runKey-SKU2','1','1',1,13,13,'FLOW','EA',1,1,0,'smoke','smoke',NOW(),'smoke','smoke',NOW());
-INSERT INTO base_data_product_purchase (id,price) VALUES ('$productId',10),('$batchProductId',10);
+('$batchProductId','V135-$runKey-P2','V1.35 batch product','V135-$runKey-SKU2','1','1',1,13,13,'FLOW','EA',1,1,0,'smoke','smoke',NOW(),'smoke','smoke',NOW()),
+('$serialProductId','V135-$runKey-P3','V1.35 serial product','V135-$runKey-SKU3','1','1',1,13,13,'FLOW','EA',1,0,1,'smoke','smoke',NOW(),'smoke','smoke',NOW());
+INSERT INTO base_data_product_purchase (id,price) VALUES ('$productId',10),('$batchProductId',10),('$serialProductId',10);
 INSERT INTO tbl_product_stock (id,sc_id,product_id,stock_num,tax_price,tax_amount) VALUES
 ('$prefix-stock1','$sourceScId','$productId',10,10,100),
 ('$prefix-stock2','$targetScId','$productId',1,10,10),
-('$prefix-stock3','$sourceScId','$batchProductId',4,10,40),
-('$prefix-stock4','$targetScId','$batchProductId',0,10,0);
+('$prefix-stock3','$sourceScId','$batchProductId',6,10,60),
+('$prefix-stock4','$targetScId','$batchProductId',0,10,0),
+('$prefix-stock5','$sourceScId','$serialProductId',3,10,30),
+('$prefix-stock6','$targetScId','$serialProductId',0,10,0);
 INSERT INTO tbl_product_stock_batch
 (id,sc_id,product_id,quantity,batch_number,shelf_location,production_date,expiry_date,supplier_id,create_time) VALUES
-('$prefix-batch','$sourceScId','$batchProductId',4,'V135-BATCH','A-01','2026-08-01','2027-08-01',NULL,NOW());
+('$prefix-batch1','$sourceScId','$batchProductId',4,'V135-BATCH','A-01','2026-08-01','2027-08-01',NULL,NOW()),
+('$prefix-batch2','$sourceScId','$batchProductId',2,'V135-BATCH2','A-02','2026-08-01','2027-08-01',NULL,NOW()),
+('$prefix-sbatch','$sourceScId','$serialProductId',3,'V135-SBATCH','S-01','2026-08-01','2027-08-01',NULL,NOW());
+INSERT INTO tbl_product_stock_serial
+(id,product_id,serial_number,stock_status,batch_id,production_date,expiry_date,shelf_location,supplier_id,create_time) VALUES
+('$prefix-ser1','$serialProductId','V135-S1',1,'$prefix-sbatch','2026-08-01','2027-08-01','S-01',NULL,NOW()),
+('$prefix-ser2','$serialProductId','V135-S2',1,'$prefix-sbatch','2026-08-01','2027-08-01','S-01',NULL,NOW()),
+('$prefix-ser3','$serialProductId','V135-S3',1,'$prefix-sbatch','2026-08-01','2027-08-01','S-01',NULL,NOW());
 "@
 
     $login = Invoke-ErpJson -Uri "$baseUri/auth/login" -Method Post -FormBody @{
@@ -269,11 +284,11 @@ INSERT INTO tbl_product_stock_batch
 SELECT COUNT(*) FROM tbl_sc_transfer_order WHERE description LIKE '$descriptionPrefix%';
 SELECT stock_num FROM tbl_product_stock WHERE sc_id='$sourceScId' AND product_id='$productId';
 SELECT stock_num FROM tbl_product_stock WHERE sc_id='$sourceScId' AND product_id='$batchProductId';
-SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$sourceScId' AND product_id='$batchProductId';
+SELECT SUM(quantity) FROM tbl_product_stock_batch WHERE sc_id='$sourceScId' AND product_id='$batchProductId';
 "@)
     if ($guardResult.Count -ne 4 -or [int]$guardResult[0] -ne 0 -or
-        [int]$guardResult[1] -ne 10 -or [int]$guardResult[2] -ne 4 -or
-        [int]$guardResult[3] -ne 4) {
+        [int]$guardResult[1] -ne 10 -or [int]$guardResult[2] -ne 6 -or
+        [int]$guardResult[3] -ne 6) {
         throw "Rejected stock transfers changed data: $($guardResult -join ',')"
     }
 
@@ -360,7 +375,237 @@ SELECT COUNT(*) FROM tbl_sc_transfer_order_detail_receive WHERE order_id='$order
         throw "Concurrent receipt was not serialized safely: $($completed -join ',')"
     }
 
-    Write-Host 'Stock-transfer verification passed: guards, traceability block, two-stage stock 10->6 and 1->5, partial receipt and concurrent duplicate receipt verified.'
+    # ---- 批次管理航材调拨：逐批次指定；审核扣转出、收货加转入；在途=未收数量 ----
+    $batchDup = @{
+        sourceScId = $sourceScId
+        targetScId = $targetScId
+        description = "$descriptionPrefix batch dup"
+        products = @(@{
+            productId = $batchProductId; transferNum = 2
+            batchDetails = @(
+                @{ batchNumber = 'V135-BATCH'; transferNum = 1 },
+                @{ batchNumber = 'V135-BATCH'; transferNum = 1 }
+            )
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/transfer/sc" -Headers $headers `
+        -JsonBody ($batchDup | ConvertTo-Json -Depth 8)
+
+    $batchSum = @{
+        sourceScId = $sourceScId
+        targetScId = $targetScId
+        description = "$descriptionPrefix batch sum mismatch"
+        products = @(@{
+            productId = $batchProductId; transferNum = 3
+            batchDetails = @(
+                @{ batchNumber = 'V135-BATCH'; transferNum = 1 },
+                @{ batchNumber = 'V135-BATCH2'; transferNum = 1 }
+            )
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/transfer/sc" -Headers $headers `
+        -JsonBody ($batchSum | ConvertTo-Json -Depth 8)
+
+    $batchTransfer = @{
+        sourceScId = $sourceScId
+        targetScId = $targetScId
+        description = "$descriptionPrefix batch transfer"
+        products = @(@{
+            productId = $batchProductId; transferNum = 3
+            batchDetails = @(
+                @{ batchNumber = 'V135-BATCH'; transferNum = 2 },
+                @{ batchNumber = 'V135-BATCH2'; transferNum = 1 }
+            )
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/transfer/sc/approve/pass/direct" -Method Post `
+        -Headers $headers -JsonBody ($batchTransfer | ConvertTo-Json -Depth 8) | Out-Null
+    $batchOrderId = [string](@(Invoke-SmokeSql -ReturnOutput -Sql `
+        "SELECT id FROM tbl_sc_transfer_order WHERE description='$descriptionPrefix batch transfer';")[0])
+    $batchApproved = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT status FROM tbl_sc_transfer_order WHERE id='$batchOrderId';
+SELECT stock_num FROM tbl_product_stock WHERE sc_id='$sourceScId' AND product_id='$batchProductId';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$sourceScId' AND product_id='$batchProductId' AND batch_number='V135-BATCH';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$sourceScId' AND product_id='$batchProductId' AND batch_number='V135-BATCH2';
+SELECT SUM(received_num) FROM tbl_sc_transfer_order_detail_batch WHERE order_id='$batchOrderId';
+"@)
+    if ($batchApproved.Count -ne 5 -or [int]$batchApproved[0] -ne 3 -or
+        [int]$batchApproved[1] -ne 3 -or [int]$batchApproved[2] -ne 2 -or
+        [int]$batchApproved[3] -ne 1 -or [int]$batchApproved[4] -ne 0) {
+        throw "Batch transfer approval failed (in-transit must remain unreceived): $($batchApproved -join ',')"
+    }
+
+    $batchGhostReceive = @{
+        id = $batchOrderId
+        products = @(@{
+            productId = $batchProductId; receiveNum = 1
+            batchDetails = @(@{ batchNumber = 'V135-GHOST'; receiveNum = 1 })
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/transfer/sc/receive" -Method Patch `
+        -Headers $headers -JsonBody ($batchGhostReceive | ConvertTo-Json -Depth 8)
+    $batchGhostGuard = @(Invoke-SmokeSql -ReturnOutput -Sql `
+        "SELECT stock_num FROM tbl_product_stock WHERE sc_id='$targetScId' AND product_id='$batchProductId';")
+    if ($batchGhostGuard.Count -ne 1 -or [int]$batchGhostGuard[0] -ne 0) {
+        throw "Rejected ghost batch receipt changed target stock: $($batchGhostGuard -join ',')"
+    }
+
+    $batchPartialReceive = @{
+        id = $batchOrderId
+        products = @(@{
+            productId = $batchProductId; receiveNum = 1
+            batchDetails = @(@{ batchNumber = 'V135-BATCH'; receiveNum = 1 })
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/transfer/sc/receive" -Method Patch -Headers $headers `
+        -JsonBody ($batchPartialReceive | ConvertTo-Json -Depth 8) | Out-Null
+    $batchPartial = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT status FROM tbl_sc_transfer_order WHERE id='$batchOrderId';
+SELECT stock_num FROM tbl_product_stock WHERE sc_id='$targetScId' AND product_id='$batchProductId';
+SELECT received_num FROM tbl_sc_transfer_order_detail_batch WHERE order_id='$batchOrderId' AND batch_number='V135-BATCH';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$targetScId' AND product_id='$batchProductId' AND batch_number='V135-BATCH';
+"@)
+    if ($batchPartial.Count -ne 4 -or [int]$batchPartial[0] -ne 9 -or
+        [int]$batchPartial[1] -ne 1 -or [int]$batchPartial[2] -ne 1 -or
+        [int]$batchPartial[3] -ne 1) {
+        throw "Batch partial receipt failed (in-transit accounting): $($batchPartial -join ',')"
+    }
+
+    $batchFinalReceive = @{
+        id = $batchOrderId
+        products = @(@{
+            productId = $batchProductId; receiveNum = 2
+            batchDetails = @(
+                @{ batchNumber = 'V135-BATCH'; receiveNum = 1 },
+                @{ batchNumber = 'V135-BATCH2'; receiveNum = 1 }
+            )
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/transfer/sc/receive" -Method Patch -Headers $headers `
+        -JsonBody ($batchFinalReceive | ConvertTo-Json -Depth 8) | Out-Null
+    $batchFinal = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT status FROM tbl_sc_transfer_order WHERE id='$batchOrderId';
+SELECT stock_num FROM tbl_product_stock WHERE sc_id='$targetScId' AND product_id='$batchProductId';
+SELECT SUM(received_num) FROM tbl_sc_transfer_order_detail_batch WHERE order_id='$batchOrderId';
+"@)
+    if ($batchFinal.Count -ne 3 -or [int]$batchFinal[0] -ne 12 -or
+        [int]$batchFinal[1] -ne 3 -or [int]$batchFinal[2] -ne 3) {
+        throw "Batch final receipt failed: $($batchFinal -join ',')"
+    }
+
+    # ---- 序列号管理航材调拨：逐序列号指定；转出置在途、收货切换到转入仓批次 ----
+    $serialDup = @{
+        sourceScId = $sourceScId
+        targetScId = $targetScId
+        description = "$descriptionPrefix serial dup"
+        products = @(@{
+            productId = $serialProductId; transferNum = 2
+            serialDetails = @(
+                @{ serialNumber = 'V135-S1'; batchNumber = 'V135-SBATCH' },
+                @{ serialNumber = 'V135-S1'; batchNumber = 'V135-SBATCH' }
+            )
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/transfer/sc" -Headers $headers `
+        -JsonBody ($serialDup | ConvertTo-Json -Depth 8)
+
+    $serialTransfer = @{
+        sourceScId = $sourceScId
+        targetScId = $targetScId
+        description = "$descriptionPrefix serial transfer"
+        products = @(@{
+            productId = $serialProductId; transferNum = 2
+            serialDetails = @(
+                @{ serialNumber = 'V135-S1'; batchNumber = 'V135-SBATCH' },
+                @{ serialNumber = 'V135-S2'; batchNumber = 'V135-SBATCH' }
+            )
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/transfer/sc/approve/pass/direct" -Method Post `
+        -Headers $headers -JsonBody ($serialTransfer | ConvertTo-Json -Depth 8) | Out-Null
+    $serialOrderId = [string](@(Invoke-SmokeSql -ReturnOutput -Sql `
+        "SELECT id FROM tbl_sc_transfer_order WHERE description='$descriptionPrefix serial transfer';")[0])
+    $serialApproved = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT status FROM tbl_sc_transfer_order WHERE id='$serialOrderId';
+SELECT stock_num FROM tbl_product_stock WHERE sc_id='$sourceScId' AND product_id='$serialProductId';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$sourceScId' AND product_id='$serialProductId' AND batch_number='V135-SBATCH';
+SELECT stock_status FROM tbl_product_stock_serial WHERE product_id='$serialProductId' AND serial_number='V135-S1';
+SELECT stock_status FROM tbl_product_stock_serial WHERE product_id='$serialProductId' AND serial_number='V135-S2';
+SELECT COUNT(*) FROM tbl_sc_transfer_order_detail_serial WHERE order_id='$serialOrderId' AND transfer_status=1;
+"@)
+    if ($serialApproved.Count -ne 6 -or [int]$serialApproved[0] -ne 3 -or
+        [int]$serialApproved[1] -ne 1 -or [int]$serialApproved[2] -ne 1 -or
+        [int]$serialApproved[3] -ne 0 -or [int]$serialApproved[4] -ne 0 -or
+        [int]$serialApproved[5] -ne 2) {
+        throw "Serial transfer approval failed (in-transit serials): $($serialApproved -join ',')"
+    }
+
+    $serialGhostReceive = @{
+        id = $serialOrderId
+        products = @(@{
+            productId = $serialProductId; receiveNum = 1
+            serialDetails = @(@{ serialNumber = 'V135-S3' })
+        })
+    }
+    Assert-ErpRejected -Uri "$baseUri/stock/transfer/sc/receive" -Method Patch `
+        -Headers $headers -JsonBody ($serialGhostReceive | ConvertTo-Json -Depth 8)
+    $serialGhostGuard = @(Invoke-SmokeSql -ReturnOutput -Sql `
+        "SELECT stock_num FROM tbl_product_stock WHERE sc_id='$targetScId' AND product_id='$serialProductId';")
+    if ($serialGhostGuard.Count -ne 1 -or [int]$serialGhostGuard[0] -ne 0) {
+        throw "Rejected mismatched serial receipt changed target stock: $($serialGhostGuard -join ',')"
+    }
+
+    $serialPartialReceive = @{
+        id = $serialOrderId
+        products = @(@{
+            productId = $serialProductId; receiveNum = 1
+            serialDetails = @(@{ serialNumber = 'V135-S1' })
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/transfer/sc/receive" -Method Patch -Headers $headers `
+        -JsonBody ($serialPartialReceive | ConvertTo-Json -Depth 8) | Out-Null
+    $serialPartial = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT status FROM tbl_sc_transfer_order WHERE id='$serialOrderId';
+SELECT stock_num FROM tbl_product_stock WHERE sc_id='$targetScId' AND product_id='$serialProductId';
+SELECT stock_status FROM tbl_product_stock_serial WHERE product_id='$serialProductId' AND serial_number='V135-S1';
+SELECT batch_id FROM tbl_product_stock_serial WHERE product_id='$serialProductId' AND serial_number='V135-S1';
+SELECT quantity FROM tbl_product_stock_batch WHERE sc_id='$targetScId' AND product_id='$serialProductId' AND batch_number='V135-SBATCH';
+SELECT transfer_status FROM tbl_sc_transfer_order_detail_serial WHERE order_id='$serialOrderId' AND serial_number='V135-S1';
+"@)
+    if ($serialPartial.Count -ne 6 -or [int]$serialPartial[0] -ne 9 -or
+        [int]$serialPartial[1] -ne 1 -or [int]$serialPartial[2] -ne 1 -or
+        [int]$serialPartial[4] -ne 1 -or [int]$serialPartial[5] -ne 2) {
+        throw "Serial partial receipt failed: $($serialPartial -join ',')"
+    }
+    # 校验序列号已切换到转入仓批次（batch_id 与转入仓 V135-SBATCH 一致）
+    $targetBatchId = [string](@(Invoke-SmokeSql -ReturnOutput -Sql `
+        "SELECT id FROM tbl_product_stock_batch WHERE sc_id='$targetScId' AND product_id='$serialProductId' AND batch_number='V135-SBATCH';")[0])
+    if ([string]$serialPartial[3] -ne $targetBatchId) {
+        throw "Received serial was not switched to the target batch: $($serialPartial -join ',')"
+    }
+
+    $serialFinalReceive = @{
+        id = $serialOrderId
+        products = @(@{
+            productId = $serialProductId; receiveNum = 1
+            serialDetails = @(@{ serialNumber = 'V135-S2' })
+        })
+    }
+    Invoke-ErpJson -Uri "$baseUri/stock/transfer/sc/receive" -Method Patch -Headers $headers `
+        -JsonBody ($serialFinalReceive | ConvertTo-Json -Depth 8) | Out-Null
+    $serialFinal = @(Invoke-SmokeSql -ReturnOutput -Sql @"
+SELECT status FROM tbl_sc_transfer_order WHERE id='$serialOrderId';
+SELECT stock_num FROM tbl_product_stock WHERE sc_id='$targetScId' AND product_id='$serialProductId';
+SELECT stock_status FROM tbl_product_stock_serial WHERE product_id='$serialProductId' AND serial_number='V135-S2';
+SELECT COUNT(*) FROM tbl_sc_transfer_order_detail_serial WHERE order_id='$serialOrderId' AND transfer_status=2;
+"@)
+    if ($serialFinal.Count -ne 4 -or [int]$serialFinal[0] -ne 12 -or
+        [int]$serialFinal[1] -ne 2 -or [int]$serialFinal[2] -ne 1 -or
+        [int]$serialFinal[3] -ne 2) {
+        throw "Serial final receipt failed: $($serialFinal -join ',')"
+    }
+
+    Write-Host 'Stock-transfer verification passed: guards, normal two-stage 10->6 and 1->5 with concurrent duplicate receipt, batch per-batch in-transit accounting and partial/final receipt, serial per-serial in-transit switching with mismatch 退回.'
 } finally {
     if ($token) {
         try {

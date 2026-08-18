@@ -6,7 +6,7 @@
     title="编辑培训记录"
     :footer="null"
   >
-    <div v-if="visible" v-permission="['hr:employee:update']" v-loading="loading">
+    <div v-if="visible" v-permission="['hr:training:update']" v-loading="loading">
       <a-form
         :model="formData"
         :rules="rules"

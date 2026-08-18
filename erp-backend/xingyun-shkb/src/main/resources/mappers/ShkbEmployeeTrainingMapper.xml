@@ -35,4 +35,59 @@
         create_time,update_by,update_by_id,
         update_time
     </sql>
+
+    <resultMap id="QueryResultMap" type="com.lframework.xingyun.shkb.bo.training.QueryShkbEmployeeTrainingBo">
+        <id property="id" column="id"/>
+        <result property="employeeId" column="employee_id"/>
+        <result property="employeeName" column="employee_name"/>
+        <result property="trainingName" column="training_name"/>
+        <result property="trainingType" column="training_type"/>
+        <result property="trainingOrg" column="training_org"/>
+        <result property="trainingContent" column="training_content"/>
+        <result property="startDate" column="startDate"/>
+        <result property="endDate" column="endDate"/>
+        <result property="trainingHours" column="training_hours"/>
+        <result property="trainingResult" column="training_result"/>
+        <result property="certificateNo" column="certificate_no"/>
+        <result property="fileUrl" column="file_url"/>
+        <result property="description" column="description"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="createTime"/>
+    </resultMap>
+
+    <select id="query" resultMap="QueryResultMap">
+        SELECT
+            t.id,
+            t.employee_id,
+            e.name AS employee_name,
+            t.training_name,
+            t.training_type,
+            t.training_org,
+            t.training_content,
+            DATE_FORMAT(t.start_date, '%Y-%m-%d') AS startDate,
+            DATE_FORMAT(t.end_date, '%Y-%m-%d') AS endDate,
+            t.training_hours,
+            t.training_result,
+            t.certificate_no,
+            t.file_url,
+            t.description,
+            t.create_by AS create_by,
+            DATE_FORMAT(t.create_time, '%Y-%m-%d %H:%i:%s') AS createTime
+        FROM shkb_employee_training t
+        LEFT JOIN shkb_employee e ON t.employee_id = e.id
+        <where>
+            <if test="vo.keyword != null and vo.keyword != ''">
+                AND (t.training_name LIKE CONCAT('%', #{vo.keyword}, '%')
+                    OR t.training_type LIKE CONCAT('%', #{vo.keyword}, '%')
+                    OR e.name LIKE CONCAT('%', #{vo.keyword}, '%'))
+            </if>
+            <if test="vo.trainingType != null and vo.trainingType != ''">
+                AND t.training_type = #{vo.trainingType}
+            </if>
+            <if test="vo.employeeId != null and vo.employeeId != ''">
+                AND t.employee_id = #{vo.employeeId}
+            </if>
+        </where>
+        ORDER BY t.create_time DESC
+    </select>
 </mapper>

@@ -40,6 +40,34 @@
             <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
     </resultMap>
 
+    <resultMap id="QueryResultMap" type="com.lframework.xingyun.shkb.bo.employee.QueryShkbEmployeeBo">
+        <id property="id" column="id"/>
+        <result property="code" column="code"/>
+        <result property="name" column="name"/>
+        <result property="gender" column="gender"/>
+        <result property="genderText" column="genderText"/>
+        <result property="idCard" column="id_card"/>
+        <result property="birthday" column="birthday"/>
+        <result property="nation" column="nation"/>
+        <result property="nativePlace" column="native_place"/>
+        <result property="politicalStatus" column="political_status"/>
+        <result property="education" column="education"/>
+        <result property="major" column="major"/>
+        <result property="graduateSchool" column="graduate_school"/>
+        <result property="graduateDate" column="graduate_date"/>
+        <result property="email" column="email"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="deptName" column="deptName"/>
+        <result property="position" column="position"/>
+        <result property="phone" column="phone"/>
+        <result property="entryDate" column="entryDate"/>
+        <result property="status" column="status"/>
+        <result property="statusText" column="statusText"/>
+        <result property="leaveDate" column="leaveDate"/>
+        <result property="leaveReason" column="leaveReason"/>
+        <result property="createTime" column="createTime"/>
+    </resultMap>
+
     <sql id="Base_Column_List">
         id,code,name,
         gender,id_card,birthday,
@@ -53,4 +81,150 @@
         create_by,create_by_id,create_time,
         update_by,update_by_id,update_time
     </sql>
+
+    <select id="query" resultMap="QueryResultMap">
+        SELECT
+            t.id,
+            t.code,
+            t.name,
+            t.gender,
+            CASE
+                WHEN t.gender = 1 THEN '男'
+                WHEN t.gender = 2 THEN '女'
+                ELSE '未知'
+            END AS genderText,
+            t.id_card,
+            DATE_FORMAT(t.birthday, '%Y-%m-%d') AS birthday,
+            t.nation,
+            t.native_place,
+            t.political_status,
+            t.education,
+            t.major,
+            t.graduate_school,
+            DATE_FORMAT(t.graduate_date, '%Y-%m-%d') AS graduateDate,
+            t.email,
+            t.dept_id,
+            d.name AS deptName,
+            t.position,
+            t.phone,
+            DATE_FORMAT(t.entry_date, '%Y-%m-%d') AS entryDate,
+            t.status,
+            CASE
+                WHEN t.status = 0 THEN '离职'
+                WHEN t.status = 1 THEN '在职'
+                WHEN t.status = 2 THEN '试用期'
+                ELSE ''
+            END AS statusText,
+            DATE_FORMAT(t.leave_date, '%Y-%m-%d') AS leaveDate,
+            t.leave_reason AS leaveReason,
+            DATE_FORMAT(t.create_time, '%Y-%m-%d %H:%i:%s') AS createTime
+        FROM shkb_employee t
+        LEFT JOIN sys_dept d ON t.dept_id = d.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (t.code LIKE CONCAT('%', #{keyword}, '%')
+                    OR t.name LIKE CONCAT('%', #{keyword}, '%')
+                    OR t.phone LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="code != null and code != ''">
+                AND t.code LIKE CONCAT('%', #{code}, '%')
+            </if>
+            <if test="name != null and name != ''">
+                AND t.name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="phone != null and phone != ''">
+                AND t.phone LIKE CONCAT('%', #{phone}, '%')
+            </if>
+            <if test="deptId != null and deptId != ''">
+                AND t.dept_id = #{deptId}
+            </if>
+            <if test="status != null">
+                AND t.status = #{status}
+            </if>
+        </where>
+        ORDER BY t.create_time DESC
+    </select>
+
+    <resultMap id="GetResultMap" type="com.lframework.xingyun.shkb.bo.employee.GetShkbEmployeeBo">
+        <id property="id" column="id"/>
+        <result property="code" column="code"/>
+        <result property="name" column="name"/>
+        <result property="gender" column="gender"/>
+        <result property="genderText" column="genderText"/>
+        <result property="idCard" column="id_card"/>
+        <result property="birthday" column="birthday"/>
+        <result property="nation" column="nation"/>
+        <result property="nativePlace" column="native_place"/>
+        <result property="politicalStatus" column="political_status"/>
+        <result property="education" column="education"/>
+        <result property="major" column="major"/>
+        <result property="graduateSchool" column="graduate_school"/>
+        <result property="graduateDate" column="graduateDate"/>
+        <result property="phone" column="phone"/>
+        <result property="email" column="email"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="deptName" column="deptName"/>
+        <result property="position" column="position"/>
+        <result property="entryDate" column="entryDate"/>
+        <result property="regularDate" column="regularDate"/>
+        <result property="leaveDate" column="leaveDate"/>
+        <result property="leaveReason" column="leave_reason"/>
+        <result property="status" column="status"/>
+        <result property="statusText" column="statusText"/>
+        <result property="photoUrl" column="photo_url"/>
+        <result property="address" column="address"/>
+        <result property="emergencyContact" column="emergency_contact"/>
+        <result property="emergencyPhone" column="emergency_phone"/>
+        <result property="description" column="description"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="createTime"/>
+    </resultMap>
+
+    <select id="getDetail" resultMap="GetResultMap">
+        SELECT
+            t.id,
+            t.code,
+            t.name,
+            t.gender,
+            CASE
+                WHEN t.gender = 1 THEN '男'
+                WHEN t.gender = 2 THEN '女'
+                ELSE '未知'
+            END AS genderText,
+            t.id_card,
+            DATE_FORMAT(t.birthday, '%Y-%m-%d') AS birthday,
+            t.nation,
+            t.native_place,
+            t.political_status,
+            t.education,
+            t.major,
+            t.graduate_school,
+            DATE_FORMAT(t.graduate_date, '%Y-%m-%d') AS graduateDate,
+            t.phone,
+            t.email,
+            t.dept_id,
+            d.name AS deptName,
+            t.position,
+            DATE_FORMAT(t.entry_date, '%Y-%m-%d') AS entryDate,
+            DATE_FORMAT(t.regular_date, '%Y-%m-%d') AS regularDate,
+            DATE_FORMAT(t.leave_date, '%Y-%m-%d') AS leaveDate,
+            t.leave_reason,
+            t.status,
+            CASE
+                WHEN t.status = 0 THEN '离职'
+                WHEN t.status = 1 THEN '在职'
+                WHEN t.status = 2 THEN '试用期'
+                ELSE ''
+            END AS statusText,
+            t.photo_url,
+            t.address,
+            t.emergency_contact,
+            t.emergency_phone,
+            t.description,
+            t.create_by,
+            DATE_FORMAT(t.create_time, '%Y-%m-%d %H:%i:%s') AS createTime
+        FROM shkb_employee t
+        LEFT JOIN sys_dept d ON t.dept_id = d.id
+        WHERE t.id = #{id}
+    </select>
 </mapper>

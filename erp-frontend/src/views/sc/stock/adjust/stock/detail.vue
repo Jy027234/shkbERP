@@ -87,6 +87,27 @@
         :columns="tableColumn"
       />
 
+      <!-- 批次/序列号追溯明细 -->
+      <j-border v-if="batchDetailRows.length > 0 || serialDetailRows.length > 0" title="追溯明细">
+        <a-table
+          v-if="batchDetailRows.length > 0"
+          :data-source="batchDetailRows"
+          :columns="batchColumns"
+          row-key="key"
+          size="small"
+          :pagination="false"
+          style="margin-bottom: 8px"
+        />
+        <a-table
+          v-if="serialDetailRows.length > 0"
+          :data-source="serialDetailRows"
+          :columns="serialColumns"
+          row-key="key"
+          size="small"
+          :pagination="false"
+        />
+      </j-border>
+
       <order-time-line :id="id" />
 
       <j-border title="合计">
@@ -133,15 +154,60 @@
           { field: 'spec', title: '规格', width: 80 },
           { field: 'categoryName', title: '航材分类', width: 120 },
           { field: 'brandName', title: '航材制造商', width: 120 },
-          { field: 'batchNumber', title: '批次号', width: 150 },
-          { field: 'serialNumberList', title: '序列号', width: 200 },
           { field: 'stockNum', title: '调整库存数量', width: 120, align: 'right' },
           { field: 'description', title: '备注', width: 200 },
         ],
         tableData: [],
+        batchColumns: [
+          { title: '航材编号', dataIndex: 'productCode', width: 120 },
+          { title: '批次号', dataIndex: 'batchNumber' },
+          { title: '调整数量', dataIndex: 'stockNum', width: 100, align: 'right' },
+          { title: '备注', dataIndex: 'description', width: 200 },
+        ],
+        serialColumns: [
+          { title: '航材编号', dataIndex: 'productCode', width: 120 },
+          { title: '序列号', dataIndex: 'serialNumber' },
+          { title: '批次号', dataIndex: 'batchNumber', width: 140 },
+          { title: '备注', dataIndex: 'description', width: 200 },
+        ],
       };
     },
-    computed: {},
+    computed: {
+      batchDetailRows() {
+        const rows = [];
+        this.tableData.forEach((detail) => {
+          (detail.batchDetails || []).forEach((item, index) => {
+            rows.push(
+              Object.assign(
+                {
+                  key: detail.productId + '-b' + index,
+                  productCode: detail.productCode,
+                },
+                item,
+              ),
+            );
+          });
+        });
+        return rows;
+      },
+      serialDetailRows() {
+        const rows = [];
+        this.tableData.forEach((detail) => {
+          (detail.serialDetails || []).forEach((item, index) => {
+            rows.push(
+              Object.assign(
+                {
+                  key: detail.productId + '-s' + index,
+                  productCode: detail.productCode,
+                },
+                item,
+              ),
+            );
+          });
+        });
+        return rows;
+      },
+    },
     created() {
       // 初始化表单数据
       this.initFormData();

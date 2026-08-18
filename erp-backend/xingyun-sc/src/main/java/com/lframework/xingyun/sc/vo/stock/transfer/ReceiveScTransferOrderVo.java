@@ -50,5 +50,53 @@ public class ReceiveScTransferOrderVo implements BaseVo, Serializable {
     @NotNull(message = "收货数量不能为空！")
     @TypeMismatch(message = "收货数量格式有误！")
     private Integer receiveNum;
+
+    /**
+     * 批次收货明细（批次管理商品：批次号+本次收货数量；与调拨明细不一致时退回）
+     */
+    @ApiModelProperty("批次收货明细")
+    @Valid
+    private List<ReceiveBatchDetailVo> batchDetails;
+
+    /**
+     * 序列号收货明细（序列号管理商品：本次收货的序列号；与调拨明细不一致时退回）
+     */
+    @ApiModelProperty("序列号收货明细")
+    @Valid
+    private List<ReceiveSerialDetailVo> serialDetails;
+  }
+
+  @Data
+  public static class ReceiveBatchDetailVo implements BaseVo, Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 批次号
+     */
+    @ApiModelProperty(value = "批次号", required = true)
+    @NotBlank(message = "批次号不能为空！")
+    private String batchNumber;
+
+    /**
+     * 本次收货数量
+     */
+    @ApiModelProperty(value = "本次收货数量", required = true)
+    @NotNull(message = "本次收货数量不能为空！")
+    @TypeMismatch(message = "本次收货数量格式有误！")
+    private Integer receiveNum;
+  }
+
+  @Data
+  public static class ReceiveSerialDetailVo implements BaseVo, Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 序列号
+     */
+    @ApiModelProperty(value = "序列号", required = true)
+    @NotBlank(message = "序列号不能为空！")
+    private String serialNumber;
   }
 }

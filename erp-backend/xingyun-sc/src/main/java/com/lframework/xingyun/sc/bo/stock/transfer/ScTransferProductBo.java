@@ -67,6 +67,18 @@ public class ScTransferProductBo extends BaseBo<ScTransferProductDto> {
   private String unit;
 
   /**
+   * 是否批次管理
+   */
+  @ApiModelProperty("是否批次管理")
+  private Boolean isBatch;
+
+  /**
+   * 是否序列号管理
+   */
+  @ApiModelProperty("是否序列号管理")
+  private Boolean isSerial;
+
+  /**
    * 当前库存数量
    */
   @ApiModelProperty("当前库存数量")
@@ -95,6 +107,8 @@ public class ScTransferProductBo extends BaseBo<ScTransferProductDto> {
     this.productId = dto.getId();
     this.productCode = dto.getCode();
     this.productName = dto.getName();
+    this.isBatch = dto.getIsBatch();
+    this.isSerial = dto.getIsSerial();
 
     ProductStockService productStockService = ApplicationUtil.getBean(
         ProductStockService.class);

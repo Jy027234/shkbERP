@@ -72,6 +72,18 @@ public class TakeStockSheetProductBo extends BaseBo<TakeStockSheetProductDto> {
   private String unit;
 
   /**
+   * 是否批次管理
+   */
+  @ApiModelProperty("是否批次管理")
+  private Boolean isBatch;
+
+  /**
+   * 是否序列号管理
+   */
+  @ApiModelProperty("是否序列号管理")
+  private Boolean isSerial;
+
+  /**
    * 库存数量
    */
   @ApiModelProperty("库存数量")
@@ -105,6 +117,8 @@ public class TakeStockSheetProductBo extends BaseBo<TakeStockSheetProductDto> {
     this.productId = dto.getId();
     this.productCode = dto.getCode();
     this.productName = dto.getName();
+    this.isBatch = dto.getIsBatch();
+    this.isSerial = dto.getIsSerial();
 
     TakeStockConfigService takeStockConfigService = ApplicationUtil.getBean(
         TakeStockConfigService.class);

@@ -22,6 +22,12 @@ public interface ProductStockBatchMapper extends BaseMapper<ProductStockBatch> {
         @Param("scId") String scId, @Param("stockNum") Integer stockNum);
 
     /**
+     * 仅在批次、商品、仓库匹配时原子增加（用于盘盈等批次入库）。
+     */
+    int addStock(@Param("id") String id, @Param("productId") String productId,
+        @Param("scId") String scId, @Param("stockNum") Integer stockNum);
+
+    /**
      * 查询商品批次库存信息
      * 
      * @param vo 查询参数

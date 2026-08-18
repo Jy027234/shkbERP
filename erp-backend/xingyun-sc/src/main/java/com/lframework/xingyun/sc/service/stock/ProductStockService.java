@@ -4,6 +4,7 @@ import com.lframework.starter.web.core.components.resp.PageResult;
 import com.lframework.starter.web.core.service.BaseMpService;
 import com.lframework.xingyun.core.dto.stock.ProductStockChangeDto;
 import com.lframework.xingyun.sc.entity.ProductStock;
+import com.lframework.xingyun.sc.vo.stock.AddProductStockBatchVo;
 import com.lframework.xingyun.sc.vo.stock.AddProductStockVo;
 import com.lframework.xingyun.sc.vo.stock.QueryProductStockVo;
 import com.lframework.xingyun.sc.vo.stock.SubProductStockVo;
@@ -74,6 +75,13 @@ public interface ProductStockService extends BaseMpService<ProductStock> {
    * @param vo
    */
   ProductStockChangeDto subStockBatch(SubProductStockBatchVo vo);
+
+  /**
+   * 批次库存入库（用于盘盈等批次入库）
+   *
+   * @param vo
+   */
+  ProductStockChangeDto addStockBatch(AddProductStockBatchVo vo);
 
   /**
    * 出库（不记录流水日志）

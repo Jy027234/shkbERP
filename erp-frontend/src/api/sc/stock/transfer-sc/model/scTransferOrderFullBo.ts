@@ -131,6 +131,26 @@ export interface DetailBo {
   unit: string;
 
   /**
+   * 是否批次管理
+   */
+  isBatch?: boolean;
+
+  /**
+   * 是否序列号管理
+   */
+  isSerial?: boolean;
+
+  /**
+   * 批次明细
+   */
+  batchDetails?: SheetBatchDetailBo[];
+
+  /**
+   * 序列号明细
+   */
+  serialDetails?: SheetSerialDetailBo[];
+
+  /**
    * 调拨数量
    */
   transferNum: number;
@@ -144,6 +164,50 @@ export interface DetailBo {
    * 已收货数量
    */
   receiveNum: number;
+
+  /**
+   * 备注
+   */
+  description: string;
+}
+
+export interface SheetBatchDetailBo {
+  /**
+   * 批次号
+   */
+  batchNumber: string;
+
+  /**
+   * 调拨数量
+   */
+  transferNum: number;
+
+  /**
+   * 已收货数量
+   */
+  receivedNum: number;
+
+  /**
+   * 备注
+   */
+  description: string;
+}
+
+export interface SheetSerialDetailBo {
+  /**
+   * 序列号
+   */
+  serialNumber: string;
+
+  /**
+   * 调拨状态：1在途、2已收货
+   */
+  transferStatus: number;
+
+  /**
+   * 批次号
+   */
+  batchNumber: string;
 
   /**
    * 备注

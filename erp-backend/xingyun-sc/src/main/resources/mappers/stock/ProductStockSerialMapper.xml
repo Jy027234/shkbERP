@@ -97,4 +97,19 @@
         </if>
         ORDER BY pss.create_time DESC
     </select>
+
+    <update id="updateStatus">
+        UPDATE tbl_product_stock_serial
+        SET stock_status = #{toStatus}
+        WHERE id = #{id}
+          AND stock_status = #{fromStatus}
+    </update>
+
+    <update id="receiveTransfer">
+        UPDATE tbl_product_stock_serial
+        SET stock_status = 1,
+            batch_id = #{batchId}
+        WHERE id = #{id}
+          AND stock_status = 0
+    </update>
 </mapper>

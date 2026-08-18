@@ -30,6 +30,7 @@ import com.lframework.xingyun.sc.mappers.ProductStockMapper;
 import com.lframework.xingyun.sc.service.stock.ProductStockBatchService;
 import com.lframework.xingyun.sc.service.stock.ProductStockLogService;
 import com.lframework.xingyun.sc.service.stock.ProductStockService;
+import com.lframework.xingyun.sc.vo.stock.AddProductStockBatchVo;
 import com.lframework.xingyun.sc.vo.stock.AddProductStockVo;
 import com.lframework.xingyun.sc.vo.stock.QueryProductStockVo;
 import com.lframework.xingyun.sc.vo.stock.SubProductStockVo;
@@ -420,6 +421,102 @@ public class ProductStockServiceImpl extends BaseMpServiceImpl<ProductStockMappe
     stockChange.setProductId(vo.getProductId());
     stockChange.setNum(vo.getStockNum());
     stockChange.setTaxAmount(subTaxAmount);
+    stockChange.setCurTaxPrice(currentTaxPrice);
+    stockChange.setCreateTime(vo.getCreateTime());
+    stockChange.setCurStockNum(currentBatchQuantity); // 返回批次剩余数量
+
+    return stockChange;
+  }
+
+  @Transactional(rollbackFor = Exception.class)
+  @Override
+  public ProductStockChangeDto addStockBatch(AddProductStockBatchVo vo) {
+
+    Product product = productService.findById(vo.getProductId());
+    if (product.getProductType() != ProductType.NORMAL) {
+      throw new DefaultClientException(
+          "只有商品类型为【" + ProductType.NORMAL.getDesc() + "】的商品支持批次入库！");
+    }
+
+    // 查询批次库存
+    ProductStockBatch stockBatch = productStockBatchService.getById(vo.getStockBatchId());
+    if (stockBatch == null) {
+      throw new DefaultClientException(
+          "批次库存不存在！");
+    }
+
+    if (!stockBatch.getProductId().equals(vo.getProductId())) {
+      throw new DefaultClientException(
+          "批次库存与商品不匹配！");
+    }
+
+    if (!stockBatch.getScId().equals(vo.getScId())) {
+      throw new DefaultClientException(
+          "批次库存与仓库不匹配！");
+    }
+
+    // 批次库存只管理数量，金额和价格由总库存管理
+    // 如果taxAmount为null，从总库存获取当前均价计算
+    if (vo.getTaxAmount() == null) {
+      Wrapper<ProductStock> queryWrapper = Wrappers.lambdaQuery(ProductStock.class)
+          .eq(ProductStock::getProductId, vo.getProductId()).eq(ProductStock::getScId, vo.getScId());
+      ProductStock productStock = getBaseMapper().selectOne(queryWrapper);
+      if (productStock != null && productStock.getStockNum() > 0) {
+        vo.setTaxAmount(NumberUtil.mul(productStock.getTaxPrice(), vo.getStockNum()));
+      } else {
+        vo.setTaxAmount(BigDecimal.ZERO);
+      }
+    }
+
+    vo.setTaxAmount(NumberUtil.getNumber(vo.getTaxAmount(), 2));
+    BigDecimal addTaxAmount = vo.getTaxAmount();
+
+    // 使用数据库条件更新，防止并发请求基于同一个旧数量重复覆盖。
+    int count = productStockBatchService
+        .addStock(vo.getStockBatchId(), vo.getProductId(), vo.getScId(), vo.getStockNum());
+    if (count != 1) {
+      throw new DefaultClientException(
+          "商品（" + product.getCode() + "）" + product.getName() + "批次库存已变化，无法入库！");
+    }
+    ProductStockBatch updatedBatch = productStockBatchService.getById(vo.getStockBatchId());
+    if (updatedBatch == null) {
+      throw new DefaultClientException("批次库存不存在！");
+    }
+    int currentBatchQuantity = updatedBatch.getQuantity();
+    int originalBatchQuantity = currentBatchQuantity - vo.getStockNum();
+
+    // 记录批次库存变动日志（注意：总库存变动日志将在调用方统一处理ProductStock时自动记录）
+    Wrapper<ProductStock> queryWrapper = Wrappers.lambdaQuery(ProductStock.class)
+        .eq(ProductStock::getProductId, vo.getProductId()).eq(ProductStock::getScId, vo.getScId());
+    ProductStock productStock = getBaseMapper().selectOne(queryWrapper);
+    BigDecimal currentTaxPrice = (productStock != null) ? productStock.getTaxPrice() : BigDecimal.ZERO;
+
+    AddLogWithAddStockVo addLogWithAddStockVo = new AddLogWithAddStockVo();
+    addLogWithAddStockVo.setProductId(vo.getProductId());
+    addLogWithAddStockVo.setScId(vo.getScId());
+    addLogWithAddStockVo.setStockNum(vo.getStockNum());
+    addLogWithAddStockVo.setTaxAmount(addTaxAmount);
+    addLogWithAddStockVo.setOriStockNum(originalBatchQuantity);
+    addLogWithAddStockVo.setCurStockNum(currentBatchQuantity);
+    // 批次库存不记录价格，使用总库存的价格信息
+    addLogWithAddStockVo.setOriTaxPrice(currentTaxPrice);
+    addLogWithAddStockVo.setCurTaxPrice(currentTaxPrice);
+    addLogWithAddStockVo.setCreateTime(vo.getCreateTime());
+    addLogWithAddStockVo.setBizId(vo.getBizId());
+    addLogWithAddStockVo.setBizDetailId(vo.getBizDetailId());
+    addLogWithAddStockVo.setBizCode(vo.getBizCode());
+    addLogWithAddStockVo.setBizType(vo.getBizType());
+    // 设置批次库存ID，用于标识这是批次库存变动
+    addLogWithAddStockVo.setStockBatchId(vo.getStockBatchId());
+
+    productStockLogService.addLogWithAddStock(addLogWithAddStockVo);
+
+    // 返回批次库存变动信息（不包含ProductStock变动）
+    ProductStockChangeDto stockChange = new ProductStockChangeDto();
+    stockChange.setScId(vo.getScId());
+    stockChange.setProductId(vo.getProductId());
+    stockChange.setNum(vo.getStockNum());
+    stockChange.setTaxAmount(addTaxAmount);
     stockChange.setCurTaxPrice(currentTaxPrice);
     stockChange.setCreateTime(vo.getCreateTime());
     stockChange.setCurStockNum(currentBatchQuantity); // 返回批次剩余数量

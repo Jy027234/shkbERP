@@ -110,7 +110,78 @@
             @input="(e) => curReceiveNumInput(e.target.value)"
           />
         </template>
+
+        <!-- 追溯收货 列自定义内容 -->
+        <template #traceReceive_default="{ row, rowIndex }">
+          <a-button
+            v-if="row.isBatch || row.isSerial"
+            type="link"
+            @click="openTraceReceiveDialog(row, rowIndex)"
+            >{{ row.isBatch ? '批次收货' : '序列号收货' }}</a-button
+          >
+        </template>
       </vxe-grid>
+
+      <!-- 批次/序列号收货明细 -->
+      <a-modal
+        v-model:open="traceReceiveDialog.visible"
+        :title="traceReceiveDialog.mode === 'batch' ? '批次收货明细（与调拨明细不一致将退回）' : '序列号收货明细（与调拨明细不一致将退回）'"
+        width="860px"
+        :footer="null"
+        :mask-closable="false"
+      >
+        <div v-if="traceReceiveDialog.mode === 'batch'">
+          <a-table
+            :data-source="traceReceiveDialog.batchRows"
+            :columns="receiveBatchColumns"
+            row-key="key"
+            size="small"
+            :pagination="false"
+          >
+            <template #bodyCell="{ column, record, index }">
+              <template v-if="column.key === 'batchNumber'">
+                <a-input v-model:value="record.batchNumber" placeholder="批次号" />
+              </template>
+              <template v-else-if="column.key === 'receiveNum'">
+                <a-input v-model:value="record.receiveNum" class="number-input" placeholder="本次收货数量" />
+              </template>
+              <template v-else-if="column.key === 'action'">
+                <a-button type="link" danger @click="traceReceiveDialog.batchRows.splice(index, 1)"
+                  >删除</a-button
+                >
+              </template>
+            </template>
+          </a-table>
+        </div>
+        <div v-else>
+          <a-table
+            :data-source="traceReceiveDialog.serialRows"
+            :columns="receiveSerialColumns"
+            row-key="key"
+            size="small"
+            :pagination="false"
+          >
+            <template #bodyCell="{ column, record, index }">
+              <template v-if="column.key === 'serialNumber'">
+                <a-input v-model:value="record.serialNumber" placeholder="序列号" />
+              </template>
+              <template v-else-if="column.key === 'action'">
+                <a-button type="link" danger @click="traceReceiveDialog.serialRows.splice(index, 1)"
+                  >删除</a-button
+                >
+              </template>
+            </template>
+          </a-table>
+        </div>
+        <div style="text-align: center; margin-top: 12px">
+          <a-space>
+            <a-button type="primary" ghost :icon="h(PlusOutlined)" @click="addTraceReceiveRow"
+              >新增一行</a-button
+            >
+            <a-button type="primary" @click="saveTraceReceiveDialog">确定</a-button>
+          </a-space>
+        </div>
+      </a-modal>
 
       <order-time-line :id="id" />
 
@@ -138,12 +209,19 @@
   </div>
 </template>
 <script>
-  import { defineComponent } from 'vue';
+  import { h, defineComponent } from 'vue';
+  import { PlusOutlined } from '@ant-design/icons-vue';
   import * as api from '@/api/sc/stock/transfer-sc';
 
   export default defineComponent({
     name: 'ReceiveScTransferSheet',
     components: {},
+    setup() {
+      return {
+        h,
+        PlusOutlined,
+      };
+    },
     data() {
       return {
         id: this.$route.params.id,
@@ -151,6 +229,23 @@
         loading: false,
         // 表单数据
         formData: {},
+        // 追溯收货弹窗
+        traceReceiveDialog: {
+          visible: false,
+          mode: 'batch',
+          rowIndex: -1,
+          batchRows: [],
+          serialRows: [],
+        },
+        receiveBatchColumns: [
+          { title: '批次号', key: 'batchNumber' },
+          { title: '本次收货数量', key: 'receiveNum', width: 140 },
+          { title: '操作', key: 'action', width: 70 },
+        ],
+        receiveSerialColumns: [
+          { title: '序列号', key: 'serialNumber' },
+          { title: '操作', key: 'action', width: 70 },
+        ],
         // 工具栏配置
         toolbarConfig: {
           // 缩放
@@ -195,6 +290,12 @@
             width: 120,
             align: 'right',
             slots: { default: 'curReceiveNum_default' },
+          },
+          {
+            title: '追溯收货',
+            slots: { default: 'traceReceive_default' },
+            width: 110,
+            fixed: 'right',
           },
           { field: 'description', title: '备注', width: 200 },
         ],
@@ -283,6 +384,8 @@
               return {
                 productId: item.productId,
                 receiveNum: item.curReceiveNum,
+                batchDetails: item.receiveBatchDetails || [],
+                serialDetails: item.receiveSerialDetails || [],
               };
             }),
         };
@@ -320,6 +423,90 @@
 
         this.formData.totalNum = totalNum;
       },
+      openTraceReceiveDialog(row, rowIndex) {
+        this.traceReceiveDialog.visible = true;
+        this.traceReceiveDialog.rowIndex = rowIndex;
+        this.traceReceiveDialog.mode = row.isBatch ? 'batch' : 'serial';
+        this.traceReceiveDialog.batchRows = (row.receiveBatchDetails || []).map((item) => {
+          return Object.assign({ key: this.$utils.uuid() }, item);
+        });
+        this.traceReceiveDialog.serialRows = (row.receiveSerialDetails || []).map((item) => {
+          return Object.assign({ key: this.$utils.uuid() }, item);
+        });
+      },
+      addTraceReceiveRow() {
+        if (this.traceReceiveDialog.mode === 'batch') {
+          this.traceReceiveDialog.batchRows.push({
+            key: this.$utils.uuid(),
+            batchNumber: '',
+            receiveNum: '',
+          });
+        } else {
+          this.traceReceiveDialog.serialRows.push({
+            key: this.$utils.uuid(),
+            serialNumber: '',
+          });
+        }
+      },
+      saveTraceReceiveDialog() {
+        const row = this.tableData[this.traceReceiveDialog.rowIndex];
+        if (!row) {
+          return;
+        }
+        if (this.traceReceiveDialog.mode === 'batch') {
+          let sum = 0;
+          const batches = [];
+          for (const item of this.traceReceiveDialog.batchRows) {
+            if (this.$utils.isEmpty(item.batchNumber)) {
+              this.$msg.createError('批次号不允许为空！');
+              return;
+            }
+            if (batches.indexOf(item.batchNumber) >= 0) {
+              this.$msg.createError('批次[' + item.batchNumber + ']重复提交！');
+              return;
+            }
+            batches.push(item.batchNumber);
+            if (!this.$utils.isIntegerGtZero(item.receiveNum)) {
+              this.$msg.createError('批次[' + item.batchNumber + ']本次收货数量必须大于0！');
+              return;
+            }
+            sum += Number(item.receiveNum);
+          }
+          if (sum !== Number(row.curReceiveNum)) {
+            this.$msg.createError('批次收货数量合计必须等于本次收货数量！');
+            return;
+          }
+          row.receiveBatchDetails = this.traceReceiveDialog.batchRows.map((item) => {
+            return {
+              batchNumber: item.batchNumber,
+              receiveNum: Number(item.receiveNum),
+            };
+          });
+        } else {
+          const serials = [];
+          for (const item of this.traceReceiveDialog.serialRows) {
+            if (this.$utils.isEmpty(item.serialNumber)) {
+              this.$msg.createError('序列号不允许为空！');
+              return;
+            }
+            if (serials.indexOf(item.serialNumber) >= 0) {
+              this.$msg.createError('序列号[' + item.serialNumber + ']重复提交！');
+              return;
+            }
+            serials.push(item.serialNumber);
+          }
+          if (serials.length !== Number(row.curReceiveNum)) {
+            this.$msg.createError('序列号收货明细数量必须等于本次收货数量！');
+            return;
+          }
+          row.receiveSerialDetails = this.traceReceiveDialog.serialRows.map((item) => {
+            return {
+              serialNumber: item.serialNumber,
+            };
+          });
+        }
+        this.traceReceiveDialog.visible = false;
+      },
       curReceiveNumInput(e) {
         this.calcSum();
       },
@@ -346,6 +533,8 @@
               if (that.$utils.eq(item.curReceiveNum, 0)) {
                 item.curReceiveNum = '';
               }
+              item.receiveBatchDetails = [];
+              item.receiveSerialDetails = [];
               return item;
             });
             this.calcSum();

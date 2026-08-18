@@ -2,13 +2,16 @@ package com.lframework.xingyun.shkb.service;
 
 import com.lframework.starter.web.core.service.BaseMpService;
 import com.lframework.xingyun.shkb.entity.ShkbEmployeeFile;
-import com.baomidou.mybatisplus.extension.service.IService;
+import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
-/**
-* @author kison
-* @description 针对表【shkb_employee_file(员工附件表)】的数据库操作Service
-* @createDate 2026-03-16 10:47:57
-*/
-public interface ShkbEmployeeFileService extends BaseMpService<ShkbEmployeeFile> {
+public interface ShkbEmployeeFileService
+extends BaseMpService<ShkbEmployeeFile> {
+    public List<String> uploadEmployeeFiles(String var1, List<MultipartFile> var2);
 
+    public List<ShkbEmployeeFile> queryByEmployeeId(String var1);
+
+    public boolean deleteEmployeeFile(String var1);
+
+    public ShkbEmployeeFile getFileById(String var1);
 }

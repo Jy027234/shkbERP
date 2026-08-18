@@ -2,13 +2,16 @@ package com.lframework.xingyun.shkb.service;
 
 import com.lframework.starter.web.core.service.BaseMpService;
 import com.lframework.xingyun.shkb.entity.ShkbTrainingCourseFile;
-import com.baomidou.mybatisplus.extension.service.IService;
+import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
-/**
-* @author kison
-* @description 针对表【shkb_training_course_file(培训课程文档表)】的数据库操作Service
-* @createDate 2026-03-16 10:47:57
-*/
-public interface ShkbTrainingCourseFileService extends BaseMpService<ShkbTrainingCourseFile> {
+public interface ShkbTrainingCourseFileService
+extends BaseMpService<ShkbTrainingCourseFile> {
+    public List<ShkbTrainingCourseFile> queryByCourseId(String var1);
 
+    public String upload(String var1, MultipartFile var2, String var3);
+
+    public void deleteById(String var1);
+
+    public void deleteByIds(List<String> var1);
 }

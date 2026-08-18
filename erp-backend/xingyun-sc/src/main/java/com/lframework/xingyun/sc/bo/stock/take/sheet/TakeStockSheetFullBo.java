@@ -18,11 +18,15 @@ import com.lframework.xingyun.sc.dto.stock.take.sheet.TakeStockSheetFullDto;
 import com.lframework.xingyun.sc.entity.PreTakeStockSheet;
 import com.lframework.xingyun.sc.entity.TakeStockConfig;
 import com.lframework.xingyun.sc.entity.TakeStockPlan;
+import com.lframework.xingyun.sc.entity.TakeStockSheetDetailBatch;
+import com.lframework.xingyun.sc.entity.TakeStockSheetDetailSerial;
 import com.lframework.xingyun.sc.enums.TakeStockPlanType;
 import com.lframework.xingyun.sc.service.stock.take.PreTakeStockSheetService;
 import com.lframework.xingyun.sc.service.stock.take.TakeStockConfigService;
 import com.lframework.xingyun.sc.service.stock.take.TakeStockPlanDetailService;
 import com.lframework.xingyun.sc.service.stock.take.TakeStockPlanService;
+import com.lframework.xingyun.sc.service.stock.take.TakeStockSheetDetailBatchService;
+import com.lframework.xingyun.sc.service.stock.take.TakeStockSheetDetailSerialService;
 import com.lframework.xingyun.template.inner.service.system.SysUserService;
 import io.swagger.annotations.ApiModelProperty;
 import java.time.LocalDateTime;
@@ -282,6 +286,30 @@ public class TakeStockSheetFullBo extends BaseBo<TakeStockSheetFullDto> {
     private String unit;
 
     /**
+     * 是否批次管理
+     */
+    @ApiModelProperty("是否批次管理")
+    private Boolean isBatch;
+
+    /**
+     * 是否序列号管理
+     */
+    @ApiModelProperty("是否序列号管理")
+    private Boolean isSerial;
+
+    /**
+     * 批次明细（逐批次录入）
+     */
+    @ApiModelProperty("批次明细")
+    private List<TakeStockSheetDetailBatch> batchDetails;
+
+    /**
+     * 序列号明细（一条序列号一条明细）
+     */
+    @ApiModelProperty("序列号明细")
+    private List<TakeStockSheetDetailSerial> serialDetails;
+
+    /**
      * 库存数量
      */
     @ApiModelProperty("库存数量")
@@ -335,6 +363,24 @@ public class TakeStockSheetFullBo extends BaseBo<TakeStockSheetFullDto> {
       this.externalCode = product.getExternalCode();
       this.spec = product.getSpec();
       this.unit = product.getUnit();
+      this.isBatch = product.getIsBatch();
+      this.isSerial = product.getIsSerial();
+
+      TakeStockSheetDetailBatchService batchService = ApplicationUtil.getBean(
+          TakeStockSheetDetailBatchService.class);
+      this.batchDetails = batchService.list(
+          com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery(
+                  TakeStockSheetDetailBatch.class)
+              .eq(TakeStockSheetDetailBatch::getSheetDetailId, dto.getId())
+              .orderByAsc(TakeStockSheetDetailBatch::getCreateTime));
+
+      TakeStockSheetDetailSerialService serialService = ApplicationUtil.getBean(
+          TakeStockSheetDetailSerialService.class);
+      this.serialDetails = serialService.list(
+          com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery(
+                  TakeStockSheetDetailSerial.class)
+              .eq(TakeStockSheetDetailSerial::getSheetDetailId, dto.getId())
+              .orderByAsc(TakeStockSheetDetailSerial::getCreateTime));
 
       TakeStockConfigService takeStockConfigService = ApplicationUtil.getBean(
           TakeStockConfigService.class);

@@ -137,6 +137,26 @@ export interface SheetDetailBo {
   unit: string;
 
   /**
+   * 是否批次管理
+   */
+  isBatch: boolean;
+
+  /**
+   * 是否序列号管理
+   */
+  isSerial: boolean;
+
+  /**
+   * 批次明细
+   */
+  batchDetails?: SheetBatchDetailBo[];
+
+  /**
+   * 序列号明细
+   */
+  serialDetails?: SheetSerialDetailBo[];
+
+  /**
    * 库存数量
    */
   stockNum: number;
@@ -155,4 +175,48 @@ export interface SheetDetailBo {
    * 盘点任务ID
    */
   planId: string;
+}
+
+export interface SheetBatchDetailBo {
+  /**
+   * 批次号
+   */
+  batchNumber: string;
+
+  /**
+   * 系统批次库存数量（录入时快照）
+   */
+  stockNum: number;
+
+  /**
+   * 实盘数量
+   */
+  takeNum: number;
+
+  /**
+   * 备注
+   */
+  description: string;
+}
+
+export interface SheetSerialDetailBo {
+  /**
+   * 序列号
+   */
+  serialNumber: string;
+
+  /**
+   * 批次号
+   */
+  batchNumber: string;
+
+  /**
+   * 实盘状态：1实盘在库、0实盘缺失
+   */
+  takeStatus: number;
+
+  /**
+   * 备注
+   */
+  description: string;
 }

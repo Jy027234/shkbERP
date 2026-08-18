@@ -127,6 +127,26 @@ export interface DetailBo {
   unit: string;
 
   /**
+   * 是否批次管理
+   */
+  isBatch?: boolean;
+
+  /**
+   * 是否序列号管理
+   */
+  isSerial?: boolean;
+
+  /**
+   * 批次明细
+   */
+  batchDetails?: SheetBatchDetailBo[];
+
+  /**
+   * 序列号明细
+   */
+  serialDetails?: SheetSerialDetailBo[];
+
+  /**
    * 调整库存数量
    */
   stockNum: number;
@@ -150,4 +170,38 @@ export interface DetailBo {
    *
    */
   status: number;
+}
+
+export interface SheetBatchDetailBo {
+  /**
+   * 批次号
+   */
+  batchNumber: string;
+
+  /**
+   * 调整数量
+   */
+  stockNum: number;
+
+  /**
+   * 备注
+   */
+  description: string;
+}
+
+export interface SheetSerialDetailBo {
+  /**
+   * 序列号
+   */
+  serialNumber: string;
+
+  /**
+   * 批次号
+   */
+  batchNumber: string;
+
+  /**
+   * 备注
+   */
+  description: string;
 }

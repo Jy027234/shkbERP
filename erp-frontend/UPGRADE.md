@@ -87,7 +87,11 @@ npx --yes pnpm@9.15.9 exec playwright install chromium
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-e2e.ps1
 ```
 
-默认冒烟账号为 `测试租户` / `admin` / `admin`，可使用 `E2E_TENANT`、`E2E_USERNAME`、`E2E_PASSWORD` 和 `E2E_BASE_URL` 覆盖。Playwright 会复用已有 5173 服务，服务未启动时自动启动 Vite；由于后端和数据库属于外部运行态，E2E 不并入纯代码标准门禁。
+默认冒烟账号为 `上海凯奔航空技术有限公司` / `admin` / `admin`（本地隔离库租户名，随 V1.21 更新；历史文档中的“测试租户”已过期），可使用 `E2E_TENANT`、`E2E_USERNAME`、`E2E_PASSWORD` 和 `E2E_BASE_URL` 覆盖。Playwright 会复用已有 5173 服务，服务未启动时自动启动 Vite；由于后端和数据库属于外部运行态，E2E 不并入纯代码标准门禁。
+
+2026-08-18 已为人事管理新增 `tests/e2e/hr-menus.spec.ts`（4 个用例）：登录后遍历人事管理下员工档案、证书管理、培训记录、培训课程、培训实施、授权项目、人员授权七个菜单页并断言路由与页面无加载失败；员工档案页验证新增入口与工号查询；培训课程页验证新增课程入口；授权项目页验证列表加载。连同 `auth-menu.spec.ts` 共 5 个 Playwright 用例全部通过（`npx playwright test`），前端 `type:check` 保持 0 错误。
+
+2026-08-18 培训记录页面权限码与后端契约对齐：`hr:employee:*`→`hr:training:*`（`views/hr/training-record/` 下 index/add/modify 三文件），与新增部署迁移 `V1.27__shkb_hr_menu_permission_fix.sql` 及后端 `ShkbEmployeeTrainingController`、`TrainingParticipantController`（`hr:training:add`→`hr:training:create`）一致；当日重跑 `verify-e2e.ps1`，auth-menu 与 hr-menus 共 5 个 Playwright 用例全部通过，`type:check` 保持 0 错误。
 
 ## 推荐演进顺序
 

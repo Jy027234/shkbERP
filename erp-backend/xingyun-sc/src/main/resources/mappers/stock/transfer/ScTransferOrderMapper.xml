@@ -37,6 +37,8 @@
         <result column="external_code" property="externalCode"/>
         <result column="spec" property="spec"/>
         <result column="unit" property="unit"/>
+        <result column="is_batch" property="isBatch"/>
+        <result column="is_serial" property="isSerial"/>
     </resultMap>
 
     <sql id="ScTransferOrderDto_sql">
@@ -83,7 +85,9 @@
             g.sku_code,
             g.external_code,
             g.spec,
-            g.unit
+            g.unit,
+            g.is_batch,
+            g.is_serial
         FROM tbl_product_stock AS ps
         INNER JOIN base_data_product AS g ON g.id = ps.product_id AND g.product_type = 1
         LEFT JOIN base_data_product_category AS c ON c.id = g.category_id

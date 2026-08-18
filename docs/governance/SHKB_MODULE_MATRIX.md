@@ -19,6 +19,8 @@ V1.36 已为所有列为 L3/L4 的模块建立统一的迁移目录校验和本�
 
 源码中存在页面、接口或实体，不等于该模块属于上海凯奔当前产品范围。尚未纳入真实业务流程的半成品统一标记为“冻结/非发布范围”，不补 schema、不扩展功能、不纳入核心回归或发布；只有用户明确启用并重新完成范围、数据和流程验收后，才允许进入 L0-L5 可靠性升级。
 
+经授权的线上只读核对结果见 `PRODUCTION_FUNCTION_BASELINE.md`。它决定业务范围；本表的 L0-L5 仍只描述 `shkbERP` 本地候选的代码、schema 和验证证据，不能把“线上有页面”误写成“本地已可替代”。
+
 ## 业务模块
 
 | 模块 | 前端代码 | 后端代码 | Schema/配置基线 | 自动化或冒烟 | 当前等级 | 主要缺口 |
@@ -29,13 +31,14 @@ V1.36 已为所有列为 L3/L4 的模块建立统一的迁移目录校验和本�
 | 工具与设备 | `views/equipment` | 工具、设备及记录 Controller | `V1.15__shkb_equipment_records.sql` | 只读探针；隔离写流程覆盖父记录守卫、计量/维保记录、日期/证书同步和附件上传删除 | L4 | 补附件物理存储生命周期、浏览器人工验收和生产恢复副本验收 |
 | 维修工卡 | `views/work-card` | `WorkCardController` | `V1.16__shkb_work_card_core.sql` | 工卡只读与隔离写流程脚本 | L4 | 补浏览器端完整业务流和生产恢复副本验收 |
 | 发料、出库与库存 | `views/material` | Material Order/Out Controller 与事务服务 | `V1.17__shkb_material_flow.sql`；Outbox `V1.18__mq_outbox.sql` | 写流程、并发、物料规则、Outbox 验证 | L4 | 对账菜单迁移后执行整套组合回归 |
-| 采购、收货、退货与通用库存 | `views/sc/purchase` | 采购订单、收货单、采购退货与库存事务服务 | `V1.24__purchase_receive_traceability.sql` 补收货追溯列；`V1.25__purchase_return_serial_traceability.sql` 补退货序列号快照 | `verify-purchase-flow.ps1` 在直连与 Vite 代理覆盖主单/商品归属、超量守卫、批次扣减、序列号部分退货与并发回滚 | L4 | 销售仍需独立验收；补浏览器业务验收和生产恢复副本验收 |
-| 库存盘点 | `views/sc/stock/take` | TakeStock Plan/Sheet Controller 与库存事务服务 | 沿用已版本化通用库存/盘点表；V1.33 无新增 DDL | `verify-stocktake-flow.ps1` 在直连与 Vite 代理覆盖仓库不可变、输入/归属守卫、单品残留清理、普通库存差异调整及追溯型库存安全阻断 | L4 | 批次/序列号尚无明细级盘点契约，只能阻断非零差异；补完整功能、浏览器验收和生产恢复副本验收 |
-| 库存调整 | `views/sc/stock/adjust` | StockAdjust Sheet/Reason Controller 与库存事务服务 | 沿用已版本化库存调整表；V1.34 无新增 DDL | `verify-stock-adjust-flow.ps1` 在直连与 Vite 代理覆盖直接审核输入/引用守卫、普通库存入出、重复审批及追溯型库存安全阻断 | L4 | 批次/序列号尚无明细级调整契约；补完整功能、浏览器验收和生产恢复副本验收 |
-| 库存调拨 | `views/sc/stock/transfer` | ScTransfer Order Controller 与库存事务服务 | 沿用已版本化仓库调拨表；V1.35 无新增 DDL | `verify-stock-transfer-flow.ps1` 在直连与 Vite 代理覆盖输入/引用守卫、审核扣转出仓、部分/最终收货、并发重复收货及追溯型库存安全阻断 | L4 | 批次/序列号尚无明细级调拨契约；补完整功能、浏览器验收和生产恢复副本验收 |
-| 拧紧机、磁粉机任务 | `views/machine-task` | MachineTask 与 MachineInfo Controller/Service | `V1.22__shkb_machine_task_core.sql` | 管理端只读探针；状态规则单测；隔离写流程覆盖相同上报重试、冲突上报和重复下发 | L3 | 补真实设备协议联调、下发成功后的断电窗口与生产恢复副本验收 |
+| 采购、收货、退货与通用库存 | `views/sc/purchase` | 采购订单、收货单、采购退货与库存事务服务 | `V1.24__purchase_receive_traceability.sql` 补收货追溯列；`V1.25__purchase_return_serial_traceability.sql` 补退货序列号快照 | `verify-purchase-flow.ps1` 在直连与 Vite 代理覆盖主单/商品归属、超量守卫、批次扣减、序列号部分退货与并发回滚 | L4 | 补浏览器业务验收和生产恢复副本验收 |
+| 库存盘点 | `views/sc/stock/take` | TakeStock Plan/Sheet Controller 与库存事务服务 | 沿用已版本化通用库存/盘点表；V1.33 无新增 DDL；V1.40 新增 `V1.28__shkb_take_stock_batch_serial.sql` 盘点批次/序列号明细表 | `verify-stocktake-flow.ps1` 在直连与 Vite 代理覆盖仓库不可变、输入/归属守卫、单品残留清理、普通库存差异调整，以及批次（逐批次盘盈/盘亏、重复/合计不符拒绝）与序列号（一条序列号一条明细、一致/盘亏/盘盈、矛盾数据拒绝）差异处理，夹具残留 0；`verify-stock-adjust-flow`/`verify-stock-transfer-flow` 回归通过 | L4 | 批次/序列号盘点已按业务确认规则实现并通过本地隔离验证；浏览器人工验收和生产恢复副本验收未完成 |
+| 库存调整 | `views/sc/stock/adjust` | StockAdjust Sheet/Reason Controller 与库存事务服务 | 沿用已版本化库存调整表；V1.34 无新增 DDL；V1.41 新增 `V1.29__shkb_stock_adjust_batch_serial.sql` 调整批次/序列号明细表 | `verify-stock-adjust-flow.ps1` 在直连与 Vite 代理覆盖直接审核输入/引用守卫、普通库存入出、重复审批，以及批次（入库/出库逐批次、缺明细/重复/合计不符/不存在批次出库拒绝）与序列号（一条序列号一条明细、状态直跳与重复拒绝）调整，夹具残留 0；盘点/调拨回归通过 | L4 | 批次/序列号调整已按业务确认规则实现并通过本地隔离验证；浏览器人工验收和生产恢复副本验收未完成 |
+| 库存调拨 | `views/sc/stock/transfer` | ScTransfer Order Controller 与库存事务服务 | 沿用已版本化仓库调拨表；V1.35 无新增 DDL；V1.42 新增 `V1.30__shkb_stock_transfer_batch_serial.sql` 调拨批次/序列号明细与在途库存表 | `verify-stock-transfer-flow.ps1` 在直连与 Vite 代理覆盖输入/引用守卫、审核扣转出仓、部分/最终收货、并发重复收货，以及批次（逐批次指定、在途=未收数量、幽灵批次退回）与序列号（逐条指定、转出置在途、收货切换转入仓批次、不属于本单退回）调拨，夹具残留 0；盘点/调整回归通过 | L4 | 批次/序列号调拨已按业务确认规则实现并通过本地隔离验证；浏览器人工验收和生产恢复副本验收未完成 |
+| 线束检测机、磁粉机任务 | `views/machine-task`（保留 `tightening` 遗留路由名） | MachineTask 与 MachineInfo Controller/Service | `V1.22__shkb_machine_task_core.sql` | 管理端只读探针；状态规则单测；隔离写流程覆盖相同上报重试、冲突上报和重复下发 | L3 | 补真实设备协议联调、下发成功后的断电窗口与生产恢复副本验收 |
+| 销售（冻结） | 仓库中的通用销售页面/代码 | 不作为上海凯奔产品接口维护 | 不补迁移 | 不纳入核心回归 | 非发布范围 | 经线上菜单核对，销售不属于上海凯奔原设计或当前部署；除非用户明确启用，否则不得投入或发布 |
 | 成品出入库（冻结） | `views/product-storage` | `ProductStorageController` 及附件服务 | 不补迁移 | 不纳入核心回归 | 非发布范围 | 半成品且未纳入上海凯奔实际流程；除非用户明确启用并重新验收，否则不投入、不发布 |
-| 人事、培训、证书、人员授权 | `views/hr`、`api/hr` | 已发现部分实体/Service/Mapper，未发现完整 HR Controller | 未发现专门增量迁移 | 仅部分前端 API 单测 | L1 | 先确认云端真实接口和表，再补后端入口、schema 与 E2E |
+| 人事、培训、证书、人员授权 | `views/hr`、`api/hr`；线上已确认员工、证书、培训记录/课程/实施、授权项目/人员授权七项功能 | HR Controller、DTO/VO、实体、Mapper 与 Service 已补齐；员工/人员授权附件上传增加父记录守卫，下载从 `jugg.upload.location` 映射并拒绝 `..` 逃逸与 `://`；删除接口经 `ShkbUploadFileUtil` 同步删除物理文件 | `V1.26__shkb_hr_core.sql`；前 12 表经现网备份 DDL 对照，第 13 张人员授权附件表补齐部署代码缺口 | `verify-hr-flow.ps1` 在 8088 直连与 5173 `/api` 代理均通过七项读写、401/403、业务拒绝 409、导出、附件安全与培训完成事务；删除附件后容器内物理文件实测消失；`tests/e2e/hr-menus.spec.ts` 4 个 Playwright 用例通过；后端 Java 25 全量编译、前端类型检查/27 项 Vitest/生产构建、V1.26 首次/重复执行均通过，夹具残留为 0；2026-08-18 业务确认后新增 `V1.27__shkb_hr_menu_permission_fix.sql` 版本化三处权限码修正（冒烟库连续执行两次、第二次 no-op），`verify-hr-flow`/`verify-menu-baseline`/`verify-auth-permission` 均通过 8088 直连与 5173 代理 | L3 | 业务配置已确认（1+7 菜单全部启用、角色 010+011、管理员 001 依赖 admin 豁免不显式绑定），三处权限码漂移已由 V1.27 版本化；恢复副本验收与浏览器真实业务流人工验收未完成 |
 | 航材基础信息 | 基础资料和航材页面 | `xingyun-basedata` 及 SHKB 扩展 | 部分字段迁移 | 主要依赖编译和通用冒烟 | L2 | 建立机型、件号、批次、序列号的业务验收集 |
 | 文件与业务附件 | 多模块上传组件 | `CommonFileController` 及各模块附件服务 | 部分模块已包含附件表 | 局部接口冒烟 | L2 | 验证存储持久化、权限、删除、恢复和大文件边界 |
 

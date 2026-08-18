@@ -17,8 +17,12 @@ import com.lframework.xingyun.basedata.service.product.ProductService;
 import com.lframework.xingyun.basedata.service.storecenter.StoreCenterService;
 import com.lframework.xingyun.sc.dto.stock.transfer.ScTransferOrderFullDto;
 import com.lframework.xingyun.sc.entity.ProductStock;
+import com.lframework.xingyun.sc.entity.ScTransferOrderDetailBatch;
+import com.lframework.xingyun.sc.entity.ScTransferOrderDetailSerial;
 import com.lframework.xingyun.sc.enums.ScTransferOrderStatus;
 import com.lframework.xingyun.sc.service.stock.ProductStockService;
+import com.lframework.xingyun.sc.service.stock.transfer.ScTransferOrderDetailBatchService;
+import com.lframework.xingyun.sc.service.stock.transfer.ScTransferOrderDetailSerialService;
 import com.lframework.xingyun.template.inner.service.system.SysUserService;
 import io.swagger.annotations.ApiModelProperty;
 import java.math.BigDecimal;
@@ -231,6 +235,30 @@ public class ScTransferOrderFullBo extends BaseBo<ScTransferOrderFullDto> {
     private String unit;
 
     /**
+     * 是否批次管理
+     */
+    @ApiModelProperty("是否批次管理")
+    private Boolean isBatch;
+
+    /**
+     * 是否序列号管理
+     */
+    @ApiModelProperty("是否序列号管理")
+    private Boolean isSerial;
+
+    /**
+     * 批次明细
+     */
+    @ApiModelProperty("批次明细")
+    private List<ScTransferOrderDetailBatch> batchDetails;
+
+    /**
+     * 序列号明细
+     */
+    @ApiModelProperty("序列号明细")
+    private List<ScTransferOrderDetailSerial> serialDetails;
+
+    /**
      * 调拨数量
      */
     @ApiModelProperty("调拨数量")
@@ -305,6 +333,24 @@ public class ScTransferOrderFullBo extends BaseBo<ScTransferOrderFullDto> {
       this.externalCode = product.getExternalCode();
       this.spec = product.getSpec();
       this.unit = product.getUnit();
+      this.isBatch = product.getIsBatch();
+      this.isSerial = product.getIsSerial();
+
+      ScTransferOrderDetailBatchService batchService = ApplicationUtil.getBean(
+          ScTransferOrderDetailBatchService.class);
+      this.batchDetails = batchService.list(
+          com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery(
+                  ScTransferOrderDetailBatch.class)
+              .eq(ScTransferOrderDetailBatch::getOrderDetailId, dto.getId())
+              .orderByAsc(ScTransferOrderDetailBatch::getCreateTime));
+
+      ScTransferOrderDetailSerialService serialService = ApplicationUtil.getBean(
+          ScTransferOrderDetailSerialService.class);
+      this.serialDetails = serialService.list(
+          com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery(
+                  ScTransferOrderDetailSerial.class)
+              .eq(ScTransferOrderDetailSerial::getOrderDetailId, dto.getId())
+              .orderByAsc(ScTransferOrderDetailSerial::getCreateTime));
 
       if (EnumUtil.getByCode(ScTransferOrderStatus.class, this.status)
           != ScTransferOrderStatus.APPROVE_PASS) {
