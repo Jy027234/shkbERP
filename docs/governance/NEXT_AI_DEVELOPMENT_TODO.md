@@ -164,9 +164,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-migration-catalog.ps1 
 | P1 | 批次/序列号盘点 | 建立明细录入、盘盈盘亏、批次和序列号一致性事务 | ✅ 已确认并落地（V1.28 迁移 + handleDiff 追溯差异处理 + `verify-stocktake-flow.ps1` 双链路扩展，详见 UPGRADE 里程碑 V1.40）；浏览器人工验收与生产恢复副本验收未完成 |
 | P1 | 批次/序列号库存调整 | 建立入库、出库、审批、重复提交和回滚规则 | ✅ 已确认并落地（V1.29 迁移 + 审核按批次/序列号明细变更库存 + `verify-stock-adjust-flow.ps1` 双链路扩展，详见 UPGRADE 里程碑 V1.41）；审核后回滚（取消审核）功能当前系统不支持（普通航材亦不支持），如需启用须另立专题 |
 | P1 | 批次/序列号仓库调拨 | 建立转出、部分收货、最终收货和并发一致性 | ✅ 已确认并落地（V1.30 迁移 + 审核按明细扣转出仓、收货按明细加转入仓、在途库存单独记录、不一致退回 + `verify-stock-transfer-flow.ps1` 双链路扩展，详见 UPGRADE 里程碑 V1.42）；浏览器人工验收与生产恢复副本验收未完成 |
-| P1 | 统一附件生命周期 | 统一存储根、权限、MIME、文件名、大小限制、删除、备份和恢复 | HR 附件删除已补物理文件清理（V1.38，本地验证）；其余模块（合同/工具/设备/工卡）删除仍只删 DB 行；生产存储方案与保留策略待业务确认 |
-| P1 | 菜单/角色业务基线 | 对账 V1.21 影响及 HR 七项菜单和角色授权 | 业务负责人提供确认结果；不得由 AI 推断 |
-| P1 | 核心浏览器 E2E | 为合同、工卡、采购、库存和 HR 增加关键提交/查询链路 | HR 七菜单导航与员工/课程/授权项目交互已由 `tests/e2e/hr-menus.spec.ts` 覆盖（2026-08-18）；合同/工卡/采购/库存链路待补 |
+| P1 | 统一附件生命周期 | 统一存储根、权限、MIME、文件名、大小限制、删除、备份和恢复 | ✅ 后端统一接入 `ShkbUploadFileUtil.deletePhysicalFile`（合同/工具/设备/计量维保/工卡删除不再只删 DB 行，V1.43）；`verify-equipment-flow.ps1` 物理文件探针（上传后存在、删除后消失）与 `verify-contract-flow.ps1` 回归通过；生产存储方案与保留策略待业务确认 |
+| P1 | 菜单/角色业务基线 | 对账 V1.21 影响及 HR 七项菜单和角色授权 | ✅ 证据已整理至 `RELEASE_CONFIRMATION_MENU_ROLE_BASELINE.md`（catalog 37 项、menu-baseline/auth-permission/hr-flow 双链路、preflight AfterMigration、E2E 6 用例）；待业务负责人按 D1–D5 逐项拍板，生产执行前须在恢复副本演练并备份 |
+| P1 | 核心浏览器 E2E | 为合同、工卡、采购、库存和 HR 增加关键提交/查询链路 | ✅ 2026-08-18 新增 `tests/e2e/core-chains.spec.ts`（合同/维修任务/工卡/工具/采购/发料/库存调拨/盘点/调整 12 个关键页面查询链路，本地冒烟通过）；与 `hr-menus.spec.ts`、`auth-menu.spec.ts` 共 6 用例 |
 | P1 | 回退与恢复方案 | 固化数据库、后端、前端和附件的可执行回退步骤 | 本地隔离演练文档已建（`ROLLBACK_RECOVERY_PLAN.md`）；候选版本与变更窗口待业务确认后才能用于生产 |
 
 ## 7. P2：中期技术债与可靠性优化

@@ -12,6 +12,7 @@ import com.lframework.xingyun.shkb.entity.ShkbDeviceFile;
 import com.lframework.xingyun.shkb.mappers.ShkbDeviceFileMapper;
 import com.lframework.xingyun.shkb.mappers.ShkbDeviceMapper;
 import com.lframework.xingyun.shkb.service.ShkbDeviceFileService;
+import com.lframework.xingyun.shkb.utils.ShkbUploadFileUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,9 @@ public class ShkbDeviceFileServiceImpl extends BaseMpServiceImpl<ShkbDeviceFileM
 
     @Autowired
     private ShkbDeviceMapper deviceMapper;
+
+    @Autowired
+    private ShkbUploadFileUtil shkbUploadFileUtil;
 
     /**
      * 上传设备附件
@@ -114,7 +118,8 @@ public class ShkbDeviceFileServiceImpl extends BaseMpServiceImpl<ShkbDeviceFileM
             return false;
         }
 
-        // 如需删除物理文件，可在此调用 UploadUtil 删除
+        // 统一物理清理：严格限制在上传根目录内，拒绝 .. 逃逸与外部 ://，失败不阻断数据库删除
+        this.shkbUploadFileUtil.deletePhysicalFile(file.getUrl());
         return this.removeById(id);
     }
 

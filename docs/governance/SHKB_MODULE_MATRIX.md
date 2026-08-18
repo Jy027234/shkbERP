@@ -40,7 +40,7 @@ V1.36 已为所有列为 L3/L4 的模块建立统一的迁移目录校验和本�
 | 成品出入库（冻结） | `views/product-storage` | `ProductStorageController` 及附件服务 | 不补迁移 | 不纳入核心回归 | 非发布范围 | 半成品且未纳入上海凯奔实际流程；除非用户明确启用并重新验收，否则不投入、不发布 |
 | 人事、培训、证书、人员授权 | `views/hr`、`api/hr`；线上已确认员工、证书、培训记录/课程/实施、授权项目/人员授权七项功能 | HR Controller、DTO/VO、实体、Mapper 与 Service 已补齐；员工/人员授权附件上传增加父记录守卫，下载从 `jugg.upload.location` 映射并拒绝 `..` 逃逸与 `://`；删除接口经 `ShkbUploadFileUtil` 同步删除物理文件 | `V1.26__shkb_hr_core.sql`；前 12 表经现网备份 DDL 对照，第 13 张人员授权附件表补齐部署代码缺口 | `verify-hr-flow.ps1` 在 8088 直连与 5173 `/api` 代理均通过七项读写、401/403、业务拒绝 409、导出、附件安全与培训完成事务；删除附件后容器内物理文件实测消失；`tests/e2e/hr-menus.spec.ts` 4 个 Playwright 用例通过；后端 Java 25 全量编译、前端类型检查/27 项 Vitest/生产构建、V1.26 首次/重复执行均通过，夹具残留为 0；2026-08-18 业务确认后新增 `V1.27__shkb_hr_menu_permission_fix.sql` 版本化三处权限码修正（冒烟库连续执行两次、第二次 no-op），`verify-hr-flow`/`verify-menu-baseline`/`verify-auth-permission` 均通过 8088 直连与 5173 代理 | L3 | 业务配置已确认（1+7 菜单全部启用、角色 010+011、管理员 001 依赖 admin 豁免不显式绑定），三处权限码漂移已由 V1.27 版本化；恢复副本验收与浏览器真实业务流人工验收未完成 |
 | 航材基础信息 | 基础资料和航材页面 | `xingyun-basedata` 及 SHKB 扩展 | 部分字段迁移 | 主要依赖编译和通用冒烟 | L2 | 建立机型、件号、批次、序列号的业务验收集 |
-| 文件与业务附件 | 多模块上传组件 | `CommonFileController` 及各模块附件服务 | 部分模块已包含附件表 | 局部接口冒烟 | L2 | 验证存储持久化、权限、删除、恢复和大文件边界 |
+| 文件与业务附件 | 多模块上传组件 | `CommonFileController` 及各模块附件服务 | 部分模块已包含附件表 | 合同/工具/设备/计量维保/工卡/HR 删除统一走 `ShkbUploadFileUtil.deletePhysicalFile` 物理清理（V1.43）；`verify-equipment-flow.ps1` 探针验证上传后存在、删除后消失，`verify-contract-flow.ps1` 回归通过 | L3 | 验证权限、MIME、文件名、大小限制、备份与恢复边界；生产存储方案与保留策略待业务确认 |
 
 ## 运行支撑
 

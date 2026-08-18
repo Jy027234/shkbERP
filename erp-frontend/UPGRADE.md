@@ -93,6 +93,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-e2e.ps1
 
 2026-08-18 培训记录页面权限码与后端契约对齐：`hr:employee:*`→`hr:training:*`（`views/hr/training-record/` 下 index/add/modify 三文件），与新增部署迁移 `V1.27__shkb_hr_menu_permission_fix.sql` 及后端 `ShkbEmployeeTrainingController`、`TrainingParticipantController`（`hr:training:add`→`hr:training:create`）一致；当日重跑 `verify-e2e.ps1`，auth-menu 与 hr-menus 共 5 个 Playwright 用例全部通过，`type:check` 保持 0 错误。
 
+2026-08-18 新增 `tests/e2e/core-chains.spec.ts`（核心浏览器 E2E）：登录后按路由直达合同（民航维修合同/合同任务派发）、维修任务（民航维修执行）、工卡列表、计量工具管理、采购（订单/收货）、发料申请、仓库调拨、库存盘点（任务/单）、库存调整共 12 个关键页面，断言路由正确且列表查询无“加载数据失败”；与 auth-menu、hr-menus 共 6 个 Playwright 用例在本地冒烟通过。
+
 ## 推荐演进顺序
 
 1. 为采购、出库和 HR 等关键提交/查询流程继续补端到端测试。

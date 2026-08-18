@@ -92,6 +92,22 @@ function Remove-SmokeUploadUrl {
     }
 }
 
+function Test-SmokeUploadUrlExists {
+    param([Parameter(Mandatory = $true)][string]$Url)
+
+    $path = $Url
+    $absoluteUri = $null
+    if ([Uri]::TryCreate($path, [UriKind]::Absolute, [ref]$absoluteUri)) {
+        $path = $absoluteUri.AbsolutePath
+    }
+    if ($path -notmatch '^/oss/1000/[0-9]{4}/[0-9]{2}/[0-9]{2}/[a-f0-9]{32}\.[A-Za-z0-9]+$') {
+        throw "Refusing to probe an unexpected smoke upload URL: $Url"
+    }
+    $target = '/opt/data/upload' + $path.Substring(4)
+    & docker exec $ApiContainer test -f $target 2>$null
+    return ($LASTEXITCODE -eq 0)
+}
+
 function Remove-ContractSmokeUploads {
     $urls = @(Invoke-SmokeSql -Sql @"
 SELECT f.url
@@ -286,7 +302,13 @@ VALUES ('v123-repair','V123-RT','V123 repair',1,'smoke','smoke','smoke',NOW(),'s
         throw 'Contract attachment upload/list mapping failed.'
     }
     $attachmentUrl = [string]$files.data[0].url
+    if (-not (Test-SmokeUploadUrlExists -Url $attachmentUrl)) {
+        throw 'Contract attachment physical file missing after upload.'
+    }
     Invoke-ErpJson -Uri "$baseUri/shkb/contract/attachment/$attachmentId" -Method Delete -Headers $headers | Out-Null
+    if (Test-SmokeUploadUrlExists -Url $attachmentUrl) {
+        throw 'Contract attachment physical file still present after delete.'
+    }
     Remove-SmokeUploadUrl -Url $attachmentUrl
 
     $taskBody = @{ contractId = $contractId } | ConvertTo-Json

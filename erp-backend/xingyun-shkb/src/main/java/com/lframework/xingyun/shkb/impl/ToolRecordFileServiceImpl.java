@@ -13,6 +13,7 @@ import com.lframework.xingyun.shkb.entity.ToolRecordFile;
 import com.lframework.xingyun.shkb.mappers.ShkbToolRecordMapper;
 import com.lframework.xingyun.shkb.service.ToolRecordFileService;
 import com.lframework.xingyun.shkb.mappers.ToolRecordFileMapper;
+import com.lframework.xingyun.shkb.utils.ShkbUploadFileUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,9 @@ public class ToolRecordFileServiceImpl extends BaseMpServiceImpl<ToolRecordFileM
 
     @Autowired
     private ShkbToolRecordMapper toolRecordMapper;
+
+    @Autowired
+    private ShkbUploadFileUtil shkbUploadFileUtil;
 
     /**
      * 上传工具计量记录附件
@@ -125,11 +129,10 @@ public class ToolRecordFileServiceImpl extends BaseMpServiceImpl<ToolRecordFileM
             return false;
         }
         
-        // 删除文件
+        // 删除文件（统一物理清理：严格限制在上传根目录内，拒绝 .. 逃逸与外部 ://）
         try {
-            // 如果需要删除物理文件，这里可以调用UploadUtil的删除方法
-            // UploadUtil.deleteFile(file.getUrl());
-            
+            this.shkbUploadFileUtil.deletePhysicalFile(file.getUrl());
+
             // 删除数据库记录
             return this.removeById(id);
         } catch (Exception e) {

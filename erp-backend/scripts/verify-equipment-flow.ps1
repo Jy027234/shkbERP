@@ -171,6 +171,22 @@ function Remove-SmokeUploadUrl {
     }
 }
 
+function Test-SmokeUploadUrlExists {
+    param([Parameter(Mandatory = $true)][string]$Url)
+
+    $path = $Url
+    $absoluteUri = $null
+    if ([Uri]::TryCreate($path, [UriKind]::Absolute, [ref]$absoluteUri)) {
+        $path = $absoluteUri.AbsolutePath
+    }
+    if ($path -notmatch '^/oss/1000/[0-9]{4}/[0-9]{2}/[0-9]{2}/[a-f0-9]{32}\.[A-Za-z0-9]+$') {
+        throw "Refusing to probe an unexpected smoke upload URL: $Url"
+    }
+    $target = '/opt/data/upload' + $path.Substring(4)
+    & docker exec $ApiContainer test -f $target 2>$null
+    return ($LASTEXITCODE -eq 0)
+}
+
 $toolCode = 'EQUIPMENT-FLOW-TOOL'
 $deviceCode = 'EQUIPMENT-FLOW-DEVICE'
 $missingId = 'equipment-flow-missing-parent'
@@ -301,9 +317,21 @@ try {
     if ($laterRecordResult.Count -ne 1 -or $laterRecordResult[0].attachments.Count -ne 1) { throw 'Updated tool record attachment is missing.' }
     $laterAttachmentId = [string]$laterRecordResult[0].attachments[0].id
     $capturedUploadUrls.Add([string]$laterRecordResult[0].attachments[0].url)
+    if (-not (Test-SmokeUploadUrlExists -Url $capturedUploadUrls[2])) {
+        throw 'Tool record attachment physical file missing after upload.'
+    }
     Invoke-ErpJson -Uri "$baseUri/shkb/tool/record/attachment/$laterAttachmentId" -Method Delete -Headers $headers | Out-Null
+    if (Test-SmokeUploadUrlExists -Url $capturedUploadUrls[2]) {
+        throw 'Tool record attachment physical file still present after delete.'
+    }
     Invoke-ErpJson -Uri "$baseUri/shkb/tool/record/$laterRecordId" -Method Delete -Headers $headers | Out-Null
+    if (-not (Test-SmokeUploadUrlExists -Url $capturedUploadUrls[1])) {
+        throw 'Tool attachment physical file missing after upload.'
+    }
     Invoke-ErpJson -Uri "$baseUri/shkb/tool/attachment/$toolFileId" -Method Delete -Headers $headers | Out-Null
+    if (Test-SmokeUploadUrlExists -Url $capturedUploadUrls[1]) {
+        throw 'Tool attachment physical file still present after delete.'
+    }
 
     $deviceBody = @{
         code = $deviceCode
@@ -357,7 +385,13 @@ try {
     $deviceFiles = Invoke-ErpJson -Uri "$baseUri/shkb/device/attachment/list?deviceId=$deviceId" -Headers $headers
     if ($deviceFiles.data.Count -ne 1 -or $deviceFiles.data[0].id -ne $deviceFileId) { throw 'Device attachment upload/list mismatch.' }
     $capturedUploadUrls.Add([string]$deviceFiles.data[0].url)
+    if (-not (Test-SmokeUploadUrlExists -Url $capturedUploadUrls[3])) {
+        throw 'Device attachment physical file missing after upload.'
+    }
     Invoke-ErpJson -Uri "$baseUri/shkb/device/attachment/$deviceFileId" -Method Delete -Headers $headers | Out-Null
+    if (Test-SmokeUploadUrlExists -Url $capturedUploadUrls[3]) {
+        throw 'Device attachment physical file still present after delete.'
+    }
     Invoke-ErpJson -Uri "$baseUri/shkb/device/record/$deviceRecordId" -Method Delete -Headers $headers | Out-Null
 
     $remainingToolRecords = Invoke-ErpJson -Uri "$baseUri/shkb/tool/record/query?pageIndex=1&pageSize=20&toolId=$toolId" -Headers $headers

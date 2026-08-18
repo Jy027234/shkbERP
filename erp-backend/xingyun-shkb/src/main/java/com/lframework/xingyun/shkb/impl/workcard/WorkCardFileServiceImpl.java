@@ -10,6 +10,8 @@ import com.lframework.starter.web.core.utils.UploadUtil;
 import com.lframework.xingyun.shkb.entity.WorkCardFile;
 import com.lframework.xingyun.shkb.mappers.WorkCardFileMapper;
 import com.lframework.xingyun.shkb.service.workcard.WorkCardFileService;
+import com.lframework.xingyun.shkb.utils.ShkbUploadFileUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +28,9 @@ import java.util.List;
 @Service
 public class WorkCardFileServiceImpl extends BaseMpServiceImpl<WorkCardFileMapper, WorkCardFile>
     implements WorkCardFileService {
+
+    @Autowired
+    private ShkbUploadFileUtil shkbUploadFileUtil;
 
     /**
      * 上传工卡附件
@@ -113,11 +118,10 @@ public class WorkCardFileServiceImpl extends BaseMpServiceImpl<WorkCardFileMappe
             return false;
         }
         
-        // 删除文件
+        // 删除文件（统一物理清理：严格限制在上传根目录内，拒绝 .. 逃逸与外部 ://）
         try {
-            // 如果需要删除物理文件，这里可以调用UploadUtil的删除方法
-            // UploadUtil.deleteFile(file.getUrl());
-            
+            this.shkbUploadFileUtil.deletePhysicalFile(file.getUrl());
+
             // 删除数据库记录
             return this.removeById(id);
         } catch (Exception e) {

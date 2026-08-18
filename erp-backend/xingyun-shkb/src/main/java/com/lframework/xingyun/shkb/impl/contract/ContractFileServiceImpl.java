@@ -12,6 +12,8 @@ import com.lframework.xingyun.shkb.entity.ContractFile;
 import com.lframework.xingyun.shkb.mappers.ContractFileMapper;
 import com.lframework.xingyun.shkb.mappers.ContractMapper;
 import com.lframework.xingyun.shkb.service.contract.ContractFileService;
+import com.lframework.xingyun.shkb.utils.ShkbUploadFileUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,6 +32,9 @@ public class ContractFileServiceImpl extends BaseMpServiceImpl<ContractFileMappe
     implements ContractFileService{
 
     private final ContractMapper contractMapper;
+
+    @Autowired
+    private ShkbUploadFileUtil shkbUploadFileUtil;
 
     public ContractFileServiceImpl(ContractMapper contractMapper) {
         this.contractMapper = contractMapper;
@@ -125,11 +130,10 @@ public class ContractFileServiceImpl extends BaseMpServiceImpl<ContractFileMappe
             return false;
         }
         
-        // 删除文件
+        // 删除文件（统一物理清理：严格限制在上传根目录内，拒绝 .. 逃逸与外部 ://）
         try {
-            // 如果需要删除物理文件，这里可以调用UploadUtil的删除方法
-            // UploadUtil.deleteFile(file.getUrl());
-            
+            this.shkbUploadFileUtil.deletePhysicalFile(file.getUrl());
+
             // 删除数据库记录
             return this.removeById(id);
         } catch (Exception e) {
